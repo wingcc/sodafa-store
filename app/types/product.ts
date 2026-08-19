@@ -1,0 +1,29 @@
+import type { StaticImageData } from 'next/image';
+
+export type Product = {
+  id: string | number;
+  name: string;
+  price: number;
+  originalPrice?: number | null;
+  image?: string | StaticImageData;
+  imageAlt?: string;
+  badge?: string | null;
+  ShowInStor?: boolean;
+  showInStore?: boolean;
+  inStock?: boolean;
+  ADS?: boolean;
+  ads?: boolean;
+  brand?: string;
+  category?: string;
+  rating?: number;
+  reviews?: number;
+  sales?: number;
+  description?: string;
+  tags?: string[];
+  bannerImage?: string | StaticImageData;
+  bannerImageAlt?: string;
+  bannerText?: string;
+  highlights?: string[];
+  images?: Array<{ src: string | StaticImageData; alt?: string }>;
+  variants?: Record<string, string[]>;
+};

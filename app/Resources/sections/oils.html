@@ -1,0 +1,38 @@
+<!-- ═══════════════════════════════════════════════════════════════
+FILE: sections/oils.html
+────────────────────────────────────────────────────────────────
+[معدّل] إضافة غلاف "oils-more" للزيوت الإضافية (5→16) مع زر تبديل
+حقيقي <button> يدعم aria-expanded / aria-controls / لوحة المفاتيح.
+═══════════════════════════════════════════════════════════════ -->
+<div class="wrap">
+     <div class="sec-head rv">
+          <span class="eyebrow">المكونات الطبيعية</span>
+          <h2>تركيبة غنية من 16 زيتاً طبيعياً لشعر أكثر صحة</h2>
+          <p>تجمع التشكيلة بين 16 زيتاً طبيعياً مختاراً بعناية، تعمل معاً لتغذية الشعر وترطيب فروة الرأس والعناية به من
+               الجذور حتى الأطراف.</p>
+     </div>
+
+     <!-- أول 4 زيوت (يتم حقنها ديناميكياً من config.json عبر [data-list]) -->
+     <div class="oils-grid" data-list></div>
+
+     <!-- باقي الزيوت (12) — تُحقن في [data-list-more] وتبقى مطوية افتراضياً -->
+     <div class="oils-more" id="oilsMore" data-more aria-hidden="true">
+          <div class="oils-more-in">
+               <div class="oils-grid oils-grid--more" data-list-more></div>
+          </div>
+     </div>
+
+     <!-- زر التبديل: زر حقيقي semantic + accessibility كاملة -->
+     <div class="oils-cta">
+          <button type="button" class="oils-toggle" id="oilsToggle" data-oils-toggle aria-expanded="false"
+               aria-controls="oilsMore">
+               <span class="ot-label" data-oils-label>إظهار المزيد من الزيوت</span>
+               <span class="ot-arrow" aria-hidden="true">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"
+                         stroke-linecap="round" stroke-linejoin="round">
+                         <path d="M6 9l6 6 6-6" />
+                    </svg>
+               </span>
+          </button>
+     </div>
+</div>
