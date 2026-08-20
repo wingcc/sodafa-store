@@ -12,6 +12,7 @@ import ScrollProgress from "../../sections/common/ScrollProgress";
 import { AnnouncementBar } from "../../sections/AnnouncementBar";
 import Navbar from "../../sections/Navbar";
 import HeroSection from "../../sections/Hero";
+import { SoyaProductHero } from "../../sections/SoyaProductHero";
 import StatsSection from "../../sections/StatsSection";
 import TrustBadges from "../../sections/TrustBadges";
 import FlashSaleSection from "../../sections/FlashSaleSection";
@@ -151,6 +152,13 @@ export const MainContent = () => {
       <section data-section="hero" id="hero">
         <HeroSection hero={hero} site={site} />
       </section>
+
+      {/* Soya Product Hero Section */}
+      {isEnabled("soya-product-hero") && (
+        <section data-section="soya-product-hero" id="soya-product-hero">
+          <SoyaProductHero site={site} />
+        </section>
+      )}
 
       {/* Stats Section */}
       <section data-section="stats" id="stats" className="band-wrap">

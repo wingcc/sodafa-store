@@ -10,6 +10,8 @@ interface ProductSectionProps {
 const delays = [0, 100, 200];
 
 export default function ProductSection({ products, site }: ProductSectionProps) {
+  const waUrl = `https://wa.me/${site.whatsappMain}?text=${encodeURIComponent(site.whatsappMessage || "")}`;
+
   return (
     <section id="products">
       <div className="wrap">
@@ -30,7 +32,7 @@ export default function ProductSection({ products, site }: ProductSectionProps) 
                 <h3>{p.title}</h3>
                 <p>{p.desc}</p>
                 <div className="pd-price">{p.price}</div>
-                <button className="pd-btn" data-order={p.title}>اطلبي الآن</button>
+                <a className="pd-btn" href={waUrl} target="_blank" rel="noopener">اطلبي الآن</a>
               </div>
             </div>
           ))}

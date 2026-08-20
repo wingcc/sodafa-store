@@ -58,16 +58,27 @@ export default function TestimonialsSection({ testimonials, stats }: Testimonial
         <div className="tst-viewport rv" data-d="120" id="tstViewport">
           <div className="tst-track" id="tstTrack" ref={trackRef}>
             {testimonials.map((t, i) => (
-              <div key={i} className="tst-card">
-                <div className="tst-stars">
-                  <StarRating rating={t.stars ?? t.rating ?? 5} size={15} id={`tst-${i}`} />
-                </div>
-                <p className="tst-text">"{t.text}"</p>
-                <div className="tst-author">
-                  <span className="tst-initial">{t.initial}</span>
-                  <div>
-                    <b>{t.name}</b>
-                    {t.city && <small>{t.city}</small>}
+              <div key={i} className="tst-slide">
+                <div className="tst-card">
+                  <span className="quote">"</span>
+                  <div className="tst-stars">
+                    <StarRating rating={t.stars ?? t.rating ?? 5} size={15} id={`tst-${i}`} />
+                  </div>
+                  <p>"{t.text}"</p>
+                  <div className="tst-who">
+                    <span className="av">{t.initial}</span>
+                    <div>
+                      <span className="nm">{t.name}</span>
+                      {t.city && (
+                        <span className="loc">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                            <circle cx="12" cy="10" r="3" />
+                          </svg>
+                          {t.city}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

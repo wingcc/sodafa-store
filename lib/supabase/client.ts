@@ -17,8 +17,12 @@ function createDummyClient() {
   const dummy = {
     auth: {
       getSession: () => Promise.resolve({ data: { session: null }, error: new Error('Supabase not configured') }),
+      getUser: () => Promise.resolve({ data: { user: null }, error: new Error('Supabase not configured') }),
       signInWithPassword: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+      signUp: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
       signOut: () => Promise.resolve({ error: new Error('Supabase not configured') }),
+      resend: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } }, error: null }),
     },
     from: () => ({
       select: () => ({ data: null, error: new Error('Supabase not configured') }),

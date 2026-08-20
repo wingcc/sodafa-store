@@ -7,8 +7,8 @@ interface OilsSectionProps {
 }
 
 const FIRST_COUNT = 4;
-const COLLAPSED_TXT = "\u0625\u0638\u0647\u0627\u0631 \u0627\u0644\u0645\u0632\u064a\u062f \u0645\u0646 \u0627\u0644\u0632\u064a\u0648\u062a";
-const EXPANDED_TXT = "\u0625\u062e\u0641\u0627\u0621 \u0627\u0644\u0632\u064a\u0648\u062a";
+const COLLAPSED_TXT = "إظهار المزيد من الزيوت";
+const EXPANDED_TXT = "إخفاء الزيوت";
 const ANIM_MS = 780;
 const OIL_COUNT_LABEL = "16";
 
@@ -96,10 +96,10 @@ export default function OilsSection({ oils }: OilsSectionProps) {
     <section id="oils">
       <div className="wrap">
         <div className="sec-head rv">
-          <span className="eyebrow">\u0627\u0644\u0645\u0643\u0648\u0646\u0627\u062a \u0627\u0644\u0637\u0628\u064a\u0639\u064a\u0629</span>
-          <h2>\u062a\u0631\u0643\u064a\u0628\u0629 \u063a\u0646\u064a\u0629 \u0645\u0646 {OIL_COUNT_LABEL} \u0632\u064a\u062a\u0627\u064b \u0637\u0628\u064a\u0639\u064a\u0627\u064b \u0644\u0634\u0639\u0631 \u0623\u0643\u062b\u0631 \u0635\u062d\u0629</h2>
+          <span className="eyebrow">المكونات الطبيعية</span>
+          <h2>تركيبة غنية من {OIL_COUNT_LABEL} زيتاً طبيعياً لشعر أكثر صحة</h2>
           <p>
-            \u062a\u062c\u0645\u0639 \u0627\u0644\u062a\u0634\u0643\u064a\u0644\u0629 \u0628\u064a\u0646 {OIL_COUNT_LABEL} \u0632\u064a\u062a\u0627\u064b \u0637\u0628\u064a\u0639\u064a\u0627\u064b \u0645\u062e\u062a\u0627\u0631\u0627\u064b \u0628\u0639\u0646\u0627\u064a\u0629\u060c \u062a\u0639\u0645\u0644 \u0645\u0639\u0627\u064b \u0644\u062a\u063a\u0630\u064a\u0629 \u0627\u0644\u0634\u0639\u0631 \u0648\u062a\u0631\u0637\u064a\u0628 \u0641\u0631\u0648\u0629 \u0627\u0644\u0631\u0623\u0633 \u0648\u0627\u0644\u0639\u0646\u0627\u064a\u0629 \u0628\u0647 \u0645\u0646 \u0627\u0644\u062c\u0630\u0648\u0631 \u062d\u062a\u0649 \u0627\u0644\u0623\u0637\u0631\u0627\u0641.
+            تجمع التشكيلة بين {OIL_COUNT_LABEL} زيتاً طبيعياً مختاراً بعناية، تعمل معاً لتغذية الشعر وترطيب فروة الرأس والعناية به من الجذور حتى الأطراف.
           </p>
         </div>
 

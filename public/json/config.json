@@ -43,6 +43,7 @@
   },
   "sections": [
     { "id": "hero",     "file": "sections/hero.html",     "enabled": true },
+    { "id": "soya-product-hero", "file": "sections/soya-product-hero.html", "enabled": true },
     { "id": "stats",    "file": "sections/stats.html",    "enabled": true },
     { "id": "trust",    "file": "sections/trust.html",    "enabled": true },
     { "id": "flash",    "file": "sections/flash.html",    "enabled": false },

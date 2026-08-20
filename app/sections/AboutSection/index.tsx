@@ -13,7 +13,8 @@ export default function AboutSection({ about, founder }: AboutSectionProps) {
   const aboutImgAlt = founder?.name ? `مؤسس — ${founder.name}` : "مؤسِّسة SODFA";
 
   // Bold-wrap specific words matching original RENDER.about
-  const p1Html = (about.p1 || "").replace(/كريمة/, "<b>كريمة</b>");
+  const founderName = founder?.name || "لوجين";
+  const p1Html = (about.p1 || "").replace(new RegExp(founderName, "g"), `<b>${founderName}</b>`);
   const p2Html = (about.p2 || "")
     .replace(/الدفع عند الاستلام/, "<b>الدفع عند الاستلام</b>")
     .replace(/إمكانية الإرجاع/, "<b>إمكانية الإرجاع</b>");
