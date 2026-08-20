@@ -9,7 +9,6 @@ interface OilsSectionProps {
 const FIRST_COUNT = 4;
 const COLLAPSED_TXT = "إظهار المزيد من الزيوت";
 const EXPANDED_TXT = "إخفاء الزيوت";
-const ANIM_MS = 780;
 const OIL_COUNT_LABEL = "16";
 
 const CHECK = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>';
@@ -25,72 +24,26 @@ export default function OilsSection({ oils }: OilsSectionProps) {
   const hasExtra = rest.length > 0;
 
   const toggle = useCallback(() => {
-    const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     setExpanded((prev) => {
       const next = !prev;
       const more = moreRef.current;
       const btn = btnRef.current;
       const label = btn?.querySelector(".ot-label");
       const arrow = btn?.querySelector(".ot-arrow");
-      if (!more) return next;
 
-      if (reduceMotion) {
-        more.style.display = next ? "block" : "none";
-      } else {
-        if (next) {
-          more.setAttribute("aria-hidden", "false");
-          more.style.display = "block";
-          const h = more.scrollHeight;
-          more.style.maxHeight = "0px";
-          more.style.overflow = "hidden";
-          more.style.transition = "none";
-          requestAnimationFrame(() => {
-            more.style.transition = `max-height ${ANIM_MS}ms cubic-bezier(.16,1,.3,1), opacity ${ANIM_MS}ms`;
-            more.style.maxHeight = h + "px";
-            more.style.opacity = "1";
-          });
-        } else {
-          more.style.transition = `max-height ${ANIM_MS}ms cubic-bezier(.16,1,.3,1), opacity ${ANIM_MS}ms`;
-          more.style.maxHeight = "0px";
-          more.style.opacity = "0";
-          setTimeout(() => {
-            more.style.display = "none";
-            more.setAttribute("aria-hidden", "true");
-          }, ANIM_MS);
-        }
+      // Toggle the .open class on the more container - CSS handles the animation
+      if (more) {
+        more.classList.toggle("open", next);
+        more.setAttribute("aria-hidden", String(!next));
       }
 
       if (btn) btn.setAttribute("aria-expanded", String(next));
       if (arrow) (arrow as HTMLElement).style.transform = next ? "rotate(180deg)" : "";
       if (label) label.textContent = next ? EXPANDED_TXT : COLLAPSED_TXT;
 
-      // Pin button
-      if (!reduceMotion && next) {
-        const target = btn?.getBoundingClientRect().top;
-        if (target != null) {
-          const t0 = performance.now();
-          const frame = (t: number) => {
-            const y = btn?.getBoundingClientRect().top;
-            const d = y! - target;
-            if (d > 1 || d < -1) {
-              try { window.scrollBy({ top: d, left: 0, behavior: "instant" }); } catch (e) { window.scrollBy(0, d); }
-              requestAnimationFrame(frame);
-            }
-          };
-          requestAnimationFrame(frame);
-        }
-      }
-
       return next;
     });
   }, []);
-
-  // Initialize more section hidden
-  useEffect(() => {
-    if (moreRef.current && hasExtra) {
-      moreRef.current.style.display = "none";
-    }
-  }, [hasExtra]);
 
   return (
     <section id="oils">
