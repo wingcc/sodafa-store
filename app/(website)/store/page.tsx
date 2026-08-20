@@ -1,9 +1,9 @@
 import React from 'react';
-import type { Product } from '../types/product';
-import { Navbar } from '../sections/Navbar';
-import { Footer } from '../sections/Footer';
+import type { Product } from '../../types/product';
+import { Navbar } from '../../sections/Navbar';
+import { Footer } from '../../sections/Footer';
 import StoreClient from './components/StoreClient';
-import { AnnouncementBar } from '../sections/AnnouncementBar';
+import { AnnouncementBar } from '../../sections/AnnouncementBar';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { mapProductRow } from '@/lib/product-mapper';
 

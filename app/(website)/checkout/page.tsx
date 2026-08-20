@@ -1,4 +1,4 @@
-import CheckoutClient from '@/app/checkout/components/CheckoutClient';
+import CheckoutClient from './components/CheckoutClient';
 
 export const metadata = {
   title: 'Checkout | WellnessMarket',

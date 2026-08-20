@@ -3,10 +3,10 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useLanguage } from "./contexts/LanguageContext";
-import { Navbar } from "./sections/Navbar";
-import { Footer } from "./sections/Footer";
-import { AnnouncementBar } from "./sections/AnnouncementBar";
+import { useLanguage } from "../contexts/LanguageContext";
+import { Navbar } from "../sections/Navbar";
+import { Footer } from "../sections/Footer";
+import { AnnouncementBar } from "../sections/AnnouncementBar";
 
 // Brand colors
 const COLORS = {

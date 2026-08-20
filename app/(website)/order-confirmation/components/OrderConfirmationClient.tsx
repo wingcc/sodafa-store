@@ -2,10 +2,10 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Navbar } from '../../sections/Navbar';
-import { Footer } from '../../sections/Footer';
-import { AnnouncementBar } from '../../sections/AnnouncementBar';
-import { useLanguage } from '../../contexts/LanguageContext';
+import { Navbar } from '../../../sections/Navbar';
+import { Footer } from '../../../sections/Footer';
+import { AnnouncementBar } from '../../../sections/AnnouncementBar';
+import { useLanguage } from '../../../contexts/LanguageContext';
 import {
   CheckCircle2,
   Package,
@@ -23,7 +23,7 @@ import {
   Clock,
   ShieldCheck,
 } from 'lucide-react';
-import { WHATSAPP_LINK } from '../../constants';
+import { WHATSAPP_LINK } from '../../../constants';
 import type { OrderRow } from '@/lib/supabase/types';
 
 interface ConfirmationItem {

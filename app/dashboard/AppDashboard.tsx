@@ -1,8 +1,11 @@
 // app/dashboard/AppDashboard.tsx
+// Page-switching router for the Dashboard.
+// The outer shell (Sidebar, auth, CSS) is provided by app/dashboard/layout.tsx.
+// DashboardLayout (Header + content area) wraps the active page.
 'use client';
 
 import React from 'react';
-import DashboardLayout from './components/layout/DashboardLayout';
+import Header from './components/layout/Header';
 import Dashboard from './pages/Dashboard';
 import Products from './pages/Products';
 import Categories from './pages/Categories';
@@ -25,7 +28,7 @@ import PromotionalBannersPage from './pages/store-manager/promotional-banners/pa
 import StoreContentPage from './pages/store-manager/store-content/page';
 
 const App: React.FC = () => {
-  const { currentPage } = useStore();
+  const { currentPage, sidebarCollapsed } = useStore();
 
   const renderPage = () => {
     switch (currentPage) {
@@ -52,9 +55,16 @@ const App: React.FC = () => {
   };
 
   return (
-    <DashboardLayout>
-      {renderPage()}
-    </DashboardLayout>
+    <div
+      className={`flex flex-col transition-all duration-300 ${
+        sidebarCollapsed ? 'ml-[72px]' : 'ml-[260px]'
+      } min-h-screen`}
+    >
+      <Header />
+      <main className="p-4 lg:p-6 flex-1">
+        {renderPage()}
+      </main>
+    </div>
   );
 };
 

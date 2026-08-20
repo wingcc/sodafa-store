@@ -1,6 +1,8 @@
 @import "tailwindcss";
-@import "./Resources/assets/css/style.css";
 
+/* ─────────────────────────────────────────────────────────────
+   Fonts — shared between website and dashboard
+   ───────────────────────────────────────────────────────────── */
 @font-face {
   font-family: 'Inter';
   src: url('https://darkarima.myshopify.com/cdn/fonts/inter/inter_n4.b2a3f24c19b4de56e8871f609e73ca7f6d2e2bb9.woff2') format('woff2');
@@ -64,6 +66,9 @@
   font-style: normal;
 }
 
+/* ─────────────────────────────────────────────────────────────
+   Tailwind theme tokens — globally available via CSS variables
+   ───────────────────────────────────────────────────────────── */
 @theme inline {
   --color-border: hsl(214.3 31.8% 91.4%);
   --color-input: hsl(214.3 31.8% 91.4%);
@@ -93,6 +98,9 @@
   --font-tajawal: Tajawal, ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
 
+/* ─────────────────────────────────────────────────────────────
+   CSS Variables — shadcn/ui compatible light & dark tokens
+   ───────────────────────────────────────────────────────────── */
 :root {
   --background: 0 0% 100%;
   --foreground: 222.2 47.4% 11.2%;
@@ -139,23 +147,29 @@
   --radius: 0.5rem;
 }
 
+/* ─────────────────────────────────────────────────────────────
+   Global base — minimal resets only (no website-specific styles)
+   ───────────────────────────────────────────────────────────── */
 @layer base {
   * {
     border-color: hsl(var(--border));
   }
-  
+
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
     font-feature-settings: 'rlig' 1, 'calt' 1;
     overflow-x: hidden;
   }
-  
+
   html {
     overflow-x: hidden;
   }
 }
 
+/* ─────────────────────────────────────────────────────────────
+   Accordion animations — used by both website and dashboard
+   ───────────────────────────────────────────────────────────── */
 @keyframes accordion-down {
   from { height: 0; }
   to { height: var(--radix-accordion-content-height); }
@@ -172,52 +186,4 @@
 
 @utility animate-accordion-up {
   animation: accordion-up 0.2s ease-out;
-}
-
-
-/* Scrollbar */
-::-webkit-scrollbar {
-  width: 5px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: #21C65B;
-  border-radius: 10px;
-}
-
-
-
-/* Toast notifications */
-.toast-item {
-  position: fixed;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #1a1a2e;
-  color: #fff;
-  padding: 12px 28px;
-  border-radius: 12px;
-  font-size: 0.95rem;
-  z-index: 9999;
-  box-shadow: 0 4px 24px rgba(0,0,0,.25);
-  animation: toast-in .35s ease, toast-out .35s ease 2.5s forwards;
-  pointer-events: auto;
-}
-@keyframes toast-in {
-  from { opacity: 0; transform: translateX(-50%) translateY(16px); }
-  to { opacity: 1; transform: translateX(-50%) translateY(0); }
-}
-@keyframes toast-out {
-  from { opacity: 1; transform: translateX(-50%) translateY(0); }
-  to { opacity: 0; transform: translateX(-50%) translateY(16px); }
-}
-
-@keyframes fade-up {
-  from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.animate-fade-up {
-  animation: fade-up 0.6s ease forwards;
 }

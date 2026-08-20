@@ -22,13 +22,13 @@ import {
   Send,
   UserCheck
 } from 'lucide-react';
-import { Navbar } from '../../../sections/Navbar';
-import { Footer } from '../../../sections/Footer';
-import { ProductCard } from '../../../components/ProductCard';
-import { useUI } from '../../../contexts/UIContext';
-import { useLanguage } from '../../../contexts/LanguageContext';
-import type { Product } from '../../../types/product';
-import { WHATSAPP_LINK } from '../../../constants';
+import { Navbar } from '../../../../sections/Navbar';
+import { Footer } from '../../../../sections/Footer';
+import { ProductCard } from '../../../../components/ProductCard';
+import { useUI } from '../../../../contexts/UIContext';
+import { useLanguage } from '../../../../contexts/LanguageContext';
+import type { Product } from '../../../../types/product';
+import { WHATSAPP_LINK } from '../../../../constants';
 
 interface ReviewItem {
   name: string;

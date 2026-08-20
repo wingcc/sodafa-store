@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import type { Product } from '../../types/product';
-import { ProductCard } from '../../components/ProductCard';
-import { FlashSales } from '../../components/FlashSales';
+import type { Product } from '../../../types/product';
+import { ProductCard } from '../../../components/ProductCard';
+import { FlashSales } from '../../../components/FlashSales';
 import { ProductHeroCarousel } from './ProductHeroCarousel';
-import { Pagination } from '../components/Pagination';
-import { useUI } from '../../contexts/UIContext';
-import { useLanguage } from '../../contexts/LanguageContext';
+import { Pagination } from './Pagination';
+import { useUI } from '../../../contexts/UIContext';
+import { useLanguage } from '../../../contexts/LanguageContext';
 import { Search, Sparkles, Filter, Grid, List, X, ArrowUpDown } from 'lucide-react';
 
 const CATEGORIES_DATA = [

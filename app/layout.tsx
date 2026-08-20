@@ -1,10 +1,18 @@
-// app/layout.tsx
+// app/layout.tsx — Minimal root layout
+// Contains only what genuinely needs to exist across the ENTIRE app:
+//   - HTML structure
+//   - Global CSS (fonts, tokens, base resets)
+//   - Geist fonts
+//   - Global Toast infrastructure
+//
+// Website-specific providers, RTL, and website CSS live in app/(website)/layout.tsx
+// Dashboard-specific providers and CSS live in app/dashboard/layout.tsx
+
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Providers } from "./providers";
-import { ToastProvider, ToastSettingsProvider } from '@/lib/toast'
- 
+import { ToastProvider, ToastSettingsProvider } from '@/lib/toast';
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -25,17 +33,14 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html
-      lang="ar"
-      dir="rtl"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-stone-50 text-stone-900">
+      <body className="min-h-full flex flex-col">
         <ToastSettingsProvider>
           <ToastProvider>
-            <Providers>{children}</Providers>
+            {children}
           </ToastProvider>
         </ToastSettingsProvider>
-         
       </body>
     </html>
   );

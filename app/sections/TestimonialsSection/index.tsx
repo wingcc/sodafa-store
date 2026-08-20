@@ -60,11 +60,11 @@ export default function TestimonialsSection({ testimonials, stats }: Testimonial
             {testimonials.map((t, i) => (
               <div key={i} className="tst-slide">
                 <div className="tst-card">
-                  <span className="quote">"</span>
+                  <span className="quote"></span>
                   <div className="tst-stars">
                     <StarRating rating={t.stars ?? t.rating ?? 5} size={15} id={`tst-${i}`} />
                   </div>
-                  <p>"{t.text}"</p>
+                  <p>{t.text}</p>
                   <div className="tst-who">
                     <span className="av">{t.initial}</span>
                     <div>

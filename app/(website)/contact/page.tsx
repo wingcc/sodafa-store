@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Navbar } from "../sections/Navbar";
-import { Footer } from "../sections/Footer";
-import { ContactSection } from "../sections/ContactSection";
-import type { SiteConfig } from "../sections/common/types";
+import { Navbar } from "../../sections/Navbar";
+import { Footer } from "../../sections/Footer";
+import { ContactSection } from "../../sections/ContactSection";
+import type { SiteConfig } from "../../sections/common/types";
 
 const DEFAULT_SITE: SiteConfig = {
   brandName: "SODFA",

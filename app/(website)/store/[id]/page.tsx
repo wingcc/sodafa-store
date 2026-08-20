@@ -1,4 +1,4 @@
-import type { Product } from '../../types/product';
+import type { Product } from '../../../types/product';
 import { notFound } from 'next/navigation';
 import ProductDetailClient from './components/ProductDetailClient';
 import { createAdminClient } from '@/lib/supabase/admin';

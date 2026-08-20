@@ -148,10 +148,10 @@ export const MainContent = () => {
       <AnnouncementBar />
       <Navbar site={site} onOpenContact={handleOpenContact} />
 
-      {/* Hero Section */}
+      {/* Hero Section 
       <section data-section="hero" id="hero">
         <HeroSection hero={hero} site={site} />
-      </section>
+      </section>*/}
 
       {/* Soya Product Hero Section */}
       {isEnabled("soya-product-hero") && (

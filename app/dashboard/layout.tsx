@@ -1,10 +1,15 @@
+// app/dashboard/layout.tsx
+// Independent Dashboard layout boundary.
+// Imports dashboard-only CSS, sets LTR direction, handles auth.
+// Nothing from this layout leaks into the website (Landing Page / Store).
+
 'use client';
 
+import './dashboard.css';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import Sidebar from './components/layout/Sidebar';
-
 
 export default function DashboardLayout({
   children,
@@ -52,7 +57,8 @@ export default function DashboardLayout({
   if (isAuthenticated === null) {
     return (
       <div
-        className="flex h-screen w-screen items-center justify-center"
+        className="dashboard-root flex h-screen w-screen items-center justify-center"
+        dir="ltr"
         style={{
           background: 'linear-gradient(135deg, #061c16 0%, #0b2e22 50%, #061c16 100%)',
         }}
@@ -73,13 +79,11 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen bg-[#f8f6f3]" dir="ltr">
-       
+    <div className="dashboard-root flex h-screen bg-[#f8f6f3]" dir="ltr" lang="en">
       <Sidebar />
       <main className="flex-1 overflow-y-auto">
         {children}
       </main>
-      
     </div>
   );
 }

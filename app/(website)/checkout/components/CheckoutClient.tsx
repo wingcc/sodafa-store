@@ -3,11 +3,11 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Navbar } from '../../sections/Navbar';
-import { Footer } from '../../sections/Footer';
-import { AnnouncementBar } from '../../sections/AnnouncementBar';
-import { useUI } from '../../contexts/UIContext';
-import { useLanguage } from '../../contexts/LanguageContext';
+import { Navbar } from '../../../sections/Navbar';
+import { Footer } from '../../../sections/Footer';
+import { AnnouncementBar } from '../../../sections/AnnouncementBar';
+import { useUI } from '../../../contexts/UIContext';
+import { useLanguage } from '../../../contexts/LanguageContext';
 import { useToast } from '@/lib/toast';
 import {
   calcSubtotal,
@@ -37,7 +37,7 @@ import {
   AlertCircle,
   Loader,
 } from 'lucide-react';
-import { WHATSAPP_LINK } from '../../constants';
+import { WHATSAPP_LINK } from '../../../constants';
 
 /** Global free-shipping threshold (mirrors store_settings.seed). */
 const GLOBAL_FREE_SHIPPING_THRESHOLD = 500;
