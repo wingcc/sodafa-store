@@ -45,7 +45,7 @@ export default function CtaSection({ pricing, site }: CtaSectionProps) {
   }, [tick]);
 
   return (
-    <section id="cta">
+    <div>
       <div className="wrap">
         <div className="cta-card rv">
           <div className="cta-txt">
@@ -90,6 +90,6 @@ export default function CtaSection({ pricing, site }: CtaSectionProps) {
           </div>
         </div>
       </div>
-    </section>
+    </div>
   );
 }

@@ -1,7 +1,7 @@
 // app/dashboard/pages/store-manager/Overview.tsx
 'use client';
 
-import { Layout, Megaphone, Star, FileText, LucideIcon } from "lucide-react";
+import { Layout, Megaphone, Star, FileText, Settings, Globe, ScrollText, LucideIcon } from "lucide-react";
 import SectionCard, { Color } from "./components/SectionCard";
 import { useStore } from "../../store/useStore";
 
@@ -10,18 +10,57 @@ interface Section {
   label: string;
   icon: LucideIcon;
   description: string;
-  page: 'store-homepage' | 'store-banners' |   'store-content'; // استخدم الأنواع الجديدة
+  page:
+    | 'store-homepage'
+    | 'store-homepage-content'
+    | 'store-reviews'
+    | 'store-settings'
+    | 'store-seo'
+    | 'store-banners'
+    | 'store-content';
   color: Color;
 }
 
 const sections: Section[] = [
   {
     id: "homepage",
-    label: "Homepage",
+    label: "Home Page",
     icon: Layout,
     description: "Manage homepage sections and layout",
     page: "store-homepage",
     color: "purple",
+  },
+  {
+    id: "contents",
+    label: "Contents",
+    icon: FileText,
+    description: "Edit the texts displayed across your homepage",
+    page: "store-homepage-content",
+    color: "emerald",
+  },
+  {
+    id: "reviews",
+    label: "Reviews",
+    icon: Star,
+    description: "Manage customer reviews shown on the homepage",
+    page: "store-reviews",
+    color: "amber",
+  },
+  {
+    id: "settings",
+    label: "Settings",
+    icon: Settings,
+    description: "General behavior and appearance of your storefront",
+    page: "store-settings",
+    color: "sky",
+  },
+  {
+    id: "seo",
+    label: "SEO",
+    icon: Globe,
+    description: "Optimize how your store appears in search engines",
+    page: "store-seo",
+    color: "indigo",
   },
   {
     id: "banners",
@@ -31,14 +70,13 @@ const sections: Section[] = [
     page: "store-banners",
     color: "pink",
   },
-  
   {
     id: "content",
     label: "Store Content",
-    icon: FileText,
+    icon: ScrollText,
     description: "Manage store pages and policies",
     page: "store-content",
-    color: "emerald",
+    color: "teal",
   },
 ];
 

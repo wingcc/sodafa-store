@@ -1,7 +1,7 @@
 // components/ui/toast/Toast.tsx
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { X } from 'lucide-react'
 import { Toast as ToastType } from './types'
 
@@ -26,6 +26,15 @@ const iconColorMap = {
   info: 'text-blue-500',
 }
 
+/* Real CSS colors for the progress bar — Tailwind class names ("green-500")
+   are not valid style values, which previously made the bar invisible. */
+const progressColorMap = {
+  success: '#22c55e',
+  error: '#ef4444',
+  warning: '#eab308',
+  info: '#3b82f6',
+}
+
 interface ToastProps {
   toast: ToastType
   onRemove: (id: string) => void
@@ -34,52 +43,52 @@ interface ToastProps {
 export function Toast({ toast, onRemove }: ToastProps) {
   const [isVisible, setIsVisible] = useState(false)
   const [progress, setProgress] = useState(100)
-  const progressRef = useRef<number>(100)
   const animationRef = useRef<number | null>(null)
-  const startTimeRef = useRef<number>(0)
   const duration = toast.duration || 4000
   const autoDismiss = toast.autoDismiss !== false
   const showProgress = toast.showProgress !== false
 
-  useEffect(() => {
-    // Trigger entrance animation
-    requestAnimationFrame(() => {
-      setIsVisible(true)
-    })
-
-    if (autoDismiss) {
-      startTimeRef.current = performance.now()
-
-      const updateProgress = () => {
-        const elapsed = performance.now() - startTimeRef.current
-        const remaining = Math.max(0, 1 - elapsed / duration)
-        progressRef.current = remaining * 100
-        setProgress(progressRef.current)
-
-        if (remaining > 0) {
-          animationRef.current = requestAnimationFrame(updateProgress)
-        } else {
-          // Auto dismiss
-          handleRemove()
-        }
-      }
-
-      animationRef.current = requestAnimationFrame(updateProgress)
-    }
-
-    return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current)
-      }
-    }
-  }, [])
-
-  const handleRemove = () => {
+  const handleRemove = useCallback(() => {
     setIsVisible(false)
     setTimeout(() => {
       onRemove(toast.id)
     }, 300) // match transition duration
-  }
+  }, [onRemove, toast.id])
+
+  useEffect(() => {
+    // Trigger entrance animation
+    const entrance = requestAnimationFrame(() => {
+      setIsVisible(true)
+    })
+
+    if (!autoDismiss) {
+      return () => cancelAnimationFrame(entrance)
+    }
+
+    const startTime = performance.now()
+
+    const updateProgress = () => {
+      const elapsed = performance.now() - startTime
+      const remaining = Math.max(0, 1 - elapsed / duration)
+      setProgress(remaining * 100)
+
+      if (remaining > 0) {
+        animationRef.current = requestAnimationFrame(updateProgress)
+      } else {
+        // Auto dismiss
+        handleRemove()
+      }
+    }
+
+    animationRef.current = requestAnimationFrame(updateProgress)
+
+    return () => {
+      cancelAnimationFrame(entrance)
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current)
+      }
+    }
+  }, [autoDismiss, duration, handleRemove])
 
   return (
     <div
@@ -116,13 +125,13 @@ export function Toast({ toast, onRemove }: ToastProps) {
         <X className="w-4 h-4" />
       </button>
 
-      {/* Progress bar */}
+      {/* Progress bar — width is driven per-frame by rAF, no CSS transition needed */}
       {showProgress && autoDismiss && (
         <div
-          className="absolute bottom-0 left-0 h-1 transition-width duration-100 ease-linear"
+          className="absolute bottom-0 left-0 h-1"
           style={{
             width: `${progress}%`,
-            backgroundColor: borderColorMap[toast.type].replace('border-l-8 border-', ''),
+            backgroundColor: progressColorMap[toast.type],
           }}
         />
       )}

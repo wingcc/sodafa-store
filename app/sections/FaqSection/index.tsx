@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import type { FaqItem } from "../common/types";
 
 interface FaqSectionProps {
@@ -8,30 +8,13 @@ interface FaqSectionProps {
 
 export default function FaqSection({ faq }: FaqSectionProps) {
   const [open, setOpen] = useState<number | null>(null);
-  const refs = useRef<(HTMLDivElement | null)[]>([]);
 
   const toggle = useCallback((i: number) => {
-    setOpen((prev) => {
-      if (prev === i) return null;
-      return i;
-    });
+    setOpen((prev) => (prev === i ? null : i));
   }, []);
 
-  // Set maxHeight via ref to match original JS behavior
-  React.useEffect(() => {
-    refs.current.forEach((el, i) => {
-      if (el) {
-        if (open === i) {
-          el.style.maxHeight = el.scrollHeight + "px";
-        } else {
-          el.style.maxHeight = "";
-        }
-      }
-    });
-  }, [open]);
-
   return (
-    <section id="faq">
+    <div>
       <div className="wrap">
         <div className="sec-head rv">
           <span className="eyebrow">الأسئلة الشائعة</span>
@@ -39,29 +22,36 @@ export default function FaqSection({ faq }: FaqSectionProps) {
         </div>
 
         <div className="faq-list">
-          {faq.map((item, i) => (
-            <div
-              key={i}
-              className={"faq-item rv" + (open === i ? " open" : "")}
-              data-d={i * 60}
-            >
-              <button
-                className="faq-q"
-                aria-expanded={open === i}
-                onClick={() => toggle(i)}
+          {faq.map((item, i) => {
+            const isOpen = open === i;
+            return (
+              <div
+                key={i}
+                className={"faq-item" + (isOpen ? " open" : "")}
               >
-                <span>{item.q}</span>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round">
-                  <path d="M12 5v14M5 12h14" />
-                </svg>
-              </button>
-              <div className="faq-a" ref={(el) => { refs.current[i] = el; }}>
-                <p>{item.a}</p>
+                <button
+                  type="button"
+                  className="faq-q"
+                  aria-expanded={isOpen}
+                  onClick={() => toggle(i)}
+                >
+                  <span className="faq-q-text">{item.q}</span>
+                  <span className="faq-icon" aria-hidden="true">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round">
+                      <path d="M12 5v14M5 12h14" />
+                    </svg>
+                  </span>
+                </button>
+                <div className="faq-a-wrap" aria-hidden={!isOpen}>
+                  <div className="faq-a">
+                    <p>{item.a}</p>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
-    </section>
+    </div>
   );
 }

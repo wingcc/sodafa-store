@@ -41,7 +41,7 @@ export default function FlashSaleSection({ flash, site }: FlashSaleSectionProps)
   const waUrl = `https://wa.me/${site.whatsappMain}?text=${encodeURIComponent(site.whatsappMessage || "")}`;
 
   return (
-    <section id="flash">
+    <div>
       <div className="wrap">
         <div className="fs-head rv">
           <h2>🔥 تخفيضات سريعة</h2>
@@ -83,6 +83,6 @@ export default function FlashSaleSection({ flash, site }: FlashSaleSectionProps)
           ))}
         </div>
       </div>
-    </section>
+    </div>
   );
 }

@@ -47,7 +47,11 @@ const App: React.FC = () => {
       case 'settings': return <Settings />;
       // حالات إدارة المتجر الجديدة
       case 'store': return <StoreManagerOverview />;
-      case 'store-homepage': return <HomepageManagement />;
+      case 'store-homepage': return <HomepageManagement initialTab="sections" />;
+      case 'store-homepage-content': return <HomepageManagement initialTab="content" />;
+      case 'store-reviews': return <HomepageManagement initialTab="reviews" />;
+      case 'store-settings': return <HomepageManagement initialTab="settings" />;
+      case 'store-seo': return <HomepageManagement initialTab="seo" />;
       case 'store-banners': return <PromotionalBannersPage />;
       case 'store-content': return <StoreContentPage />;
       default: return <Dashboard />;

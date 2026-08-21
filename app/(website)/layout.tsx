@@ -10,7 +10,9 @@ import { ThemeProvider } from '@/lib/theme';
 import { CartDrawer } from '../components/CartDrawer';
 import { SearchDialog } from '../components/SearchDialog';
 import { CheckoutFormModal } from '../components/CheckoutFormModal';
-import { FloatingWhatsappButton } from '../components/FloatingWhatsappButton';
+// NOTE: no FloatingWhatsappButton here — the landing page's MainContent renders
+// its own dashboard-managed floating buttons (sections/common/FloatingButtons).
+// The old component remains only for the (store) route group.
 
 export default function WebsiteLayout({
   children,
@@ -18,7 +20,26 @@ export default function WebsiteLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ThemeProvider>
+    <>
+      {/* Brand display font — same source as the original app/Resources/index.html.
+          Tajawal (body font) is already @font-face'd in globals.css. */}
+      <link
+        href="https://cdn.jsdelivr.net/npm/@fontsource/el-messiri@5.0.13/arabic-400.css"
+        rel="stylesheet"
+      />
+      <link
+        href="https://cdn.jsdelivr.net/npm/@fontsource/el-messiri@5.0.13/arabic-500.css"
+        rel="stylesheet"
+      />
+      <link
+        href="https://cdn.jsdelivr.net/npm/@fontsource/el-messiri@5.0.13/arabic-600.css"
+        rel="stylesheet"
+      />
+      <link
+        href="https://cdn.jsdelivr.net/npm/@fontsource/el-messiri@5.0.13/arabic-700.css"
+        rel="stylesheet"
+      />
+      <ThemeProvider>
       <UIProvider>
         <LanguageProvider>
           <div dir="rtl" lang="ar" className="flex flex-col min-h-screen">
@@ -26,10 +47,10 @@ export default function WebsiteLayout({
             <CartDrawer />
             <SearchDialog />
             <CheckoutFormModal />
-            <FloatingWhatsappButton />
           </div>
         </LanguageProvider>
       </UIProvider>
-    </ThemeProvider>
+      </ThemeProvider>
+    </>
   );
 }

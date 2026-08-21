@@ -162,9 +162,9 @@
     overflow-x: hidden;
   }
 
-  html {
-    overflow-x: hidden;
-  }
+  /* NOTE: no overflow-x on <html> — setting it on both html and body turns
+     body into its own scroll container and breaks position:sticky / window
+     scroll events for the website (the original site sets it on body only). */
 }
 
 /* ─────────────────────────────────────────────────────────────

@@ -11,7 +11,7 @@ interface VideoSectionProps {
 
 export default function VideoSection({ video, site, onOpenVideo }: VideoSectionProps) {
   return (
-    <section id="video">
+    <div>
       <div className="wrap">
         <div className="sec-head rv">
           <span className="eyebrow">{video.eyebrow}</span>
@@ -41,6 +41,6 @@ export default function VideoSection({ video, site, onOpenVideo }: VideoSectionP
           <div className="play-cap">{video.caption}</div>
         </div>
       </div>
-    </section>
+    </div>
   );
 }

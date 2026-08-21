@@ -46,7 +46,7 @@ export default function OilsSection({ oils }: OilsSectionProps) {
   }, []);
 
   return (
-    <section id="oils">
+    <div>
       <div className="wrap">
         <div className="sec-head rv">
           <span className="eyebrow">المكونات الطبيعية</span>
@@ -96,7 +96,7 @@ export default function OilsSection({ oils }: OilsSectionProps) {
           </div>
         )}
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -108,7 +108,7 @@ function OilCard({ oil, delay, extra }: { oil: OilItem; delay: number; extra?: b
     >
       <div className="oil-img">
         <span className="oil-num">{oil.num}</span>
-        <img loading="lazy" src={oil.img} alt={oil.name} />
+        {oil.img ? <img loading="lazy" src={oil.img} alt={oil.name} /> : null}
       </div>
       <div className="oil-body">
         <h3>{oil.name} <small>{oil.latin}</small></h3>

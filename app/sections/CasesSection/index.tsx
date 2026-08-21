@@ -77,7 +77,7 @@ function CaseCard({ item, index }: { item: CaseItem; index: number }) {
 
 export default function CasesSection({ cases }: CasesSectionProps) {
   return (
-    <section id="cases">
+    <div>
       <div className="wrap">
         <div className="sec-head rv">
           <span className="eyebrow">نتائج حقيقية قبل وبعد</span>
@@ -90,6 +90,6 @@ export default function CasesSection({ cases }: CasesSectionProps) {
           ))}
         </div>
       </div>
-    </section>
+    </div>
   );
 }

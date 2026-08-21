@@ -272,5 +272,9 @@ export type PageSection =
   | 'store-homepage'     // ← إدارة أقسام الصفحة الرئيسية
   | 'store-banners'      // ← إدارة البانرات
   | 'store-featured'     // ← إدارة المنتجات المميزة
+  | 'store-homepage-content'
+  | 'store-reviews'
+  | 'store-settings'
+  | 'store-seo'
   | 'store-content'      // ← إدارة صفحات المحتوى
   | 'settings';

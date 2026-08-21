@@ -7,6 +7,58 @@
 /* SODFA brand styles — full website stylesheet */
 @import "../Resources/assets/css/style.css";
 
+/* ── Brand fonts ──
+   El Messiri is loaded via @fontsource CSS links in app/(website)/layout.tsx
+   (same source as the original index.html). Re-map the design-system font
+   variables here so they win over the defaults declared inside style.css.
+   Tajawal (body) is @font-face'd in globals.css. */
+:root {
+  --disp: "El Messiri", serif;
+  --body: "Tajawal", sans-serif;
+}
+
+/* ── Tall hero — takes ~90% of viewport + navbar/announcement bar ──
+   Hero is the first impression: long product image, full-page feel. */
+.hero {
+  min-height: calc(90vh + 20px) !important;
+  min-height: calc(90dvh + 20px) !important;
+  display: flex !important;
+  align-items: center;
+  padding-block: 36px 32px !important;
+}
+.hero-grid {
+  gap: 2.4rem !important;
+  align-items: center;
+  width: 100%;
+}
+.arch {
+  height: 680px !important;
+}
+@media (max-width: 1024px) {
+  .hero { min-height: calc(88vh + 20px) !important; }
+  .arch { height: 560px !important; }
+}
+@media (max-width: 768px) {
+  .hero {
+    min-height: auto !important;
+    padding-block: 22px 18px !important;
+  }
+  .arch { height: 480px !important; }
+}
+@media (max-width: 480px) {
+  .arch { height: 420px !important; }
+}
+
+
+.section {
+  position: relative;
+  overflow: hidden;
+  padding-top: 0; 
+  padding-bottom: 0;
+  z-index: 1;
+}
+
+
 /* ── Website scrollbar ── */
 ::-webkit-scrollbar {
   width: 5px;
@@ -17,6 +69,234 @@
 ::-webkit-scrollbar-thumb {
   background: #21C65B;
   border-radius: 10px;
+}
+
+/* ── Floating buttons safety net ──
+   The original stylesheet gives .fbtn only `position: fixed` — the real
+   coordinates are applied by JS (applyButtonSettings). React applies them
+   via inline styles from dashboard settings; these defaults guarantee
+   bottom placement before/without that (original defaults: waFab right,
+   scrollTop left). */
+.fbtn[data-btn="waFab"] { right: 22px; left: auto; bottom: 22px; }
+.fbtn[data-btn="scrollTop"] { left: 22px; right: auto; bottom: 96px; }
+
+/* ── Page-wide falling leaves & flowers (test.24.html fallZone) ──
+   Two FIXED layers cover the whole page while scrolling:
+   - #fallZoneBack  (z-index 0)  → particles behind section content
+   - #fallZoneFront (z-index 55) → particles floating above the content,
+     still below the sticky navbar (z-index 60). */
+.fall-zone {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+#fallZoneBack { z-index: 0; }
+#fallZoneFront { z-index: 55; }
+.faller {
+  position: absolute;
+  top: -8%;
+  color: var(--brand);
+  animation-name: leafFall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+.faller.flower {
+  color: var(--brand-soft);
+  filter: drop-shadow(0 0 2px color-mix(in srgb, var(--brand) 40%, transparent));
+}
+@keyframes leafFall {
+  0%   { transform: translate3d(0, -8vh, 0) rotate(0deg); }
+  25%  { transform: translate3d(30px, 26vh, 0) rotate(95deg); }
+  50%  { transform: translate3d(-22px, 52vh, 0) rotate(185deg); }
+  75%  { transform: translate3d(26px, 80vh, 0) rotate(268deg); }
+  100% { transform: translate3d(-12px, 112vh, 0) rotate(360deg); }
+}
+/* test.24.html plays the falling effect regardless of the OS "reduce
+   motion" setting — match that, otherwise users with Windows animation
+   effects disabled would never see it (style.css hides #fallZone there). */
+@media (prefers-reduced-motion: reduce) {
+  .fall-zone { display: block !important; }
+}
+
+/* ── Premium FAQ refresh — button never disappears (grid animation) ── */
+.faq-item {
+  background: #FFFFFF !important;
+  border: 1px solid #E6EBE8 !important;
+  border-radius: 16px !important;
+  overflow: hidden !important;
+  transition: border-color .3s, box-shadow .3s, transform .3s !important;
+  box-shadow: 0 2px 12px rgba(16, 45, 32, .04) !important;
+}
+.faq-item:hover {
+  border-color: #CDE8DB !important;
+  box-shadow: 0 6px 20px rgba(16, 45, 32, .07) !important;
+}
+.faq-item.open {
+  border-color: var(--brand) !important;
+  box-shadow: 0 10px 30px rgba(22, 90, 64, .12) !important;
+}
+/* Question button — always visible, never hidden */
+.faq-q {
+  position: relative !important;
+  z-index: 1 !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  gap: 1rem !important;
+  width: 100% !important;
+  padding: 1.25rem 1.4rem !important;
+  background: #FFFFFF !important;
+  border: none !important;
+  cursor: pointer !important;
+  font-weight: 700 !important;
+  font-size: 1.02rem !important;
+  color: #0F2E22 !important;
+  text-align: right !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+.faq-q-text { flex: 1; text-align: right; line-height: 1.5; }
+.faq-icon {
+  flex: none !important;
+  width: 32px !important;
+  height: 32px !important;
+  display: grid !important;
+  place-items: center;
+  border-radius: 999px !important;
+  background: #EAF4EE !important;
+  color: var(--brand) !important;
+  border: 1px solid #D6EADF !important;
+  transition: transform .35s, background .3s, color .3s, border-color .3s !important;
+}
+.faq-icon svg { display: block; }
+.faq-item.open .faq-q {
+  background: #F3FAF6 !important;
+  color: #0F2E22 !important;
+  border-bottom: 1px solid #EAF4EE !important;
+}
+.faq-item.open .faq-icon {
+  background: var(--brand) !important;
+  color: #FFFFFF !important;
+  border-color: var(--brand) !important;
+  transform: rotate(45deg) !important;
+}
+/* Answer — grid 0fr → 1fr, no JS, never hides the button */
+.faq-a-wrap {
+  display: grid !important;
+  grid-template-rows: 0fr !important;
+  transition: grid-template-rows .45s cubic-bezier(.2,.7,.2,1) !important;
+}
+.faq-item.open .faq-a-wrap {
+  grid-template-rows: 1fr !important;
+}
+.faq-a {
+  overflow: hidden !important;
+  min-height: 0 !important;
+  background: #F8FBF8 !important;
+  max-height: none !important;
+  opacity: 1 !important;
+  transition: none !important;
+}
+.faq-a p {
+  padding: 1.1rem 1.5rem 1.35rem !important;
+  color: #2A4A3A !important;
+  font-size: .95rem !important;
+  line-height: 1.85 !important;
+  font-weight: 500 !important;
+}
+.faq-a p::before {
+  content: "";
+  display: block;
+  width: 28px;
+  height: 3px;
+  background: linear-gradient(90deg, var(--brand), var(--accent));
+  border-radius: 999px;
+  margin-bottom: .85rem;
+  opacity: .9;
+}
+/* safeguard: FAQ items must always be visible even if reveal observer hasn't fired */
+.faq-item,
+.faq-item.rv {
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+/* ── Page aesthetic polish — warmer, more premium palette ── */
+:root {
+  --bg: #FCFAF3 !important;
+  --bg2: #F2EED9 !important;
+  --brand-tint: #EDF5EF !important;
+  --brand-glow: rgba(22, 90, 64, .18) !important;
+}
+body {
+  background: linear-gradient(180deg, #FCFAF3 0%, #F7F3E8 45%, #F2EED9 100%) !important;
+  background-attachment: fixed !important;
+}
+.section, [data-section] > div {
+  position: relative;
+}
+.sec-head h2 {
+  background: linear-gradient(135deg, #0F2E22 0%, #1A6B4A 55%, #C6A15B 100%);
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+}
+.eyebrow {
+  background: linear-gradient(135deg, #165A40, #C6A15B) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+  font-weight: 800 !important;
+  letter-spacing: .06em !important;
+}
+
+/* ── Store flush with footer — DESKTOP ONLY (test.24.html) ──
+   style.css applies html.store-flush at all widths; the original design
+   only merges the store band into the footer on desktop. Restore the
+   normal rounded/spacing look on mobile. */
+@media (max-width: 768px) {
+  html.store-flush #store { padding: 5.5rem 0; }
+  html.store-flush #store .store-band {
+    margin: 0 10px;
+    border-radius: 28px;
+    box-shadow: 0 30px 70px var(--brand-glow);
+  }
+  html.store-flush footer.site-footer { margin-top: 5.5rem; }
+}
+
+/* ── Desktop: Store + Footer as one integrated piece ──
+   Mobile keeps them separated (as is). On desktop they attach with
+   shared radius and ONE continuous gradient — no line between them. */
+@media (min-width: 769px) {
+  /* Remove any gap between sections */
+  #store {
+    padding-bottom: 0 !important;
+  }
+  #store .dark-band.store-band {
+    margin-bottom: 0 !important;
+    border-radius: 38px 38px 0 0 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, .10) !important;
+    box-shadow: none !important;
+    /* top half of the continuous gradient: lighter → dark */
+    background: linear-gradient(180deg, #11402F 0%, #07231A 100%) !important;
+  }
+  /* Footer attaches directly under store — same width & bottom rounding */
+  #footer {
+    padding-top: 0 !important;
+  }
+  footer.site-footer {
+    margin-top: 0 !important;
+    margin-inline: 16px !important;
+    width: auto !important;
+    border-radius: 0 0 38px 38px !important;
+    border-top: none !important;
+    box-shadow: none !important;
+    /* bottom half continues from the exact dark tone where store ended */
+    background: linear-gradient(180deg, #07231A 0%, #0B3323 100%) !important;
+  }
 }
 
 /* ── Toast notifications (website only) ── */
@@ -51,4 +331,51 @@
 }
 .animate-fade-up {
   animation: fade-up 0.6s ease forwards;
+}
+
+/* ── Floating pill navbar (accessgrid.com reference) ──
+   Layered soft shadow + hairline ring from the reference element:
+   shadow-[0_1px_1px_0_rgba(38,38,43,.10),0_0_0_1px_rgba(38,38,43,.04),0_2px_12px_-4px_rgba(38,38,43,.16)] */
+
+/* Mobile: always a floating rounded island with a gap from the top */
+@media (max-width: 768px) {
+  nav {
+    top: 10px;
+    margin-inline: 12px;
+    border-radius: 16px;
+    background: #fbfbfc;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow:
+      0 1px 1px 0 rgba(38, 38, 43, 0.10),
+      0 0 0 1px rgba(38, 38, 43, 0.04),
+      0 2px 12px -4px rgba(38, 38, 43, 0.16);
+  }
+  /* round the dropdown's bottom corners so it follows the pill shape */
+  nav .m-menu {
+    border-bottom: none;
+    border-radius: 0 0 16px 16px;
+  }
+}
+
+/* Desktop: full-width bar while the hero is in view; morphs into a
+   centered floating pill (rounded, fit-content width, top gap) on scroll.
+   Solid background — nothing shows through from underneath. */
+@media (min-width: 769px) {
+  nav {
+    background: #fbfbfc;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  nav.scrolled {
+    top: 14px;
+    width: fit-content;
+    margin-inline: auto;
+    border-radius: 18px;
+    background: #fbfbfc;
+    box-shadow:
+      0 1px 1px 0 rgba(38, 38, 43, 0.10),
+      0 0 0 1px rgba(38, 38, 43, 0.04),
+      0 2px 12px -4px rgba(38, 38, 43, 0.16);
+  }
 }

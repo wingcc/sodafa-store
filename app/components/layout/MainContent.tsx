@@ -2,9 +2,11 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import type { SodfaConfig, LegalConfig } from "../../sections/common/types";
+import type { SodfaConfig } from "../../sections/common/types";
+import { loadPublicConfig } from "@/lib/public-content";
 import Preloader from "../../sections/common/Preloader";
 import VideoModal from "../../sections/common/VideoModal";
+import ContactModal from "../../sections/common/ContactModal";
 import FloatingButtons from "../../sections/common/FloatingButtons";
 import ScrollProgress from "../../sections/common/ScrollProgress";
 
@@ -12,7 +14,6 @@ import ScrollProgress from "../../sections/common/ScrollProgress";
 import { AnnouncementBar } from "../../sections/AnnouncementBar";
 import Navbar from "../../sections/Navbar";
 import HeroSection from "../../sections/Hero";
-import { SoyaProductHero } from "../../sections/SoyaProductHero";
 import StatsSection from "../../sections/StatsSection";
 import TrustBadges from "../../sections/TrustBadges";
 import FlashSaleSection from "../../sections/FlashSaleSection";
@@ -27,8 +28,8 @@ import FaqSection from "../../sections/FaqSection";
 import HowToOrderSection from "../../sections/HowToOrderSection";
 import CtaSection from "../../sections/CtaSection";
 import StoreVisitSection from "../../sections/StoreVisitSection";
-import { ContactSection } from "../../sections/ContactSection";
 import Footer from "../../sections/Footer";
+import FallingLeaves from "../../sections/common/FallingLeaves";
 
 export const MainContent = () => {
   const [config, setConfig] = useState<SodfaConfig | null>(null);
@@ -36,6 +37,7 @@ export const MainContent = () => {
   const [error, setError] = useState<string | null>(null);
   const [legalModal, setLegalModal] = useState<"privacy" | "terms" | "cookies" | null>(null);
   const [videoModal, setVideoModal] = useState(false);
+  const [contactModal, setContactModal] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   // Re-observe .rv elements whenever config changes (sections render after config loads)
@@ -80,13 +82,9 @@ export const MainContent = () => {
   useEffect(() => {
     const loadConfig = async () => {
       try {
-        const res = await fetch("/json/config.json");
-        if (res.ok) {
-          const cfg = await res.json();
-          setConfig(cfg);
-        } else {
-          setError("Failed to load config");
-        }
+        // config.json base + dashboard-managed database overlay
+        const cfg = await loadPublicConfig();
+        setConfig(cfg);
       } catch (err) {
         console.error("Failed to load config:", err);
         setError("Failed to load configuration");
@@ -98,8 +96,20 @@ export const MainContent = () => {
     loadConfig();
   }, []);
 
+  // Store flush (test.24.html): when 'store' is the last enabled section,
+  // merge it seamlessly into the footer. Desktop only — see website.css.
+  useEffect(() => {
+    const lastEnabled = config?.sections?.filter((s) => s.enabled).pop()?.id;
+    document.documentElement.classList.toggle("store-flush", lastEnabled === "store");
+    return () => document.documentElement.classList.remove("store-flush");
+  }, [config]);
+
   const handleOpenContact = useCallback(() => {
-    document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" });
+    setContactModal(true);
+  }, []);
+
+  const handleCloseContact = useCallback(() => {
+    setContactModal(false);
   }, []);
 
   const showToast = useCallback((msg: string) => {
@@ -131,7 +141,7 @@ export const MainContent = () => {
     );
   }
 
-  const { site, hero, stats, trust, flash, oils, benefits, video, cases, about, founder, products, testimonials, faq, orderSteps, pricing, legal, sections } = config;
+  const { site, hero, stats, trust, flash, oils, benefits, video, cases, about, founder, products, testimonials, faq, orderSteps, pricing, legal, sections, buttonsSettings } = config;
 
   // Build enabled set from config sections array
   const enabledSet = new Set(
@@ -143,32 +153,33 @@ export const MainContent = () => {
 
   return (
     <main role="main" id="app">
+      <FallingLeaves />
       <Preloader />
       <ScrollProgress />
       <AnnouncementBar />
       <Navbar site={site} onOpenContact={handleOpenContact} />
 
-      {/* Hero Section 
-      <section data-section="hero" id="hero">
-        <HeroSection hero={hero} site={site} />
-      </section>*/}
-
-      {/* Soya Product Hero Section */}
-      {isEnabled("soya-product-hero") && (
-        <section data-section="soya-product-hero" id="soya-product-hero">
-          <SoyaProductHero site={site} />
-        </section>
+      {/* Hero Section — div mount like the original buildApp() (hero carries
+          its own <section class="hero"> with padding:0) */}
+      {isEnabled("hero") && (
+        <div data-section="hero">
+          <HeroSection hero={hero} site={site} />
+        </div>
       )}
 
       {/* Stats Section */}
-      <section data-section="stats" id="stats" className="band-wrap">
-        <StatsSection stats={stats} />
-      </section>
+      {isEnabled("stats") && (
+        <section data-section="stats" id="stats" className="band-wrap">
+          <StatsSection stats={stats} />
+        </section>
+      )}
 
       {/* Trust Badges Section */}
-      <section data-section="trust" id="trust" className="band-wrap">
-        <TrustBadges trust={trust} />
-      </section>
+      {isEnabled("trust") && (
+        <section data-section="trust" id="trust" className="band-wrap">
+          <TrustBadges trust={trust} />
+        </section>
+      )}
 
       {/* Flash Sale Section (disabled by default) */}
       {isEnabled("flash") && flash && (
@@ -178,29 +189,39 @@ export const MainContent = () => {
       )}
 
       {/* Oils Section */}
-      <section data-section="oils" id="oils">
-        <OilsSection oils={oils} />
-      </section>
+      {isEnabled("oils") && (
+        <section data-section="oils" id="oils">
+          <OilsSection oils={oils} />
+        </section>
+      )}
 
       {/* Benefits Section */}
-      <section data-section="benefits" id="benefits">
-        <BenefitsSection benefits={benefits} site={site} />
-      </section>
+      {isEnabled("benefits") && (
+        <section data-section="benefits" id="benefits">
+          <BenefitsSection benefits={benefits} site={site} />
+        </section>
+      )}
 
       {/* Video Section */}
-      <section data-section="video" id="video">
-        <VideoSection video={video} site={site} onOpenVideo={handleOpenVideo} />
-      </section>
+      {isEnabled("video") && (
+        <section data-section="video" id="video">
+          <VideoSection video={video} site={site} onOpenVideo={handleOpenVideo} />
+        </section>
+      )}
 
       {/* Cases / Before-After Section */}
-      <section data-section="cases" id="cases">
-        <CasesSection cases={cases} />
-      </section>
+      {isEnabled("cases") && (
+        <section data-section="cases" id="cases">
+          <CasesSection cases={cases} />
+        </section>
+      )}
 
       {/* About Section */}
-      <section data-section="about" id="about">
-        <AboutSection about={about} founder={founder} />
-      </section>
+      {isEnabled("about") && (
+        <section data-section="about" id="about">
+          <AboutSection about={about} founder={founder} />
+        </section>
+      )}
 
       {/* Products Section (disabled by default) */}
       {isEnabled("products") && (
@@ -210,48 +231,55 @@ export const MainContent = () => {
       )}
 
       {/* Testimonials / Reviews Section */}
-      <section data-section="reviews" id="reviews">
-        <TestimonialsSection testimonials={testimonials} stats={stats} />
-      </section>
+      {isEnabled("reviews") && (
+        <section data-section="reviews" id="reviews">
+          <TestimonialsSection testimonials={testimonials} stats={stats} />
+        </section>
+      )}
 
       {/* FAQ Section */}
-      <section data-section="faq" id="faq">
-        <FaqSection faq={faq} />
-      </section>
+      {isEnabled("faq") && (
+        <section data-section="faq" id="faq">
+          <FaqSection faq={faq} />
+        </section>
+      )}
 
       {/* How to Order Section */}
-      <section data-section="order" id="order">
-        <HowToOrderSection steps={orderSteps} site={site} />
-      </section>
+      {isEnabled("order") && (
+        <section data-section="order" id="order">
+          <HowToOrderSection steps={orderSteps} site={site} />
+        </section>
+      )}
 
       {/* CTA Section */}
-      <section data-section="cta" id="cta">
-        <CtaSection pricing={pricing} site={site} />
-      </section>
+      {isEnabled("cta") && (
+        <section data-section="cta" id="cta">
+          <CtaSection pricing={pricing} site={site} />
+        </section>
+      )}
 
       {/* Store Visit Section */}
-      <section data-section="store" id="store">
-        <StoreVisitSection site={site} onOpenContact={handleOpenContact} />
-      </section>
-
-      {/* Contact Section */}
-      <section data-section="contact" id="contact">
-        <ContactSection site={site} />
-      </section>
+      {isEnabled("store") && (
+        <section data-section="store" id="store">
+          <StoreVisitSection site={site} onOpenContact={handleOpenContact} />
+        </section>
+      )}
 
       {/* Footer */}
-      <div data-section="footer" id="footer">
-        <Footer
-          site={site}
-          legal={legal || {}}
-          onOpenContact={handleOpenContact}
-          onOpenLegal={handleOpenLegal}
-          showToast={showToast}
-        />
-      </div>
+      {isEnabled("footer") && (
+        <div data-section="footer" id="footer">
+          <Footer
+            site={site}
+            legal={legal || {}}
+            onOpenContact={handleOpenContact}
+            onOpenLegal={handleOpenLegal}
+            showToast={showToast}
+          />
+        </div>
+      )}
 
       {/* Floating Buttons */}
-      <FloatingButtons site={site} />
+      <FloatingButtons site={site} onOpenContact={handleOpenContact} buttonsSettings={buttonsSettings} />
 
       {/* Toast */}
       <div className={`toast${toastMsg ? " show" : ""}`} id="toast">
@@ -263,6 +291,11 @@ export const MainContent = () => {
 
       {/* Video Modal */}
       {videoModal && <VideoModal onClose={() => setVideoModal(false)} />}
+
+      {/* Contact Modal (Popup) */}
+      {contactModal && (
+        <ContactModal site={site} onClose={handleCloseContact} showToast={showToast} />
+      )}
 
       {/* Legal Modal */}
       {legalModal && legal && legal[legalModal] && (

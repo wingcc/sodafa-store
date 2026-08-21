@@ -4,7 +4,7 @@ import { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 
-export type Color = "purple" | "pink" | "amber" | "emerald";
+export type Color = "purple" | "pink" | "amber" | "emerald" | "sky" | "indigo" | "teal";
 
 interface SectionCardProps {
   icon: LucideIcon;
@@ -19,6 +19,9 @@ const colorMap: Record<Color, string> = {
   pink: "bg-pink-50 text-pink-600 border-pink-200 hover:border-pink-400 hover:shadow-pink-100/50",
   amber: "bg-amber-50 text-amber-600 border-amber-200 hover:border-amber-400 hover:shadow-amber-100/50",
   emerald: "bg-emerald-50 text-emerald-600 border-emerald-200 hover:border-emerald-400 hover:shadow-emerald-100/50",
+  sky: "bg-sky-50 text-sky-600 border-sky-200 hover:border-sky-400 hover:shadow-sky-100/50",
+  indigo: "bg-indigo-50 text-indigo-600 border-indigo-200 hover:border-indigo-400 hover:shadow-indigo-100/50",
+  teal: "bg-teal-50 text-teal-600 border-teal-200 hover:border-teal-400 hover:shadow-teal-100/50",
 };
 
 export default function SectionCard({

@@ -20,7 +20,7 @@ export default function AboutSection({ about, founder }: AboutSectionProps) {
     .replace(/إمكانية الإرجاع/, "<b>إمكانية الإرجاع</b>");
 
   return (
-    <section id="about">
+    <div>
       <div className="wrap">
         <div className="about-card rv">
           <div className="about-img">
@@ -37,6 +37,6 @@ export default function AboutSection({ about, founder }: AboutSectionProps) {
           </div>
         </div>
       </div>
-    </section>
+    </div>
   );
 }

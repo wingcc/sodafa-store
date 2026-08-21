@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Check, AlertCircle } from 'lucide-react';
+import { X, AlertCircle } from 'lucide-react';
 import { HomepageSection } from '../types';
 
 interface Props {
@@ -15,14 +15,22 @@ interface Props {
 
 // Predefined sections that match the public homepage components
 const PREDEFINED_SECTIONS = [
-  { id: 'hero', name: 'Hero Banner', description: 'Main hero section with promotional content' },
-  { id: 'trust-badges', name: 'Trust Badges', description: 'Trust badges showing payment and delivery options' },
-  { id: 'flash-sale', name: 'Flash Sale', description: 'Flash sale products countdown' },
-  { id: 'products', name: 'Featured Products', description: 'Curated product selection for homepage' },
-  { id: 'about', name: 'About Us', description: 'About the store and founder' },
-  { id: 'how-to-order', name: 'How to Order', description: 'Steps to order' },
-  { id: 'testimonials', name: 'Testimonials', description: 'Customer reviews and testimonials' },
-  { id: 'store-visit', name: 'Store Visit', description: 'Store location and map' },
+  { id: 'hero', name: 'البطل الرئيسي', description: 'Main hero section with promotional content' },
+  { id: 'stats', name: 'الإحصائيات', description: 'Animated statistics counters' },
+  { id: 'trust', name: 'الثقة', description: 'Trust badges showing payment and delivery options' },
+  { id: 'flash', name: 'العروض السريعة', description: 'Flash sale products countdown' },
+  { id: 'oils', name: 'الزيوت', description: 'Natural oils showcase' },
+  { id: 'benefits', name: 'المميزات', description: 'Serum benefits and features grid' },
+  { id: 'video', name: 'الفيديو', description: 'Promotional video section' },
+  { id: 'cases', name: 'قبل وبعد', description: 'Before and after results gallery' },
+  { id: 'about', name: 'من نحن', description: 'About the store and founder' },
+  { id: 'products', name: 'المنتجات', description: 'Featured products grid' },
+  { id: 'reviews', name: 'التقييمات', description: 'Customer reviews and testimonials' },
+  { id: 'faq', name: 'الأسئلة الشائعة', description: 'Frequently asked questions accordion' },
+  { id: 'order', name: 'طريقة الطلب', description: 'How to order steps' },
+  { id: 'cta', name: 'دعوة للعمل', description: 'Call to action banner' },
+  { id: 'store', name: 'المتجر', description: 'Store location and map' },
+  { id: 'footer', name: 'التذييل', description: 'Page footer' },
 ];
 
 export default function SectionEditorModal({ isOpen, onClose, section, onSave, existingIds = [] }: Props) {

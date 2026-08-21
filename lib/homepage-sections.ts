@@ -12,14 +12,22 @@ export interface HomepageSection {
 
 export function getFallbackSections(): HomepageSection[] {
   return [
-    { id: 'hero', name: 'Hero Banner', description: 'Main hero section', status: 'active', order: 0 },
-    { id: 'trust-badges', name: 'Trust Badges', description: 'Trust badges', status: 'active', order: 1 },
-    { id: 'flash-sale', name: 'Flash Sale', description: 'Flash sale countdown', status: 'active', order: 2 },
-    { id: 'products', name: 'Featured Products', description: 'Product grid', status: 'active', order: 3 },
-    { id: 'about', name: 'About Us', description: 'About section', status: 'active', order: 4 },
-    { id: 'how-to-order', name: 'How to Order', description: 'Steps', status: 'active', order: 5 },
-    { id: 'testimonials', name: 'Testimonials', description: 'Customer reviews', status: 'active', order: 6 },
-    { id: 'store-visit', name: 'Store Visit', description: 'Store location', status: 'active', order: 7 },
+    { id: 'hero', name: 'البطل الرئيسي', description: 'Main hero section with promotional content', status: 'active', order: 0 },
+    { id: 'stats', name: 'الإحصائيات', description: 'Animated statistics counters', status: 'active', order: 2 },
+    { id: 'trust', name: 'الثقة', description: 'Trust badges showing payment and delivery options', status: 'active', order: 3 },
+    { id: 'flash', name: 'العروض السريعة', description: 'Flash sale products countdown', status: 'inactive', order: 4 },
+    { id: 'oils', name: 'الزيوت', description: 'Natural oils showcase', status: 'active', order: 5 },
+    { id: 'benefits', name: 'المميزات', description: 'Serum benefits and features grid', status: 'active', order: 6 },
+    { id: 'video', name: 'الفيديو', description: 'Promotional video section', status: 'active', order: 7 },
+    { id: 'cases', name: 'قبل وبعد', description: 'Before and after results gallery', status: 'active', order: 8 },
+    { id: 'about', name: 'من نحن', description: 'About the store and founder', status: 'active', order: 9 },
+    { id: 'products', name: 'المنتجات', description: 'Featured products grid', status: 'inactive', order: 10 },
+    { id: 'reviews', name: 'التقييمات', description: 'Customer reviews and testimonials', status: 'active', order: 11 },
+    { id: 'faq', name: 'الأسئلة الشائعة', description: 'Frequently asked questions accordion', status: 'active', order: 12 },
+    { id: 'order', name: 'طريقة الطلب', description: 'How to order steps', status: 'active', order: 13 },
+    { id: 'cta', name: 'دعوة للعمل', description: 'Call to action banner', status: 'active', order: 14 },
+    { id: 'store', name: 'المتجر', description: 'Store location and map', status: 'active', order: 15 },
+    { id: 'footer', name: 'التذييل', description: 'Page footer', status: 'active', order: 16 },
   ];
 }
 

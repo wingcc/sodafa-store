@@ -9,7 +9,7 @@ interface HowToOrderSectionProps {
 
 export default function HowToOrderSection({ steps, site }: HowToOrderSectionProps) {
   return (
-    <section id="order">
+    <div>
       <div className="wrap" style={{ position: "relative", zIndex: 1 }}>
         <div className="sec-head rv">
           <span className="eyebrow">بكل بساطة</span>
@@ -28,6 +28,6 @@ export default function HowToOrderSection({ steps, site }: HowToOrderSectionProp
           ))}
         </div>
       </div>
-    </section>
+    </div>
   );
 }

@@ -13,7 +13,7 @@ export default function ProductSection({ products, site }: ProductSectionProps) 
   const waUrl = `https://wa.me/${site.whatsappMain}?text=${encodeURIComponent(site.whatsappMessage || "")}`;
 
   return (
-    <section id="products">
+    <div>
       <div className="wrap">
         <div className="sec-head rv">
           <span className="eyebrow">تشكيلتنا</span>
@@ -38,6 +38,6 @@ export default function ProductSection({ products, site }: ProductSectionProps) 
           ))}
         </div>
       </div>
-    </section>
+    </div>
   );
 }

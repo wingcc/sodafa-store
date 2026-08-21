@@ -159,7 +159,13 @@ export function StarRating({ rating, size = 16, id }: { rating: number; size?: n
       stars.push(<StarEmptySVG key={i} width={size} />);
     }
   }
-  return <>{stars}</>;
+  // inline-flex row so stars stay horizontal (Tailwind preflight makes svg block);
+  // inherits RTL so the first star sits on the right
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: Math.round(size * 0.19) }}>
+      {stars}
+    </span>
+  );
 }
 
 export const CHECK_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>';

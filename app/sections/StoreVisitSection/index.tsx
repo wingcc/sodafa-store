@@ -12,7 +12,7 @@ export default function StoreVisitSection({ site, onOpenContact }: StoreVisitSec
   const waUrl = `https://wa.me/${site.whatsappStore}`;
 
   return (
-    <section id="store">
+    <div>
       <div className="dark-band store-band" id="storeBand">
         <div className="deco d1" />
         <div className="deco d2" />
@@ -78,6 +78,6 @@ export default function StoreVisitSection({ site, onOpenContact }: StoreVisitSec
           </div>
         </div>
       </div>
-    </section>
+    </div>
   );
 }
