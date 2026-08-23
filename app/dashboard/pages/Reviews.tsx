@@ -33,6 +33,9 @@ import {
   StarHalf,
   Sparkles,
   Zap,
+  ChevronDown,
+  Plus,
+  Edit2,
 } from 'lucide-react';
 import Badge from '../components/ui/Badge';
 import RefreshButton from '../components/ui/RefreshButton';
@@ -97,6 +100,18 @@ const Reviews: React.FC = () => {
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
   const [expandedReplyId, setExpandedReplyId] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [distributionOpen, setDistributionOpen] = useState(false);
+
+  // Add/Edit Review Modal
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [editingReview, setEditingReview] = useState<UiReview | null>(null);
+  const [reviewForm, setReviewForm] = useState({
+    productId: '',
+    customerName: '',
+    rating: 5,
+    comment: '',
+  });
+  const [reviewFormLoading, setReviewFormLoading] = useState(false);
 
   // Fetch products
   useEffect(() => {
@@ -148,11 +163,9 @@ const Reviews: React.FC = () => {
     return map;
   }, [reviews]);
 
-  // Products with reviews + search
+  // All products + search (show all, not just those with reviews)
   const productsWithReviews = useMemo(() => {
-    const list = products
-      .filter((p) => productStats.has(p.id))
-      .sort((a, b) => (productStats.get(b.id)?.count || 0) - (productStats.get(a.id)?.count || 0));
+    const list = products.sort((a, b) => (productStats.get(b.id)?.count || 0) - (productStats.get(a.id)?.count || 0));
     if (!productSearch) return list;
     const q = productSearch.toLowerCase();
     return list.filter((p) => p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q));
@@ -246,6 +259,86 @@ const Reviews: React.FC = () => {
     }
   };
 
+  // Add/Edit Review handlers
+  const openAddReviewModal = () => {
+    setEditingReview(null);
+    setReviewForm({
+      productId: selectedProductId || (products.length > 0 ? products[0].id : ''),
+      customerName: '',
+      rating: 5,
+      comment: '',
+    });
+    setShowReviewModal(true);
+  };
+
+  const openEditReviewModal = (review: UiReview) => {
+    setEditingReview(review);
+    setReviewForm({
+      productId: review.productId,
+      customerName: review.customerName,
+      rating: review.rating,
+      comment: review.comment,
+    });
+    setShowReviewModal(true);
+  };
+
+  const handleReviewFormSubmit = async () => {
+    if (!reviewForm.customerName.trim()) {
+      addToast('error', 'Customer name is required');
+      return;
+    }
+    if (!reviewForm.productId) {
+      addToast('error', 'Please select a product');
+      return;
+    }
+    setReviewFormLoading(true);
+    try {
+      const selectedProd = products.find((p) => p.id === reviewForm.productId);
+      if (editingReview) {
+        // Update existing review
+        const res = await fetch(`/api/reviews/${editingReview.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            customerName: reviewForm.customerName.trim(),
+            rating: reviewForm.rating,
+            comment: reviewForm.comment.trim(),
+          }),
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error?.message || 'Failed to update review');
+        const updated: UiReview = mapReview(json.data);
+        setReviews((prev) => prev.map((r) => (r.id === editingReview.id ? updated : r)));
+        addToast('success', 'Review updated successfully');
+      } else {
+        // Create new review
+        const res = await fetch('/api/reviews', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            productId: reviewForm.productId,
+            productName: selectedProd?.name || '',
+            customerName: reviewForm.customerName.trim(),
+            rating: reviewForm.rating,
+            comment: reviewForm.comment.trim(),
+            status: 'approved',
+          }),
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error?.message || 'Failed to create review');
+        const newReview: UiReview = mapReview(json.data);
+        setReviews((prev) => [newReview, ...prev]);
+        addToast('success', 'Review added successfully');
+      }
+      setShowReviewModal(false);
+      setEditingReview(null);
+    } catch (e: any) {
+      addToast('error', e.message || 'Failed to save review');
+    } finally {
+      setReviewFormLoading(false);
+    }
+  };
+
   const renderStars = (rating: number, size = 16) => {
     return (
       <div className="flex items-center gap-0.5">
@@ -262,10 +355,10 @@ const Reviews: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'approved': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-      case 'pending': return 'bg-amber-50 text-amber-700 border-amber-200';
-      case 'rejected': return 'bg-red-50 text-red-700 border-red-200';
-      default: return 'bg-gray-50 text-gray-700 border-gray-200';
+      case 'approved': return 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/20';
+      case 'pending': return 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/20';
+      case 'rejected': return 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300 border-red-200 dark:border-red-500/20';
+      default: return 'bg-gray-50 dark:bg-white/5 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-white/10';
     }
   };
 
@@ -274,7 +367,7 @@ const Reviews: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 p-4 md:p-6 bg-gradient-to-br from-slate-50 via-white to-blue-50/30 min-h-screen">
+    <div className="space-y-6 p-4 md:p-6 bg-gradient-to-br from-slate-50 via-white to-blue-50/30 dark:from-[var(--dashboard-bg-dark,#0f1411)] dark:via-[var(--dashboard-bg-dark,#0f1411)] dark:to-[var(--dashboard-bg-dark,#0f1411)] min-h-screen">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
@@ -284,7 +377,7 @@ const Reviews: React.FC = () => {
             </span>
             Review Management
           </h2>
-          <p className="text-sm text-slate-500 mt-1 flex items-center gap-2">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-2">
             <span className="inline-flex items-center gap-1">
               <Sparkles size={14} className="text-blue-500" />
               Product-centric moderation
@@ -293,35 +386,37 @@ const Reviews: React.FC = () => {
             <span>Supabase live</span>
           </p>
         </div>
-        <RefreshButton onRefresh={handleRefresh} isLoading={isLoadingReviews || isLoadingProducts} size="md" variant="default" />
+        <div className="flex items-center gap-2">
+          <RefreshButton onRefresh={handleRefresh} isLoading={isLoadingReviews || isLoadingProducts} size="md" variant="default" />
+        </div>
       </div>
 
-      {/* Global overview - Redesigned Stats */}
+      {/* Global overview - Stats with border icons */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm hover:shadow-md transition-all">
+        <div className="bg-white dark:bg-[var(--dashboard-card-dark,#161d2b)] rounded-2xl p-5 border border-slate-200/60 dark:border-[var(--dashboard-card-border-dark,rgba(255,255,255,0.1))] shadow-sm hover:shadow-md transition-all">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-500">Average Rating</p>
-              <p className="text-3xl font-bold text-slate-800 mt-1">{globalAvg ? globalAvg.toFixed(1) : '—'}</p>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Average Rating</p>
+              <p className="text-3xl font-bold text-slate-800 dark:text-slate-100 mt-1">{globalAvg ? globalAvg.toFixed(1) : '—'}</p>
             </div>
-            <div className="bg-gradient-to-br from-yellow-400 to-yellow-500 p-3 rounded-xl text-white">
-              <Star size={20} className="fill-white" />
+            <div className="w-11 h-11 rounded-xl border-2 border-yellow-200 dark:border-yellow-500/20 bg-yellow-50 dark:bg-yellow-500/10 flex items-center justify-center">
+              <Star size={20} className="text-yellow-500 fill-yellow-400" />
             </div>
           </div>
           <div className="mt-2">{renderStars(Math.round(globalAvg), 14)}</div>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm hover:shadow-md transition-all">
+        <div className="bg-white dark:bg-[var(--dashboard-card-dark,#161d2b)] rounded-2xl p-5 border border-slate-200/60 dark:border-[var(--dashboard-card-border-dark,rgba(255,255,255,0.1))] shadow-sm hover:shadow-md transition-all">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-500">Total Reviews</p>
-              <p className="text-3xl font-bold text-slate-800 mt-1">{reviews.length}</p>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Reviews</p>
+              <p className="text-3xl font-bold text-slate-800 dark:text-slate-100 mt-1">{reviews.length}</p>
             </div>
-            <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-3 rounded-xl text-white">
-              <MessageSquare size={20} />
+            <div className="w-11 h-11 rounded-xl border-2 border-blue-200 dark:border-blue-500/20 bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center">
+              <MessageSquare size={20} className="text-blue-500" />
             </div>
           </div>
-          <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+          <div className="mt-2 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
             <CheckCircle size={14} className="text-emerald-500" />
             <span>{globalApproved} approved</span>
             <ClockIcon size={14} className="text-amber-500 ml-1" />
@@ -329,76 +424,87 @@ const Reviews: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm hover:shadow-md transition-all">
+        <div className="bg-white dark:bg-[var(--dashboard-card-dark,#161d2b)] rounded-2xl p-5 border border-slate-200/60 dark:border-[var(--dashboard-card-border-dark,rgba(255,255,255,0.1))] shadow-sm hover:shadow-md transition-all">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-500">Pending Reviews</p>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Pending Reviews</p>
               <p className="text-3xl font-bold text-amber-600 mt-1">{globalPending}</p>
             </div>
-            <div className="bg-gradient-to-br from-amber-400 to-orange-500 p-3 rounded-xl text-white">
-              <ClockIcon size={20} />
+            <div className="w-11 h-11 rounded-xl border-2 border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center">
+              <ClockIcon size={20} className="text-amber-500" />
             </div>
           </div>
-          <div className="mt-2 text-xs text-slate-500">
-            {globalPending > 0 ? 'Awaiting moderation' : 'All caught up! ✨'}
+          <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+            {globalPending > 0 ? 'Awaiting moderation' : 'All caught up!'}
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm hover:shadow-md transition-all">
+        <div className="bg-white dark:bg-[var(--dashboard-card-dark,#161d2b)] rounded-2xl p-5 border border-slate-200/60 dark:border-[var(--dashboard-card-border-dark,rgba(255,255,255,0.1))] shadow-sm hover:shadow-md transition-all">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-500">Products</p>
-              <p className="text-3xl font-bold text-slate-800 mt-1">{productsWithReviews.length}</p>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Products</p>
+              <p className="text-3xl font-bold text-slate-800 dark:text-slate-100 mt-1">{productsWithReviews.length}</p>
             </div>
-            <div className="bg-gradient-to-br from-purple-500 to-indigo-600 p-3 rounded-xl text-white">
-              <Package size={20} />
+            <div className="w-11 h-11 rounded-xl border-2 border-purple-200 dark:border-purple-500/20 bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center">
+              <Package size={20} className="text-purple-500" />
             </div>
           </div>
-          <div className="mt-2 text-xs text-slate-500">
+          <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
             with customer feedback
           </div>
         </div>
       </div>
 
       {/* Distribution Card */}
-      <div className="bg-white rounded-2xl p-6 border border-slate-200/60 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <h4 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+      <div className="bg-white dark:bg-[var(--dashboard-card-dark,#161d2b)] rounded-2xl border border-slate-200/60 dark:border-[var(--dashboard-card-border-dark,rgba(255,255,255,0.1))] shadow-sm overflow-hidden">
+        <button
+          onClick={() => setDistributionOpen(!distributionOpen)}
+          className="w-full flex items-center justify-between p-5 hover:bg-slate-50/50 dark:hover:bg-white/[0.04] transition-colors"
+        >
+          <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-2">
             <TrendingUp size={16} className="text-blue-500" />
             {selectedProduct ? `${selectedProduct.name} — Rating Distribution` : 'Global Rating Distribution'}
           </h4>
-          <Badge variant="outline" size="sm" className="bg-slate-50">
-            {selectedProduct ? `${selectedStats?.count || 0} reviews` : `${reviews.length} total reviews`}
-          </Badge>
-        </div>
-        <div className="space-y-2.5">
-          {ratingDistribution.map(({ rating, count, percentage }) => (
-            <div key={rating} className="flex items-center gap-3">
-              <span className="text-sm font-medium w-8 text-slate-600">{rating} ★</span>
-              <div className="flex-1 h-2.5 rounded-full overflow-hidden bg-slate-100">
-                <div 
-                  className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-blue-400 to-indigo-500" 
-                  style={{ width: `${percentage}%` }} 
-                />
+          <div className="flex items-center gap-3">
+            <Badge variant="default" size="sm" className="bg-slate-50 dark:bg-white/5">
+              {selectedProduct ? `${selectedStats?.count || 0} reviews` : `${reviews.length} total reviews`}
+            </Badge>
+            <ChevronDown
+              size={16}
+              className={`text-slate-400 transition-transform duration-200 ${distributionOpen ? 'rotate-180' : ''}`}
+            />
+          </div>
+        </button>
+        {distributionOpen && (
+          <div className="px-5 pb-5 space-y-2.5">
+            {ratingDistribution.map(({ rating, count, percentage }) => (
+              <div key={rating} className="flex items-center gap-3">
+                <span className="text-sm font-medium w-8 text-slate-600 dark:text-slate-300">{rating} ★</span>
+                <div className="flex-1 h-2.5 rounded-full overflow-hidden bg-slate-100 dark:bg-white/10">
+                  <div 
+                    className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-blue-400 to-indigo-500" 
+                    style={{ width: `${percentage}%` }} 
+                  />
+                </div>
+                <span className="text-sm text-slate-500 dark:text-slate-400 w-8 text-right font-medium">{count}</span>
               </div>
-              <span className="text-sm text-slate-500 w-8 text-right font-medium">{count}</span>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Main product-centric layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left: Product selector */}
         <div className="lg:col-span-4 xl:col-span-3">
-          <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden sticky top-4">
-            <div className="p-4 border-b border-slate-100">
+          <div className="bg-white dark:bg-[var(--dashboard-card-dark,#161d2b)] rounded-2xl border border-slate-200/60 dark:border-[var(--dashboard-card-border-dark,rgba(255,255,255,0.1))] shadow-sm overflow-hidden sticky top-4">
+            <div className="p-4 border-b border-slate-100 dark:border-white/10">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-2">
                   <Package size={16} className="text-blue-500" />
                   Products
                 </h3>
-                <Badge variant="secondary" size="sm" className="bg-blue-50 text-blue-600">
+                <Badge variant="default" size="sm" className="bg-blue-50 dark:bg-blue-500/10 text-blue-600">
                   {productsWithReviews.length}
                 </Badge>
               </div>
@@ -409,7 +515,7 @@ const Reviews: React.FC = () => {
                   placeholder="Search products..."
                   value={productSearch}
                   onChange={(e) => setProductSearch(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all bg-slate-50 border border-slate-200 text-slate-800 placeholder:text-slate-400"
+                  className="w-full pl-9 pr-3 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-slate-100 placeholder:text-slate-400"
                 />
               </div>
             </div>
@@ -418,53 +524,53 @@ const Reviews: React.FC = () => {
               {isLoadingProducts ? (
                 <div className="p-8 text-center">
                   <Loader2 size={24} className="animate-spin mx-auto text-blue-500 mb-2" />
-                  <p className="text-sm text-slate-500">Loading products...</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Loading products...</p>
                 </div>
               ) : productsWithReviews.length === 0 ? (
                 <div className="p-8 text-center">
-                  <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
-                    <ImageIcon size={24} className="text-slate-400" />
+                  <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-white/10 flex items-center justify-center mx-auto mb-3">
+                    <Package size={24} className="text-slate-400" />
                   </div>
-                  <p className="text-sm font-medium text-slate-700">No products with reviews</p>
-                  <p className="text-xs text-slate-400 mt-1">Reviews will appear here once customers comment.</p>
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-200">No products found</p>
+                  <p className="text-xs text-slate-400 mt-1">{productSearch ? 'Try a different search' : 'Add products to get started'}</p>
                 </div>
               ) : (
                 productsWithReviews.map((product) => {
                   const stats = productStats.get(product.id);
                   const isActive = selectedProductId === product.id;
-                  const initials = product.name.split(' ').slice(0, 2).map(n => n[0]).join('');
+                  const avgRating = stats ? stats.avg : product.rating;
+                  const reviewCount = stats?.count ?? 0;
                   return (
                     <button
                       key={product.id}
                       onClick={() => setSelectedProductId(product.id)}
-                      className={`w-full text-left p-4 flex gap-3 transition-all hover:bg-slate-50 border-l-4 ${
-                        isActive ? 'bg-blue-50/50 border-blue-500' : 'border-transparent hover:border-slate-200'
+                      className={`w-full text-left p-3 flex gap-3 transition-all hover:bg-slate-50 dark:hover:bg-white/5 border-l-4 ${
+                        isActive ? 'bg-blue-50/50 dark:bg-blue-500/10 border-blue-500' : 'border-transparent hover:border-slate-200'
                       }`}
                     >
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0 ${
-                        isActive ? 'bg-gradient-to-br from-blue-500 to-indigo-600' : 'bg-gradient-to-br from-slate-400 to-slate-500'
-                      }`}>
-                        {initials || 'P'}
-                      </div>
+                      {product.images?.[0] ? (
+                        <img
+                          src={product.images[0]}
+                          alt={product.name}
+                          className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
+                        />
+                      ) : (
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-xs flex-shrink-0 ${
+                          isActive ? 'bg-gradient-to-br from-blue-500 to-indigo-600' : 'bg-gradient-to-br from-slate-400 to-slate-500'
+                        }`}>
+                          {product.name.split(' ').slice(0, 2).map(n => n[0]).join('') || 'P'}
+                        </div>
+                      )}
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold truncate text-slate-800">{product.name}</p>
-                        <p className="text-xs text-slate-500 truncate">{product.categoryName} · {product.sku}</p>
-                        <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                          <span className="flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600">
-                            <Star size={10} className="fill-yellow-400 text-yellow-400" />
-                            {stats ? stats.avg.toFixed(1) : product.rating.toFixed(1)}
-                          </span>
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                            {stats?.count ?? 0} reviews
-                          </span>
-                          {stats && stats.pending > 0 && (
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-200">
-                              {stats.pending} pending
-                            </span>
-                          )}
+                        <p className="text-sm font-semibold truncate text-slate-800 dark:text-slate-100">{product.name}</p>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <Star size={11} className="fill-yellow-400 text-yellow-400" />
+                          <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{avgRating.toFixed(1)}</span>
+                          <span className="text-slate-300">·</span>
+                          <span className="text-xs text-slate-400">{reviewCount} reviews</span>
                         </div>
                       </div>
-                      <ChevronRight size={16} className={`self-center flex-shrink-0 transition-colors ${
+                      <ChevronRight size={14} className={`self-center flex-shrink-0 transition-colors ${
                         isActive ? 'text-blue-500' : 'text-slate-300'
                       }`} />
                     </button>
@@ -473,19 +579,19 @@ const Reviews: React.FC = () => {
               )}
             </div>
 
-            <div className="p-3 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
+            <div className="p-3 border-t border-slate-100 dark:border-white/10 bg-slate-50/50 flex items-center justify-between">
               <button
                 onClick={() => setSelectedProductId(null)}
                 className={`text-xs font-medium px-3 py-1.5 rounded-full border transition ${
                   !selectedProductId
-                    ? 'bg-blue-500 text-white border-blue-500'
-                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                    ? 'bg-blue-50 dark:bg-blue-500/100 text-white border-blue-500'
+                    : 'bg-white dark:bg-[var(--dashboard-card-dark,#161d2b)] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5'
                 }`}
               >
                 All products
               </button>
               <span className="text-xs text-slate-400">
-                {selectedProductId ? `${selectedReviews.length} shown` : `${reviews.length} total`}
+                {productsWithReviews.length} products · {reviews.length} reviews
               </span>
             </div>
           </div>
@@ -493,71 +599,94 @@ const Reviews: React.FC = () => {
 
         {/* Right: Reviews for selected product */}
         <div className="lg:col-span-8 xl:col-span-9 space-y-4">
-          {/* Selected product header */}
+          {/* Selected product header — enhanced design */}
           {selectedProduct ? (
-            <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
-              <div className="relative h-28 md:h-32 bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-600">
-                <div className="absolute inset-0 opacity-10 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzR2LTRoNHY0aC00em0wIDB2LTRoLTR2NGg0eiIvPjwvZz48L2c+PC9zdmc+')]"></div>
-                <div className="absolute -bottom-8 left-5 flex items-end gap-4">
-                  <div className="w-20 h-20 rounded-2xl border-4 border-white shadow-lg bg-white overflow-hidden flex items-center justify-center">
-                    {selectedProduct.images?.[0] ? (
-                      <img src={selectedProduct.images[0]} alt={selectedProduct.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <Package size={32} className="text-slate-400" />
-                    )}
+            <div className="bg-white dark:bg-[var(--dashboard-card-dark,#161d2b)] rounded-2xl border border-slate-200/60 dark:border-[var(--dashboard-card-border-dark,rgba(255,255,255,0.1))] shadow-sm overflow-hidden">
+              <div className="relative h-40 md:h-48 bg-gradient-to-br from-indigo-600 via-blue-500 to-cyan-400 overflow-hidden">
+                <div className="absolute inset-0 opacity-[0.07] bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzR2LTRoNHY0aC00em0wIDB2LTRoLTR2NGg0eiIvPjwvZz48L2c+PC9zdmc+')]"></div>
+                <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full bg-white/10 blur-sm"></div>
+                <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-white/10 blur-sm"></div>
+
+                {/* Product info overlay on gradient */}
+                <div className="absolute inset-0 flex items-end p-6">
+                  <div className="flex items-end gap-4 w-full">
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-3 border-white/80 shadow-lg bg-white dark:bg-[var(--dashboard-card-dark,#161d2b)] overflow-hidden flex-shrink-0">
+                      {selectedProduct.images?.[0] ? (
+                        <img src={selectedProduct.images[0]} alt={selectedProduct.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-white/10">
+                          <Package size={32} className="text-slate-300" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg sm:text-xl font-bold text-white leading-tight drop-shadow-md">{selectedProduct.name}</h3>
+                      <div className="flex items-center gap-2 mt-1 text-xs text-white/70">
+                        <span className="flex items-center gap-1"><Tag size={11} /> {selectedProduct.categoryName}</span>
+                        <span className="text-white/40">·</span>
+                        <span className="font-mono">{selectedProduct.sku}</span>
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-2xl sm:text-3xl font-bold text-white drop-shadow-md">{selectedProduct.regularPrice}</p>
+                      <p className="text-xs text-white/60 font-medium">MAD</p>
+                    </div>
                   </div>
-                  <div className="pb-2">
-                    <h3 className="text-white font-bold text-lg leading-none drop-shadow-md">{selectedProduct.name}</h3>
-                    <p className="text-white/80 text-xs flex items-center gap-2">
-                      <Tag size={12} />
-                      {selectedProduct.categoryName} · {selectedProduct.sku} · {selectedProduct.regularPrice} MAD
-                    </p>
-                  </div>
-                </div>
-                <div className="absolute top-3 right-3 flex gap-2">
-                  <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-white/20 backdrop-blur text-white border border-white/20 flex items-center gap-1">
-                    <Award size={12} /> {selectedAvg.toFixed(1)} ★
-                  </span>
-                  <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-white text-slate-800">
-                    {selectedStats?.count || 0} reviews
-                  </span>
                 </div>
               </div>
-              <div className="pt-10 p-5">
-                <p className="text-sm text-slate-600 line-clamp-2">
-                  {selectedProduct.shortDescription || selectedProduct.fullDescription || 'No description available'}
-                </p>
-                <div className="flex flex-wrap gap-2 mt-3">
-                  <Badge variant="secondary" size="sm" className="bg-blue-50 text-blue-600 border-blue-200">
-                    {selectedProduct.categoryName}
-                  </Badge>
-                  {selectedProduct.tags.slice(0, 4).map((tag) => (
-                    <Badge key={tag} variant="outline" size="sm" className="bg-slate-50">
-                      {tag}
-                    </Badge>
-                  ))}
-                  <Badge 
-                    variant="outline" 
-                    size="sm" 
-                    className={selectedProduct.stock > 0 ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-red-50 text-red-600 border-red-200'}
-                  >
-                    {selectedProduct.stock > 0 ? `${selectedProduct.stock} in stock` : 'Out of stock'}
-                  </Badge>
+
+              <div className="px-6 py-5">
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-yellow-50 dark:bg-yellow-500/10 border border-yellow-200 dark:border-yellow-500/20">
+                    <Star size={14} className="fill-yellow-400 text-yellow-400" />
+                    <span className="text-sm font-bold text-yellow-700 dark:text-yellow-300">{selectedAvg.toFixed(1)}</span>
+                    <span className="text-xs text-yellow-600/70">({selectedStats?.count || 0})</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20">
+                    <MessageSquare size={13} className="text-blue-500" />
+                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300">{selectedStats?.count || 0} reviews</span>
+                  </div>
+                  {selectedStats && selectedStats.pending > 0 && (
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20">
+                      <ClockIcon size={13} className="text-amber-500" />
+                      <span className="text-sm font-medium text-amber-700 dark:text-amber-300">{selectedStats.pending} pending</span>
+                    </div>
+                  )}
+                  <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border ${selectedProduct.stock > 0 ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20' : 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20'}`}>
+                    <div className={`w-1.5 h-1.5 rounded-full ${selectedProduct.stock > 0 ? 'bg-emerald-50 dark:bg-emerald-500/100' : 'bg-red-50 dark:bg-red-500/100'}`}></div>
+                    <span className={`text-sm font-medium ${selectedProduct.stock > 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-700 dark:text-red-300'}`}>
+                      {selectedProduct.stock > 0 ? `${selectedProduct.stock} in stock` : 'Out of stock'}
+                    </span>
+                  </div>
                 </div>
+
+                {(selectedProduct.shortDescription || selectedProduct.fullDescription) && (
+                  <p className="mt-3 text-sm text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
+                    {selectedProduct.shortDescription || selectedProduct.fullDescription}
+                  </p>
+                )}
+
+                {selectedProduct.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-3">
+                    {selectedProduct.tags.slice(0, 5).map((tag) => (
+                      <span key={tag} className="px-2.5 py-0.5 text-xs font-medium bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 rounded-full border border-slate-200 dark:border-white/10">{tag}</span>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-8 text-center">
-              <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-3">
+            <div className="bg-white dark:bg-[var(--dashboard-card-dark,#161d2b)] rounded-2xl border border-slate-200/60 dark:border-[var(--dashboard-card-border-dark,rgba(255,255,255,0.1))] shadow-sm p-8 text-center">
+              <div className="w-16 h-16 rounded-full bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center mx-auto mb-3">
                 <Eye size={24} className="text-blue-500" />
               </div>
-              <p className="text-sm font-semibold text-slate-700">Select a product to moderate its reviews</p>
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Select a product to moderate its reviews</p>
               <p className="text-xs text-slate-400 mt-1">Or use “All products” to see every comment.</p>
             </div>
           )}
 
           {/* Filters for reviews */}
-          <div className="bg-white rounded-2xl p-4 border border-slate-200/60 shadow-sm flex flex-col sm:flex-row gap-3">
+          <div className="bg-white dark:bg-[var(--dashboard-card-dark,#161d2b)] rounded-2xl p-4 border border-slate-200/60 dark:border-[var(--dashboard-card-border-dark,rgba(255,255,255,0.1))] shadow-sm flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
@@ -565,18 +694,18 @@ const Reviews: React.FC = () => {
                 placeholder={selectedProduct ? `Search ${selectedProduct.name} reviews...` : 'Search reviews by customer or comment...'}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all bg-slate-50 border border-slate-200 text-slate-800 placeholder:text-slate-400"
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-slate-100 placeholder:text-slate-400"
               />
             </div>
-            <div className="flex gap-1.5 flex-wrap">
+            <div className="flex gap-1.5 flex-wrap items-center">
               {(['all', 'pending', 'approved', 'rejected'] as const).map((f) => (
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
                   className={`px-4 py-2 rounded-xl text-sm font-medium transition-all border ${
                     filter === f
-                      ? 'bg-blue-500 text-white border-blue-500 shadow-sm shadow-blue-200'
-                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                      ? 'bg-blue-50 dark:bg-blue-500/100 text-white border-blue-500 shadow-sm shadow-blue-200'
+                      : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10'
                   }`}
                 >
                   {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -589,22 +718,31 @@ const Reviews: React.FC = () => {
                   )}
                 </button>
               ))}
+              {selectedProductId && (
+                <button
+                  onClick={openAddReviewModal}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-blue-50 dark:bg-blue-500/100 hover:bg-blue-600 border border-blue-500 shadow-sm shadow-blue-200 transition-all"
+                >
+                  <Plus size={14} />
+                  Add Review
+                </button>
+              )}
             </div>
           </div>
 
           {/* Reviews list */}
           <div className="space-y-4">
             {isLoadingReviews ? (
-              <div className="bg-white rounded-2xl border border-slate-200/60 p-10 text-center">
+              <div className="bg-white dark:bg-[var(--dashboard-card-dark,#161d2b)] rounded-2xl border border-slate-200/60 dark:border-[var(--dashboard-card-border-dark,rgba(255,255,255,0.1))] p-10 text-center">
                 <Loader2 size={32} className="animate-spin mx-auto text-blue-500 mb-3" />
-                <p className="text-sm text-slate-500">Loading reviews from Supabase...</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Loading reviews from Supabase...</p>
               </div>
             ) : selectedReviews.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-slate-200/60 p-10 text-center">
-                <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
+              <div className="bg-white dark:bg-[var(--dashboard-card-dark,#161d2b)] rounded-2xl border border-slate-200/60 dark:border-[var(--dashboard-card-border-dark,rgba(255,255,255,0.1))] p-10 text-center">
+                <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-white/10 flex items-center justify-center mx-auto mb-3">
                   <MessageSquare size={24} className="text-slate-400" />
                 </div>
-                <p className="text-sm font-semibold text-slate-700">No reviews found</p>
+                <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">No reviews found</p>
                 <p className="text-xs text-slate-400 mt-1">
                   {selectedProduct ? `No ${filter !== 'all' ? filter : ''} reviews for ${selectedProduct.name}` : 'Try adjusting filters or search'}
                 </p>
@@ -620,7 +758,7 @@ const Reviews: React.FC = () => {
                 const statusColor = getStatusColor(review.status);
 
                 return (
-                  <div key={review.id} className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-5 hover:shadow-md transition-all">
+                  <div key={review.id} className="bg-white dark:bg-[var(--dashboard-card-dark,#161d2b)] rounded-2xl border border-slate-200/60 dark:border-[var(--dashboard-card-border-dark,rgba(255,255,255,0.1))] shadow-sm p-5 hover:shadow-md transition-all">
                     <div className="flex items-start gap-3">
                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-xs flex-shrink-0 ${
                         isPending ? 'bg-gradient-to-br from-amber-400 to-orange-500' :
@@ -631,7 +769,7 @@ const Reviews: React.FC = () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-sm font-semibold text-slate-800">{review.customerName}</p>
+                          <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{review.customerName}</p>
                           <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full border ${statusColor}`}>
                             {review.status}
                           </span>
@@ -640,10 +778,10 @@ const Reviews: React.FC = () => {
                             {new Date(review.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                           </span>
                         </div>
-                        <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1.5">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1.5">
                           on <span className="font-medium text-blue-600">{review.productName || selectedProduct?.name || 'Product'}</span>
                           {!selectedProductId && review.productId && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/10">
                               {review.productId.slice(0, 6)}
                             </span>
                           )}
@@ -652,10 +790,10 @@ const Reviews: React.FC = () => {
                           {renderStars(review.rating, 14)}
                           <span className="text-xs text-slate-400 ml-1">{review.rating}.0</span>
                         </div>
-                        <p className="text-sm mt-3 leading-relaxed text-slate-700">{review.comment || <span className="italic text-slate-400">No comment</span>}</p>
+                        <p className="text-sm mt-3 leading-relaxed text-slate-700 dark:text-slate-200">{review.comment || <span className="italic text-slate-400">No comment</span>}</p>
 
                         {review.adminReply && !isReplyOpen && (
-                          <div className="mt-3 p-3 rounded-xl bg-blue-50/70 border border-blue-100 text-slate-700">
+                          <div className="mt-3 p-3 rounded-xl bg-blue-50/70 border border-blue-100 text-slate-700 dark:text-slate-200">
                             <p className="text-xs font-semibold flex items-center gap-1 text-blue-600">
                               <Reply size={12} /> Admin reply
                             </p>
@@ -664,8 +802,8 @@ const Reviews: React.FC = () => {
                         )}
 
                         {isReplyOpen && (
-                          <div className="mt-3 p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-                            <label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                          <div className="mt-3 p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 space-y-2">
+                            <label className="text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1">
                               <Reply size={12} className="text-blue-500" />
                               Reply as admin
                             </label>
@@ -674,19 +812,19 @@ const Reviews: React.FC = () => {
                               onChange={(e) => setReplyDrafts((prev) => ({ ...prev, [review.id]: e.target.value }))}
                               rows={3}
                               placeholder="Write a helpful reply..."
-                              className="w-full rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all bg-white border border-slate-200 text-slate-700 placeholder:text-slate-400"
+                              className="w-full rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all bg-white dark:bg-[var(--dashboard-card-dark,#161d2b)] border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 placeholder:text-slate-400"
                             />
                             <div className="flex gap-2 justify-end">
                               <button
                                 onClick={() => setExpandedReplyId(null)}
-                                className="px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition"
+                                className="px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-white/10 bg-white dark:bg-[var(--dashboard-card-dark,#161d2b)] text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition"
                               >
                                 Cancel
                               </button>
                               <button
                                 onClick={() => handleReply(review)}
                                 disabled={!!actionLoading}
-                                className="px-3 py-1.5 rounded-lg text-xs font-medium text-white bg-blue-500 hover:bg-blue-600 transition flex items-center gap-1 disabled:opacity-50"
+                                className="px-3 py-1.5 rounded-lg text-xs font-medium text-white bg-blue-50 dark:bg-blue-500/100 hover:bg-blue-600 transition flex items-center gap-1 disabled:opacity-50"
                               >
                                 {actionLoading === review.id ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
                                 Save reply {isPending ? '& approve' : ''}
@@ -697,13 +835,13 @@ const Reviews: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-1.5 mt-4 pt-3 border-t border-slate-100">
+                    <div className="flex flex-wrap items-center gap-1.5 mt-4 pt-3 border-t border-slate-100 dark:border-white/10">
                       {isPending && (
                         <>
                           <button
                             onClick={() => handleModerate(review.id, 'approved', draft || review.adminReply || undefined)}
                             disabled={!!actionLoading}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white bg-emerald-500 hover:bg-emerald-600 transition disabled:opacity-50"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white bg-emerald-50 dark:bg-emerald-500/100 hover:bg-emerald-600 transition disabled:opacity-50"
                           >
                             {actionLoading === review.id ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
                             Approve
@@ -711,7 +849,7 @@ const Reviews: React.FC = () => {
                           <button
                             onClick={() => handleModerate(review.id, 'rejected', draft || review.adminReply || undefined)}
                             disabled={!!actionLoading}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white bg-red-500 hover:bg-red-600 transition disabled:opacity-50"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white bg-red-50 dark:bg-red-500/100 hover:bg-red-600 transition disabled:opacity-50"
                           >
                             {actionLoading === review.id ? <Loader2 size={12} className="animate-spin" /> : <X size={12} />}
                             Reject
@@ -722,7 +860,7 @@ const Reviews: React.FC = () => {
                         <button
                           onClick={() => handleModerate(review.id, 'rejected')}
                           disabled={!!actionLoading}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 bg-white text-red-500 hover:bg-red-50 transition disabled:opacity-50"
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-white/10 bg-white dark:bg-[var(--dashboard-card-dark,#161d2b)] text-red-500 dark:text-red-400 hover:bg-red-50 transition disabled:opacity-50"
                         >
                           <X size={12} /> Reject
                         </button>
@@ -731,7 +869,7 @@ const Reviews: React.FC = () => {
                         <button
                           onClick={() => handleModerate(review.id, 'approved')}
                           disabled={!!actionLoading}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white bg-emerald-500 hover:bg-emerald-600 transition disabled:opacity-50"
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white bg-emerald-50 dark:bg-emerald-500/100 hover:bg-emerald-600 transition disabled:opacity-50"
                         >
                           <Check size={12} /> Approve
                         </button>
@@ -743,11 +881,17 @@ const Reviews: React.FC = () => {
                         }}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition ${
                           isReplyOpen
-                            ? 'bg-blue-500 text-white border-blue-500'
-                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                            ? 'bg-blue-50 dark:bg-blue-500/100 text-white border-blue-500'
+                            : 'bg-slate-50 dark:bg-white/5 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10'
                         }`}
                       >
                         <Reply size={12} /> {review.adminReply ? 'Edit reply' : 'Reply'}
+                      </button>
+                      <button
+                        onClick={() => openEditReviewModal(review)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-white/10 bg-white dark:bg-[var(--dashboard-card-dark,#161d2b)] text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition"
+                      >
+                        <Edit2 size={12} /> Edit
                       </button>
                       <button
                         onClick={() => handleDelete(review.id)}
@@ -764,6 +908,107 @@ const Reviews: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Add/Edit Review Modal */}
+      {showReviewModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowReviewModal(false)}>
+          <div className="bg-white dark:bg-[var(--dashboard-card-dark,#161d2b)] rounded-2xl shadow-2xl w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-white/10">
+              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                {editingReview ? <Edit2 size={20} className="text-blue-500" /> : <Plus size={20} className="text-blue-500" />}
+                {editingReview ? 'Edit Review' : 'Add Review'}
+                {selectedProduct && !editingReview && (
+                  <span className="text-sm font-normal text-slate-400">for {selectedProduct.name}</span>
+                )}
+              </h3>
+              <button onClick={() => setShowReviewModal(false)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 transition">
+                <X size={18} className="text-slate-400" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              {/* Product selector — only show when no product is pre-selected */}
+              {!editingReview && !selectedProductId && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Product</label>
+                  <select
+                    value={reviewForm.productId}
+                    onChange={(e) => setReviewForm({ ...reviewForm, productId: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition"
+                  >
+                    <option value="">Select a product</option>
+                    {products.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Customer name */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Customer Name</label>
+                <input
+                  type="text"
+                  value={reviewForm.customerName}
+                  onChange={(e) => setReviewForm({ ...reviewForm, customerName: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition"
+                  placeholder="Enter customer name"
+                />
+              </div>
+
+              {/* Rating */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Rating</label>
+                <div className="flex items-center gap-1">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setReviewForm({ ...reviewForm, rating: s })}
+                      className="p-0.5 transition-transform hover:scale-110"
+                    >
+                      <Star
+                        size={28}
+                        className={s <= reviewForm.rating ? 'fill-yellow-400 text-yellow-400' : 'text-slate-200 hover:text-yellow-200'}
+                      />
+                    </button>
+                  ))}
+                  <span className="ml-2 text-sm font-medium text-slate-600 dark:text-slate-300">{reviewForm.rating}/5</span>
+                </div>
+              </div>
+
+              {/* Comment */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Comment</label>
+                <textarea
+                  value={reviewForm.comment}
+                  onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
+                  rows={4}
+                  className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition resize-none"
+                  placeholder="Write the review comment..."
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-100 dark:border-white/10">
+              <button
+                onClick={() => setShowReviewModal(false)}
+                className="px-5 py-2.5 rounded-xl text-sm font-medium border border-slate-200 dark:border-white/10 bg-white dark:bg-[var(--dashboard-card-dark,#161d2b)] text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReviewFormSubmit}
+                disabled={reviewFormLoading}
+                className="px-5 py-2.5 rounded-xl text-sm font-medium text-white bg-blue-50 dark:bg-blue-500/100 hover:bg-blue-600 transition flex items-center gap-2 disabled:opacity-50"
+              >
+                {reviewFormLoading ? <Loader2 size={14} className="animate-spin" /> : editingReview ? <Check size={14} /> : <Plus size={14} />}
+                {editingReview ? 'Update Review' : 'Add Review'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
