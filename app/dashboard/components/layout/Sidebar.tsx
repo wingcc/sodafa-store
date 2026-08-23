@@ -16,62 +16,74 @@ import {
   Bell,
   Store,
   Settings,
-  ChevronLeft,
-  ChevronRight,
   Search,
+  ExternalLink,
+  ChevronsLeft,
+  ChevronsRight,
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
+import { usePreferencesStore } from '../../store/usePreferencesStore';
+import { useTranslation } from '../../i18n/useTranslation';
 import type { PageSection } from '../../types';
 
-interface NavItem {
+interface NavItemDef {
   id: PageSection;
-  label: string;
   icon: React.ReactNode;
-  group: string;
+  labelKey: string;
+  groupKey: string;
 }
 
-const navItems: NavItem[] = [
-  { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={19} />, group: 'Overview' },
-  { id: 'products', label: 'Products', icon: <Package size={19} />, group: 'Catalog' },
-  { id: 'categories', label: 'Categories', icon: <FolderTree size={19} />, group: 'Catalog' },
-  { id: 'orders', label: 'Orders', icon: <ShoppingCart size={19} />, group: 'Sales' },
-  { id: 'customers', label: 'Customers', icon: <Users size={19} />, group: 'Sales' },
-  { id: 'inventory', label: 'Inventory', icon: <Warehouse size={19} />, group: 'Operations' },
-  { id: 'reviews', label: 'Reviews', icon: <Star size={19} />, group: 'Operations' },
-  { id: 'coupons', label: 'Discounts & Coupons', icon: <Ticket size={19} />, group: 'Marketing' },
-  { id: 'shipping', label: 'Shipping', icon: <Truck size={19} />, group: 'Operations' },
-  { id: 'payments', label: 'Payments', icon: <CreditCard size={19} />, group: 'Finance' },
-  { id: 'analytics', label: 'Analytics', icon: <BarChart3 size={19} />, group: 'Insights' },
-  { id: 'notifications', label: 'Notifications', icon: <Bell size={19} />, group: 'System' },
-  { id: 'store', label: 'Store Management', icon: <Store size={19} />, group: 'System' },
-  { id: 'settings', label: 'Settings', icon: <Settings size={19} />, group: 'System' },
+const navDefs: NavItemDef[] = [
+  { id: 'dashboard', icon: <LayoutDashboard size={19} />, labelKey: 'sidebar.dashboard', groupKey: 'sidebar.overview' },
+  { id: 'products', icon: <Package size={19} />, labelKey: 'sidebar.products', groupKey: 'sidebar.catalog' },
+  { id: 'categories', icon: <FolderTree size={19} />, labelKey: 'sidebar.categories', groupKey: 'sidebar.catalog' },
+  { id: 'orders', icon: <ShoppingCart size={19} />, labelKey: 'sidebar.orders', groupKey: 'sidebar.sales' },
+  { id: 'customers', icon: <Users size={19} />, labelKey: 'sidebar.customers', groupKey: 'sidebar.sales' },
+  { id: 'inventory', icon: <Warehouse size={19} />, labelKey: 'sidebar.inventory', groupKey: 'sidebar.operations' },
+  { id: 'reviews', icon: <Star size={19} />, labelKey: 'sidebar.reviews', groupKey: 'sidebar.operations' },
+  { id: 'coupons', icon: <Ticket size={19} />, labelKey: 'sidebar.coupons', groupKey: 'sidebar.marketing' },
+  { id: 'shipping', icon: <Truck size={19} />, labelKey: 'sidebar.shipping', groupKey: 'sidebar.operations' },
+  { id: 'payments', icon: <CreditCard size={19} />, labelKey: 'sidebar.payments', groupKey: 'sidebar.finance' },
+  { id: 'analytics', icon: <BarChart3 size={19} />, labelKey: 'sidebar.analytics', groupKey: 'sidebar.insights' },
+  { id: 'notifications', icon: <Bell size={19} />, labelKey: 'sidebar.notifications', groupKey: 'sidebar.system' },
+  { id: 'store', icon: <Store size={19} />, labelKey: 'sidebar.store', groupKey: 'sidebar.system' },
+  { id: 'settings', icon: <Settings size={19} />, labelKey: 'sidebar.settings', groupKey: 'sidebar.system' },
 ];
 
 const Sidebar: React.FC = () => {
   const { currentPage, setCurrentPage, sidebarCollapsed, toggleSidebar, searchQuery, setSearchQuery, unreadNotifications } = useStore();
-  const groups = navItems.reduce<Record<string, NavItem[]>>((acc, item) => {
-    if (!acc[item.group]) acc[item.group] = [];
-    acc[item.group].push(item);
+  const { t, isRTL } = useTranslation();
+  const prefTheme = usePreferencesStore((s) => s.theme);
+
+  const groups = navDefs.reduce<Record<string, NavItemDef[]>>((acc, item) => {
+    const groupLabel = t(item.groupKey as any);
+    if (!acc[groupLabel]) acc[groupLabel] = [];
+    acc[groupLabel].push(item);
     return acc;
   }, {});
 
-  const filteredGroups = Object.entries(groups).reduce<Record<string, NavItem[]>>((acc, [group, items]) => {
+  const filteredGroups = Object.entries(groups).reduce<Record<string, NavItemDef[]>>((acc, [group, items]) => {
     const filtered = items.filter((item) =>
-      item.label.toLowerCase().includes(searchQuery.toLowerCase())
+      t(item.labelKey as any).toLowerCase().includes(searchQuery.toLowerCase())
     );
     if (filtered.length > 0) acc[group] = filtered;
     return acc;
   }, {});
 
+  const positionStyle: React.CSSProperties = isRTL
+    ? { right: 0, left: 'auto', borderLeft: '1px solid rgba(255,255,255,0.08)', borderRight: 'none' }
+    : { left: 0, right: 'auto' };
+
   return (
     <aside
-      className={`fixed left-0 top-0 h-full text-white z-40 transition-all duration-300 flex flex-col ${
+      className={`fixed top-0 h-full text-white z-40 transition-all duration-300 flex flex-col ${
         sidebarCollapsed ? 'w-[72px]' : 'w-[260px]'
       }`}
       style={{
-        background: 'linear-gradient(180deg, #071f18 0%, #0a2a1f 30%, #0c3124 65%, #071f18 100%)',
-        borderRight: '1px solid rgba(205,165,82,0.1)',
-        boxShadow: '4px 0 24px rgba(0,0,0,0.35)',
+        background: 'var(--color-darkGreen, #0a2c23)',
+        borderRight: isRTL ? undefined : '1px solid rgba(255,255,255,0.08)',
+        boxShadow: isRTL ? '-4px 0 24px rgba(0,0,0,0.35)' : '4px 0 24px rgba(0,0,0,0.35)',
+        ...positionStyle,
       }}
     >
       {/* Logo */}
@@ -83,8 +95,8 @@ const Sidebar: React.FC = () => {
           <div
             className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
             style={{
-              background: 'linear-gradient(135deg, #cda552, #9a7635)',
-              boxShadow: '0 4px 14px rgba(205,165,82,0.35)',
+              background: `var(--color-accent-${prefTheme === 'dark' ? 'dark' : 'light'}, #d97706)`,
+              boxShadow: `0 4px 14px var(--color-accent-${prefTheme === 'dark' ? 'dark' : 'light'}, #d97706)33`,
             }}
           >
             <span className="text-white font-bold text-sm">S</span>
@@ -92,7 +104,7 @@ const Sidebar: React.FC = () => {
           {!sidebarCollapsed && (
             <div className="min-w-0">
               <h1 className="text-sm font-bold tracking-widest text-white truncate">SODFA</h1>
-              <p className="text-[10px] tracking-widest uppercase font-medium" style={{ color: '#cda55270' }}>
+              <p className="text-[10px] tracking-widest uppercase font-medium opacity-50">
                 Marketplace
               </p>
             </div>
@@ -104,20 +116,20 @@ const Sidebar: React.FC = () => {
       {!sidebarCollapsed && (
         <div className="px-3 pt-3 pb-1 flex-shrink-0">
           <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'rgba(255,255,255,0.3)' }} />
+            <Search size={14} className={`absolute top-1/2 -translate-y-1/2 pointer-events-none ${isRTL ? 'right-3' : 'left-3'}`} style={{ color: 'rgba(255,255,255,0.3)' }} />
             <input
               type="text"
-              placeholder="Search menu..."
+              placeholder={t('sidebar.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none transition-all rounded-lg"
+              className={`w-full py-2 text-sm text-white placeholder-white/30 focus:outline-none transition-all rounded-lg ${isRTL ? 'pr-8 pl-3' : 'pl-8 pr-3'}`}
               style={{
                 background: 'rgba(255,255,255,0.05)',
                 border: '1px solid rgba(255,255,255,0.08)',
               }}
               onFocus={(e) => {
                 e.target.style.background = 'rgba(255,255,255,0.09)';
-                e.target.style.border = '1px solid rgba(205,165,82,0.4)';
+                e.target.style.border = '1px solid var(--color-accent-' + (prefTheme === 'dark' ? 'dark' : 'light') + ', #d97706)40';
               }}
               onBlur={(e) => {
                 e.target.style.background = 'rgba(255,255,255,0.05)';
@@ -154,15 +166,14 @@ const Sidebar: React.FC = () => {
                 <button
                   key={item.id}
                   onClick={() => setCurrentPage(item.id)}
-                  title={sidebarCollapsed ? item.label : undefined}
+                  title={sidebarCollapsed ? t(item.labelKey as any) : undefined}
                   className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[14.5px] font-medium transition-all duration-200 mb-0.5 relative group"
                   style={
                     isActive
                       ? {
-                          background: 'linear-gradient(135deg, rgba(205,165,82,0.16) 0%, rgba(13,52,40,0.5) 100%)',
+                          background: `color-mix(in srgb, var(--color-accent-${prefTheme === 'dark' ? 'dark' : 'light'}, #d97706) 16%, rgba(255,255,255,0.05))`,
                           color: '#ffffff',
-                          border: '1px solid rgba(205,165,82,0.2)',
-                          boxShadow: 'inset 0 1px 0 rgba(205,165,82,0.1)',
+                          border: '1px solid var(--color-accent-' + (prefTheme === 'dark' ? 'dark' : 'light') + ', #d97706)20',
                         }
                       : {
                           background: 'transparent',
@@ -188,22 +199,22 @@ const Sidebar: React.FC = () => {
                   {/* Active indicator bar */}
                   {isActive && (
                     <div
-                      className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[22px] rounded-r-full"
-                      style={{ background: 'linear-gradient(180deg, #cda552, #9a7635)' }}
+                      className={`absolute top-1/2 -translate-y-1/2 w-[3px] h-[22px] rounded-full ${isRTL ? 'right-0' : 'left-0'}`}
+                      style={{ background: `var(--color-accent-${prefTheme === 'dark' ? 'dark' : 'light'}, #d97706)` }}
                     />
                   )}
 
                   {/* Icon */}
                   <span
                     className="flex-shrink-0 transition-colors duration-200"
-                    style={{ color: isActive ? '#cda552' : undefined }}
+                    style={{ color: isActive ? `var(--color-accent-${prefTheme === 'dark' ? 'dark' : 'light'}, #d97706)` : undefined }}
                   >
                     {item.icon}
                   </span>
 
                   {/* Label */}
                   {!sidebarCollapsed && (
-                    <span className="truncate">{item.label}</span>
+                    <span className="truncate">{t(item.labelKey as any)}</span>
                   )}
 
                   {/* Notification badge */}
@@ -225,25 +236,64 @@ const Sidebar: React.FC = () => {
         ))}
       </nav>
 
-      {/* Collapse Toggle */}
+      {/* View Store Button */}
       <div
         className="p-3 flex-shrink-0"
         style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}
       >
-        <button
-          onClick={toggleSidebar}
-          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
-          style={{ color: 'rgba(255,255,255,0.4)' }}
+        <a
+          href="/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
+          style={{
+            background: `var(--color-accent-${prefTheme === 'dark' ? 'dark' : 'light'}, #d97706)`,
+            color: '#ffffff',
+            boxShadow: `0 4px 14px var(--color-accent-${prefTheme === 'dark' ? 'dark' : 'light'}, #d97706)33`,
+          }}
           onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.06)';
-            (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.75)';
+            (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(-1px)';
+            (e.currentTarget as HTMLAnchorElement).style.filter = 'brightness(1.1)';
           }}
           onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
-            (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.4)';
+            (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(0)';
+            (e.currentTarget as HTMLAnchorElement).style.filter = 'brightness(1)';
           }}
         >
-          {sidebarCollapsed ? <ChevronRight size={17} /> : <ChevronLeft size={17} />}
+          <Store size={16} />
+          {!sidebarCollapsed && <span>View Store</span>}
+          {!sidebarCollapsed && <ExternalLink size={12} className="opacity-60" />}
+        </a>
+      </div>
+
+      {/* Desktop Collapse Toggle */}
+      <div
+        className="hidden lg:flex p-3 flex-shrink-0 justify-center"
+        style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}
+      >
+        <button
+          onClick={toggleSidebar}
+          title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-medium transition-all duration-200"
+          style={{
+            background: 'rgba(255,255,255,0.06)',
+            color: 'rgba(255,255,255,0.6)',
+            border: '1px solid rgba(255,255,255,0.08)',
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.1)';
+            (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.9)';
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.06)';
+            (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.6)';
+          }}
+        >
+          {isRTL ? (
+            sidebarCollapsed ? <ChevronsRight size={18} /> : <ChevronsLeft size={18} />
+          ) : (
+            sidebarCollapsed ? <ChevronsRight size={18} /> : <ChevronsLeft size={18} />
+          )}
           {!sidebarCollapsed && <span>Collapse</span>}
         </button>
       </div>

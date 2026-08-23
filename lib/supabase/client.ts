@@ -1,5 +1,5 @@
 /**
- * Browser/client Supabase client
+ * Browser/client Supabase client — singleton
  * Safe to use from Client Components
  *
  * SECURITY: Uses only public anon key, never service-role key
@@ -34,18 +34,23 @@ function createDummyClient() {
   return dummy as unknown as SupabaseClient;
 }
 
+let browserClient: SupabaseClient | null = null;
+
 /**
- * Creates a new client-side Supabase instance
- * Uses NEXT_PUBLIC_* environment variables
- * Safe to expose to browser
+ * Returns the single shared browser-side Supabase instance.
+ * All components share the same auth state, so signOut() clears the session for everyone.
  */
 export const createClient = (): SupabaseClient => {
+  if (browserClient) return browserClient;
+
   const url = publicConfig.url;
   const anonKey = publicConfig.anonKey;
 
   if (!url || !anonKey) {
-    return createDummyClient();
+    browserClient = createDummyClient();
+  } else {
+    browserClient = createSupabaseClient(url, anonKey);
   }
 
-  return createSupabaseClient(url, anonKey);
+  return browserClient;
 };

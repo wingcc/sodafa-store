@@ -113,7 +113,7 @@ export default function StoreContentPage() {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
-          <div className="w-10 h-10 border-4 border-[#cda552] border-t-transparent rounded-full animate-spin mx-auto" />
+          <div className="w-10 h-10 border-4 border-[#d97706] border-t-transparent rounded-full animate-spin mx-auto" />
           <p className="mt-4 text-gray-500 text-sm">Loading content pages...</p>
         </div>
       </div>

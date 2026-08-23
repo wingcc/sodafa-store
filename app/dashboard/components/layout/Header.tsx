@@ -14,12 +14,21 @@ import {
   AlertTriangle,
   Star,
   CreditCard,
-  ArrowLeft, // ← new icon for back button
+  ArrowLeft,
+  ArrowRight,
+  Sun,
+  Moon,
+  Languages,
+  Check,
+  CheckCheck,
+  Loader2,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useStore } from '../../store/useStore';
-import { COLORS } from '../../theme/colors';
+import { usePreferencesStore } from '../../store/usePreferencesStore';
+import { useTranslation } from '../../i18n/useTranslation';
+import { getHeaderIcon, getHeaderBg, formatRelativeTime } from '../notifications/notificationVisuals';
 
 const Header: React.FC = () => {
   const {
@@ -29,10 +38,15 @@ const Header: React.FC = () => {
     setSearchQuery,
     notifications,
     unreadNotifications,
+    fetchNotifications,
+    isLoadingNotifications,
     markNotificationsRead,
     markNotificationAsRead,
+    toggleStarNotification,
     toggleSidebar,
   } = useStore();
+  const { theme, toggleTheme, language, toggleLanguage } = usePreferencesStore();
+  const { t, isRTL } = useTranslation();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [userName, setUserName] = useState<string>('');
@@ -40,6 +54,21 @@ const Header: React.FC = () => {
   const [userInitials, setUserInitials] = useState<string>('??');
   const [signingOut, setSigningOut] = useState(false);
   const router = useRouter();
+
+  // Fetch notifications for bell (shared source of truth with Notification Center)
+  useEffect(() => {
+    if (notifications.length === 0 && !isLoadingNotifications) {
+      fetchNotifications().then(() => {
+        // Auto-seed if empty on first load
+        const state = useStore.getState();
+        if (state.notifications.length === 0 && !state.isLoadingNotifications) {
+          fetch('/api/admin/notifications/seed', { method: 'POST' })
+            .then(() => fetchNotifications())
+            .catch(() => {});
+        }
+      }).catch(() => {});
+    }
+  }, [fetchNotifications, notifications.length, isLoadingNotifications]);
 
   // Fetch the logged-in Supabase user
   useEffect(() => {
@@ -68,41 +97,46 @@ const Header: React.FC = () => {
   }, []);
 
   const handleSignOut = async () => {
+    if (signingOut) return;
     setSigningOut(true);
+
+    // Clear ALL local auth storage immediately
     try {
-      const supabase = createClient();
-      await supabase.auth.signOut();
-      await fetch('/api/auth/logout', { method: 'POST' });
-    } catch (err) {
-      console.error('Sign out error:', err);
-    } finally {
-      window.location.href = '/login';
-    }
+      Object.keys(localStorage).forEach(k => { if (k.startsWith('sb-')) localStorage.removeItem(k); });
+      Object.keys(sessionStorage).forEach(k => { if (k.startsWith('sb-')) sessionStorage.removeItem(k); });
+    } catch {}
+
+    // Fire-and-forget: Supabase signOut + server cookie clear
+    try { createClient().auth.signOut({ scope: 'local' }); } catch {}
+    fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+
+    // Hard redirect — bypasses React router, layout auth, everything
+    window.location.replace('/login');
   };
 
-  const pageTitle: Record<string, string> = {
-    dashboard: 'Dashboard',
-    products: 'Products',
-    categories: 'Categories',
-    orders: 'Orders',
-    customers: 'Customers',
-    inventory: 'Inventory',
-    reviews: 'Reviews',
-    coupons: 'Discounts & Coupons',
-    shipping: 'Shipping',
-    payments: 'Payments',
-    analytics: 'Analytics',
-    notifications: 'Notifications',
-    store: 'Store Management',
-    'store-homepage': 'Home Page',
-    'store-homepage-content': 'Homepage Contents',
-    'store-reviews': 'Homepage Reviews',
-    'store-settings': 'Storefront Settings',
-    'store-seo': 'SEO',
-    'store-banners': 'Promotional Banners',
-    'store-featured': 'Featured Products',
-    'store-content': 'Store Content',
-    settings: 'Settings',
+  const pageTitleMap: Record<string, string> = {
+    dashboard: t('header.page.dashboard'),
+    products: t('header.page.products'),
+    categories: t('header.page.categories'),
+    orders: t('header.page.orders'),
+    customers: t('header.page.customers'),
+    inventory: t('header.page.inventory'),
+    reviews: t('header.page.reviews'),
+    coupons: t('header.page.coupons'),
+    shipping: t('header.page.shipping'),
+    payments: t('header.page.payments'),
+    analytics: t('header.page.analytics'),
+    notifications: t('header.page.notifications'),
+    store: t('header.page.store'),
+    'store-homepage': t('header.page.store-homepage'),
+    'store-homepage-content': t('header.page.store-homepage-content'),
+    'store-reviews': t('header.page.store-reviews'),
+    'store-settings': t('header.page.store-settings'),
+    'store-seo': t('header.page.store-seo'),
+    'store-banners': t('header.page.store-banners'),
+    'store-featured': t('header.page.store-featured'),
+    'store-content': t('header.page.store-content'),
+    settings: t('header.page.settings'),
   };
 
   // Determine if we are on a Store sub‑page
@@ -114,32 +148,38 @@ const Header: React.FC = () => {
 
   const recentNotifications = notifications.slice(0, 5);
 
-  const getNotifIcon = (type: string) => {
-    switch (type) {
-      case 'order': return <ShoppingCart size={15} className="text-purple-500" />;
-      case 'customer': return <Users size={15} className="text-sky-500" />;
-      case 'stock': return <AlertTriangle size={15} className="text-amber-500" />;
-      case 'review': return <Star size={15} className="text-pink-500" />;
-      case 'payment': return <CreditCard size={15} className="text-emerald-500" />;
-      default: return <Bell size={15} className="text-gray-500" />;
-    }
-  };
+  // Accent color helper — uses palette accent instead of hardcoded gold
+  const accentColor = `var(--color-accent-${theme === 'dark' ? 'dark' : 'light'}, #d97706)`;
 
-  const getNotifBg = (type: string) => {
-    switch (type) {
-      case 'order': return 'bg-purple-50';
-      case 'customer': return 'bg-sky-50';
-      case 'stock': return 'bg-amber-50';
-      case 'review': return 'bg-pink-50';
-      case 'payment': return 'bg-emerald-50';
-      default: return 'bg-gray-50';
-    }
+  // Shared visuals — header uses solid bg + white icon, same hue as Center
+  const getNotifIcon = (type: string) => getHeaderIcon(type, 15);
+  const getNotifBg = (type: string) => getHeaderBg(type);
+  const getTypeLabel = (type: string) => {
+    const map: Record<string, string> = {
+      order: 'Orders', review: 'Reviews', product: 'Products', payment: 'Payments',
+      shipping: 'Shipping', promotion: 'Promotions', system: 'System', social: 'Social',
+      inventory: 'Inventory', stock: 'Inventory', customer: 'Social', security: 'Security',
+    };
+    return map[type] ?? type;
   };
 
   const closeAll = () => {
     setShowNotifications(false);
     setShowProfile(false);
   };
+
+  // Handle click outside — close popups when clicking outside them
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (!showNotifications && !showProfile) return;
+      const target = e.target as HTMLElement;
+      // Don't close if click is inside any popup
+      if (target.closest('[data-popup]')) return;
+      closeAll();
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showNotifications, showProfile]);
 
   return (
     <>
@@ -151,9 +191,9 @@ const Header: React.FC = () => {
       <header
         className="h-16 flex items-center justify-between px-4 lg:px-6 sticky top-0 z-50 text-white shadow-lg"
         style={{
-          background: 'linear-gradient(135deg, #061c16 0%, #0b2e22 40%, #0d3428 70%, #061c16 100%)',
-          borderBottom: '1px solid rgba(205,165,82,0.12)',
-          boxShadow: '0 2px 20px rgba(0,0,0,0.4), 0 1px 0 rgba(205,165,82,0.08)',
+          background: 'linear-gradient(135deg, var(--color-darkGreen, #061c16) 0%, var(--color-mediumGreen, #0b2e22) 45%, color-mix(in srgb, var(--color-mediumGreen, #0b2e22) 85%, black) 70%, var(--color-darkGreen, #061c16) 100%)',
+          borderBottom: '1px solid color-mix(in srgb, var(--color-gold, #d97706) 14%, transparent)',
+          boxShadow: '0 2px 20px rgba(0,0,0,0.4), 0 1px 0 color-mix(in srgb, var(--color-gold, #d97706) 10%, transparent)',
         }}
       >
         {/* Left side */}
@@ -171,16 +211,16 @@ const Header: React.FC = () => {
               <button
                 onClick={handleBackToStore}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all hover:bg-white/10"
-                style={{ color: '#cda552' }}
+                style={{ color: accentColor }}
               >
-                <ArrowLeft size={16} />
-                <span>Back</span>
+                {isRTL ? <ArrowRight size={16} /> : <ArrowLeft size={16} />}
+                <span>{t('header.back')}</span>
               </button>
             )}
             <div>
-              <h1 className="text-lg font-bold text-white tracking-wide">{pageTitle[currentPage]}</h1>
-              <p className="text-[11px] hidden sm:block font-medium" style={{ color: '#cda552cc' }}>
-                SODFA MARKETPLACE Admin
+              <h1 className="text-lg font-bold text-white tracking-wide">{pageTitleMap[currentPage] ?? currentPage}</h1>
+              <p className="text-[11px] hidden sm:block font-medium opacity-60">
+                {t('header.subtitle')}
               </p>
             </div>
           </div>
@@ -190,20 +230,20 @@ const Header: React.FC = () => {
         <div className="flex items-center gap-2.5">
           {/* Search */}
           <div className="hidden md:flex items-center relative">
-            <Search size={15} className="absolute left-3 text-white/30 pointer-events-none" />
+            <Search size={15} className={`absolute ${isRTL ? 'right-3' : 'left-3'} text-white/30 pointer-events-none`} />
             <input
               type="text"
-              placeholder="Search products, orders..."
+              placeholder={t('header.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-64 pl-9 pr-4 py-2 text-sm text-white placeholder-white/30 focus:outline-none transition-all rounded-xl"
+              className={`w-64 py-2 text-sm text-white placeholder-white/30 focus:outline-none transition-all rounded-xl ${isRTL ? 'pr-9 pl-4' : 'pl-9 pr-4'}`}
               style={{
                 background: 'rgba(255,255,255,0.06)',
                 border: '1px solid rgba(255,255,255,0.1)',
               }}
               onFocus={(e) => {
                 e.target.style.background = 'rgba(255,255,255,0.1)';
-                e.target.style.border = '1px solid rgba(205,165,82,0.45)';
+                e.target.style.border = `1px solid ${accentColor}73`;
               }}
               onBlur={(e) => {
                 e.target.style.background = 'rgba(255,255,255,0.06)';
@@ -212,6 +252,37 @@ const Header: React.FC = () => {
             />
           </div>
 
+          {/* Theme Toggle */}
+          <button
+            onClick={toggleTheme}
+            title={theme === 'dark' ? t('header.theme.light') : t('header.theme.dark')}
+            aria-label={t('header.toggleTheme')}
+            className="relative w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
+            style={{
+              background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              color: 'rgba(255,255,255,0.85)',
+            }}
+          >
+            {theme === 'dark' ? <Sun size={18} style={{ color: accentColor }} /> : <Moon size={18} />}
+          </button>
+
+          {/* Language Toggle */}
+          <button
+            onClick={toggleLanguage}
+            title={t('header.toggleLanguage')}
+            aria-label={t('header.toggleLanguage')}
+            className="relative w-10 h-10 rounded-xl flex items-center justify-center gap-1 transition-all duration-200 hover:scale-105 active:scale-95 text-xs font-bold"
+            style={{
+              background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              color: 'rgba(255,255,255,0.85)',
+            }}
+          >
+            <Languages size={15} />
+            <span className="hidden sm:inline text-[10px] leading-none">{language === 'ar' ? 'AR' : 'EN'}</span>
+          </button>
+
           {/* Notifications */}
           <div className="relative z-50">
             <button
@@ -219,16 +290,16 @@ const Header: React.FC = () => {
                 setShowNotifications((v) => !v);
                 setShowProfile(false);
               }}
-              title="Notifications"
+              title={t('header.notifications')}
               className="relative w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200"
               style={{
                 background: showNotifications
-                  ? 'rgba(205,165,82,0.18)'
+                  ? `color-mix(in srgb, ${accentColor} 18%, transparent)`
                   : 'rgba(255,255,255,0.06)',
                 border: showNotifications
-                  ? '1px solid rgba(205,165,82,0.4)'
+                  ? `1px solid color-mix(in srgb, ${accentColor} 40%, transparent)`
                   : '1px solid rgba(255,255,255,0.1)',
-                color: showNotifications ? '#cda552' : 'rgba(255,255,255,0.75)',
+                color: showNotifications ? accentColor : 'rgba(255,255,255,0.75)',
               }}
             >
               <Bell size={19} />
@@ -237,7 +308,7 @@ const Header: React.FC = () => {
                   className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 text-white text-[10px] font-bold rounded-full flex items-center justify-center pointer-events-none"
                   style={{
                     background: 'linear-gradient(135deg, #ef4444, #dc2626)',
-                    border: '2px solid #061c16',
+                    border: '2px solid var(--color-darkGreen, #0a2c23)',
                     boxShadow: '0 2px 8px rgba(239,68,68,0.5)',
                   }}
                 >
@@ -248,12 +319,13 @@ const Header: React.FC = () => {
 
             {showNotifications && (
               <div
-                className="absolute right-0 top-full mt-3 w-80 sm:w-[400px] rounded-2xl overflow-hidden z-50"
+                className={`absolute top-full mt-3 w-80 sm:w-[400px] rounded-2xl overflow-hidden z-50 ${isRTL ? 'left-0' : 'right-0'}`}
                 style={{
                   background: '#ffffff',
                   border: '1px solid rgba(0,0,0,0.08)',
                   boxShadow: '0 20px 60px rgba(0,0,0,0.18), 0 8px 24px rgba(0,0,0,0.12)',
                 }}
+                data-popup="notifications"
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Header */}
@@ -262,10 +334,10 @@ const Header: React.FC = () => {
                   style={{ borderBottom: '1px solid #f3f4f6', background: '#fafafa' }}
                 >
                   <div className="flex items-center gap-2.5">
-                    <h3 className="font-bold text-gray-900 text-sm">Notifications</h3>
+                    <h3 className="font-bold text-gray-900 text-sm">{t('header.notifications')}</h3>
                     {unreadNotifications > 0 && (
                       <span className="px-2 py-0.5 text-[11px] font-bold text-red-600 bg-red-50 rounded-full border border-red-100">
-                        {unreadNotifications} new
+                        {unreadNotifications} {t('header.new')}
                       </span>
                     )}
                   </div>
@@ -273,46 +345,63 @@ const Header: React.FC = () => {
                     <button
                       onClick={() => markNotificationsRead()}
                       className="text-xs font-semibold transition-colors hover:opacity-70"
-                      style={{ color: COLORS.gold }}
+                      style={{ color: accentColor }}
                     >
-                      Mark all read
+                      {t('header.markAllRead')}
                     </button>
                   )}
                 </div>
 
                 {/* Items */}
                 <div className="max-h-[360px] overflow-y-auto divide-y divide-gray-50">
-                  {recentNotifications.map((notif) => (
-                    <div
-                      key={notif.id}
-                      onClick={() => markNotificationAsRead(notif.id)}
-                      className="px-5 py-3.5 cursor-pointer transition-colors hover:bg-gray-50"
-                      style={!notif.read ? { background: 'rgba(205,165,82,0.05)' } : {}}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className={`w-8 h-8 rounded-xl ${getNotifBg(notif.type)} flex items-center justify-center flex-shrink-0 mt-0.5`}>
-                          {getNotifIcon(notif.type)}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="text-sm font-semibold text-gray-900 truncate">{notif.title}</p>
-                            {!notif.read && (
-                              <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: '#cda552' }} />
-                            )}
+                  {isLoadingNotifications && recentNotifications.length === 0 ? (
+                    <div className="py-10 flex flex-col items-center gap-2 text-gray-400">
+                      <Loader2 size={18} className="animate-spin text-gray-400" />
+                      <span className="text-xs">Loading notifications...</span>
+                    </div>
+                  ) : recentNotifications.length === 0 ? (
+                    <div className="py-10 flex flex-col items-center gap-2 text-gray-400">
+                      <Bell size={20} className="text-gray-300" />
+                      <span className="text-xs">No notifications</span>
+                    </div>
+                  ) : (
+                    recentNotifications.map((notif) => (
+                      <div
+                        key={notif.id}
+                        onClick={() => {
+                          if (!notif.read) markNotificationAsRead(notif.id).catch(()=>{});
+                          if (notif.actionUrl) {
+                            const p = notif.actionUrl.replace(/^\/dashboard\/?/, '') || 'dashboard';
+                            setCurrentPage(p as any);
+                            setShowNotifications(false);
+                          }
+                        }}
+                        className="px-5 py-3.5 cursor-pointer transition-colors hover:bg-gray-50"
+                        style={!notif.read ? { background: `color-mix(in srgb, ${accentColor} 5%, transparent)` } : {}}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={`w-8 h-8 rounded-xl ${getNotifBg(notif.type)} flex items-center justify-center flex-shrink-0 mt-0.5 border shadow-sm`}>
+                            {getNotifIcon(notif.type)}
                           </div>
-                          <p className="text-xs text-gray-500 mt-0.5 leading-relaxed line-clamp-2">{notif.message}</p>
-                          <p className="text-[10px] text-gray-400 mt-1.5 font-medium">
-                            {new Date(notif.timestamp).toLocaleDateString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </p>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-sm font-semibold text-gray-900 truncate">{notif.title}</p>
+                              <div className="flex items-center gap-1.5 flex-shrink-0">
+                                {(notif as any).starred && <Star size={12} className="text-amber-500 fill-amber-500" />}
+                                {!notif.read && (
+                                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: accentColor }} />
+                                )}
+                              </div>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-0.5 leading-relaxed line-clamp-2">{notif.message}</p>
+                            <p className="text-[10px] text-gray-400 mt-1.5 font-medium">
+                              {formatRelativeTime(notif.timestamp)}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
 
                 {/* Footer */}
@@ -326,9 +415,9 @@ const Header: React.FC = () => {
                       setCurrentPage('notifications');
                     }}
                     className="text-xs font-semibold w-full transition-colors hover:opacity-70"
-                    style={{ color: COLORS.gold }}
+                    style={{ color: accentColor }}
                   >
-                    View all notifications →
+                    {t('header.viewAll')}
                   </button>
                 </div>
               </div>
@@ -347,15 +436,15 @@ const Header: React.FC = () => {
               }}
               className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl transition-all duration-200"
               style={{
-                background: showProfile ? 'rgba(205,165,82,0.12)' : 'rgba(255,255,255,0.06)',
-                border: showProfile ? '1px solid rgba(205,165,82,0.35)' : '1px solid rgba(255,255,255,0.1)',
+                background: showProfile ? `color-mix(in srgb, ${accentColor} 12%, transparent)` : 'rgba(255,255,255,0.06)',
+                border: showProfile ? `1px solid color-mix(in srgb, ${accentColor} 35%, transparent)` : '1px solid rgba(255,255,255,0.1)',
               }}
             >
               <div
                 className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 font-bold text-xs text-white"
                 style={{
-                  background: 'linear-gradient(135deg, #cda552, #9a7635)',
-                  boxShadow: '0 2px 8px rgba(205,165,82,0.35)',
+                  background: accentColor,
+                  boxShadow: `0 2px 8px color-mix(in srgb, ${accentColor} 35%, transparent)`,
                 }}
               >
                 {userInitials}
@@ -364,7 +453,7 @@ const Header: React.FC = () => {
                 <span className="text-xs font-semibold text-white leading-tight">
                   {userName || 'Loading...'}
                 </span>
-                <span className="text-[10px] leading-tight" style={{ color: '#cda552aa' }}>
+                <span className="text-[10px] leading-tight opacity-50">
                   {userEmail || '—'}
                 </span>
               </div>
@@ -380,12 +469,13 @@ const Header: React.FC = () => {
 
             {showProfile && (
               <div
-                className="absolute right-0 top-full mt-3 w-64 sm:w-72 rounded-2xl overflow-hidden z-50"
+                className={`absolute top-full mt-3 w-64 sm:w-72 rounded-2xl overflow-hidden z-50 ${isRTL ? 'left-0' : 'right-0'}`}
                 style={{
                   background: '#ffffff',
                   border: '1px solid rgba(0,0,0,0.08)',
                   boxShadow: '0 20px 60px rgba(0,0,0,0.18), 0 8px 24px rgba(0,0,0,0.12)',
                 }}
+                data-popup="profile"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div
@@ -394,7 +484,7 @@ const Header: React.FC = () => {
                 >
                   <div
                     className="w-11 h-11 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
-                    style={{ background: 'linear-gradient(135deg, #cda552, #9a7635)', boxShadow: '0 4px 12px rgba(205,165,82,0.3)' }}
+                    style={{ background: accentColor, boxShadow: `0 4px 12px color-mix(in srgb, ${accentColor} 30%, transparent)` }}
                   >
                     {userInitials}
                   </div>
@@ -404,17 +494,29 @@ const Header: React.FC = () => {
                   </div>
                 </div>
                 <div className="py-1.5 px-1.5">
-                  <button className="w-full flex items-center gap-3 px-3.5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-xl transition-colors">
+                  <button
+                    onClick={() => {
+                      setShowProfile(false);
+                      setCurrentPage('settings');
+                    }}
+                    className="w-full flex items-center gap-3 px-3.5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-xl transition-colors"
+                  >
                     <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center">
                       <User size={14} className="text-gray-500" />
                     </div>
-                    My Profile
+                    {t('header.profile.myProfile')}
                   </button>
-                  <button className="w-full flex items-center gap-3 px-3.5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-xl transition-colors">
+                  <button
+                    onClick={() => {
+                      setShowProfile(false);
+                      setCurrentPage('settings');
+                    }}
+                    className="w-full flex items-center gap-3 px-3.5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-xl transition-colors"
+                  >
                     <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center">
                       <Settings size={14} className="text-gray-500" />
                     </div>
-                    Settings
+                    {t('header.profile.settings')}
                   </button>
                   <div className="my-1 mx-3" style={{ borderTop: '1px solid #f3f4f6' }} />
                   <button
@@ -425,7 +527,7 @@ const Header: React.FC = () => {
                     <div className="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center">
                       <LogOut size={14} className="text-red-500" />
                     </div>
-                    {signingOut ? 'Signing out...' : 'Sign Out'}
+                    {signingOut ? t('header.profile.signingOut') : t('header.profile.signOut')}
                   </button>
                 </div>
               </div>

@@ -16,8 +16,10 @@ import StatCard from '../components/ui/StatCard';
 import Badge from '../components/ui/Badge';
 import RefreshButton from '../components/ui/RefreshButton';
 import { orders } from '../data/mockData';
+import { useTranslation } from '../i18n/useTranslation';
 
 const Payments: React.FC = () => {
+  const { t } = useTranslation();
   const handleRefresh = () => {
     // Refresh payment data
   };
@@ -39,7 +41,7 @@ const Payments: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Payments</h2>
+          <h2 className="text-xl font-bold text-gray-900">{t('payments.title')}</h2>
           <p className="text-sm text-gray-500 mt-1">Track and manage all payment transactions</p>
         </div>
         <RefreshButton

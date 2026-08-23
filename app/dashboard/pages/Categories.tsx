@@ -17,8 +17,10 @@ import Badge from '../components/ui/Badge';
 import RefreshButton from '../components/ui/RefreshButton';
 import { categories } from '../data/mockData';
 import { useToast } from '@/lib/toast';
+import { useTranslation } from '../i18n/useTranslation';
 
 const Categories: React.FC = () => {
+  const { t } = useTranslation();
   const { addToast } = useToast();
   const [showModal, setShowModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState<unknown>(null);
@@ -60,7 +62,7 @@ const Categories: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Categories</h2>
+          <h2 className="text-xl font-bold text-gray-900">{t('header.page.categories')}</h2>
           <p className="text-sm text-gray-500 mt-1">Organize your product catalog</p>
         </div>
         <div className="flex items-center gap-3">

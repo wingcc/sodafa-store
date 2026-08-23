@@ -22,8 +22,6 @@ import {
   Send,
   UserCheck
 } from 'lucide-react';
-import { Navbar } from '../../../../sections/Navbar';
-import { Footer } from '../../../../sections/Footer';
 import { ProductCard } from '../../../../components/ProductCard';
 import { useUI } from '../../../../contexts/UIContext';
 import { useLanguage } from '../../../../contexts/LanguageContext';
@@ -51,13 +49,9 @@ export default function ProductDetailClient({ product: initialProduct }: Product
 
   if (!product) {
     return (
-      <>
-        <Navbar />
-        <main className="min-h-screen bg-stone-50 pt-6 pb-20 font-sans flex items-center justify-center">
-          <p className="text-stone-500">Product not found.</p>
-        </main>
-        <Footer />
-      </>
+      <main className="min-h-screen bg-stone-50 pt-6 pb-20 font-sans flex items-center justify-center">
+        <p className="text-stone-500">Product not found.</p>
+      </main>
     );
   }
 
@@ -212,9 +206,7 @@ export default function ProductDetailClient({ product: initialProduct }: Product
   }, [product]);
 
   return (
-    <>
-      <Navbar />
-      <main className="min-h-screen bg-stone-50 pt-6 pb-20 font-sans" dir={isAr ? 'rtl' : 'ltr'}>
+    <main className="min-h-screen bg-stone-50 pt-6 pb-20 font-sans" dir={isAr ? 'rtl' : 'ltr'}>
         {/* Breadcrumb Navigation */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <nav className="flex items-center gap-2 text-xs sm:text-sm text-stone-500 font-medium overflow-x-auto">
@@ -841,7 +833,5 @@ export default function ProductDetailClient({ product: initialProduct }: Product
           )}
         </div>
       </main>
-      <Footer />
-    </>
   );
 }

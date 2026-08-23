@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import type { Product } from '../../../types/product';
 import { ProductCard } from '../../../components/ProductCard';
-import { FlashSales } from '../../../components/FlashSales';
+ 
 import { ProductHeroCarousel } from './ProductHeroCarousel';
 import { Pagination } from './Pagination';
 import { useUI } from '../../../contexts/UIContext';
@@ -202,14 +202,19 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
   return (
     <div
       ref={sectionRef}
-      className="min-h-screen bg-stone-50 text-stone-800 font-sans"
+      className="min-h-screen text-stone-800 font-sans"
+      style={{ background: 'linear-gradient(180deg, #FCFAF3 0%, #F7F3E8 100%)' }}
       dir={isAr ? 'rtl' : 'ltr'}
     >
-      <ProductHeroCarousel products={allProducts} />
-      <FlashSales />
+      <div className="max-w-[1440px] mx-auto w-full">
+        <div className="mx-3 sm:mx-4 mt-4 overflow-hidden rounded-[28px] shadow-[0_20px_60px_rgba(17,64,47,.12)] border border-white/60">
+          <ProductHeroCarousel products={allProducts} />
+        </div>
+      </div>
+      
 
-      {/* ===== CONTROLS BAR ===== */}
-      <div className="sticky top-16 z-30 bg-white/95 backdrop-blur-md border-y border-stone-200 shadow-xs">
+      {/* ===== CONTROLS BAR — 2026 floating glass pill ===== */}
+      <div className="store-controls-pill">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
           {/* Top row: Search + Sort + View toggle */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
@@ -313,7 +318,7 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
             </div>
           </div>
 
-          {/* Category Pills Slider */}
+          {/* Category Pills — segmented pill */}
           <div className="flex gap-2 mt-3.5 overflow-x-auto pb-1 scrollbar-none">
             {CATEGORIES_DATA.map((cat) => (
               <button
@@ -322,14 +327,11 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
                   setActiveCategory(cat.value);
                   setCurrentPage(1);
                 }}
-                className={`
-                  flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all duration-200
-                  ${
-                    activeCategory === cat.value
-                      ? 'bg-emerald-950 text-amber-200 shadow-sm scale-105 border border-emerald-900'
-                      : 'bg-stone-100 text-stone-600 border border-stone-200/60 hover:bg-stone-200/70 hover:text-stone-900'
-                  }
-                `}
+                className={`flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold border transition-all duration-200 ${
+                  activeCategory === cat.value
+                    ? 'bg-[#07231A] text-[#E8CE93] border-[#07231A] shadow-sm'
+                    : 'bg-white text-stone-600 border-[var(--line)] hover:border-[#1E7A57]/30 hover:text-[#07231A]'
+                }`}
               >
                 <span>{cat.icon}</span>
                 <span>{isAr ? cat.ar : cat.en}</span>

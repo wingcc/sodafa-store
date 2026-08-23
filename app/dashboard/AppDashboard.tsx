@@ -20,6 +20,7 @@ import Analytics from './pages/Analytics';
 import Notifications from './pages/Notifications';
 import Settings from './pages/Settings';
 import { useStore } from './store/useStore';
+import { usePreferencesStore } from './store/usePreferencesStore';
 
 // استيراد مكونات إدارة المتجر الجديدة
 import StoreManagerOverview from './pages/store-manager/Overview';
@@ -29,6 +30,8 @@ import StoreContentPage from './pages/store-manager/store-content/page';
 
 const App: React.FC = () => {
   const { currentPage, sidebarCollapsed } = useStore();
+  const language = usePreferencesStore((s) => s.language);
+  const isRTL = language === 'ar';
 
   const renderPage = () => {
     switch (currentPage) {
@@ -58,11 +61,12 @@ const App: React.FC = () => {
     }
   };
 
+  const marginClass = isRTL
+    ? (sidebarCollapsed ? 'mr-[72px]' : 'mr-[260px]')
+    : (sidebarCollapsed ? 'ml-[72px]' : 'ml-[260px]');
   return (
     <div
-      className={`flex flex-col transition-all duration-300 ${
-        sidebarCollapsed ? 'ml-[72px]' : 'ml-[260px]'
-      } min-h-screen`}
+      className={`flex flex-col transition-all duration-300 ${marginClass} min-h-screen`}
     >
       <Header />
       <main className="p-4 lg:p-6 flex-1">

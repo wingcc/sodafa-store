@@ -1,0 +1,1376 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+     <meta charset="UTF-8">
+     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+     <title>SODFA — استوديو لوحات الألوان</title>
+     <script src="https://cdn.tailwindcss.com"></script>
+     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css">
+     <link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/css/tajawal@latest/arabic-400-normal.css">
+     <link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/css/tajawal@latest/arabic-700-normal.css">
+     <link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/css/tajawal@latest/arabic-900-normal.css">
+     <style>
+          * {
+               font-family: 'Tajawal', system-ui, sans-serif;
+               -webkit-tap-highlight-color: transparent;
+          }
+
+          html {
+               scroll-behavior: smooth;
+          }
+
+          body {
+               background: var(--bg);
+               color: var(--text);
+               transition: background 0.5s, color 0.5s;
+               overflow-x: hidden;
+          }
+
+          /* ============ DEFAULT PALETTE (Emerald) ============ */
+          :root {
+               --primary: #059669;
+               --primary-dark: #047857;
+               --primary-light: #10b981;
+               --primary-50: #ecfdf5;
+               --accent: #d97706;
+               --accent-light: #f59e0b;
+               --bg: #fafaf7;
+               --bg-alt: #ffffff;
+               --card: #ffffff;
+               --text: #0f172a;
+               --text-muted: #64748b;
+               --border: #e2e8f0;
+               --shadow: rgba(0, 0, 0, 0.08);
+          }
+
+          .dark {
+               --bg: #0a0f1a;
+               --bg-alt: #131a28;
+               --card: #131a28;
+               --text: #f1f5f9;
+               --text-muted: #94a3b8;
+               --border: #1e293b;
+               --primary-50: rgba(16, 185, 129, 0.1);
+               --shadow: rgba(0, 0, 0, 0.4);
+          }
+
+          /* ============ PALETTE: ROSE BLOOM ============ */
+          body.palette-rose {
+               --primary: #e11d48;
+               --primary-dark: #be123c;
+               --primary-light: #fb7185;
+               --primary-50: #fff1f2;
+               --accent: #d97706;
+               --accent-light: #f59e0b;
+          }
+
+          body.palette-rose.dark {
+               --bg: #1a0a12;
+               --bg-alt: #241018;
+               --card: #241018;
+               --primary-50: rgba(251, 113, 133, 0.1);
+               --border: #3a1a28;
+          }
+
+          /* ============ PALETTE: ROYAL AMETHYST ============ */
+          body.palette-amethyst {
+               --primary: #7c3aed;
+               --primary-dark: #6d28d9;
+               --primary-light: #a78bfa;
+               --primary-50: #f5f3ff;
+               --accent: #d97706;
+               --accent-light: #f59e0b;
+          }
+
+          body.palette-amethyst.dark {
+               --bg: #0f0a1a;
+               --bg-alt: #1a1428;
+               --card: #1a1428;
+               --primary-50: rgba(167, 139, 250, 0.1);
+               --border: #2a1a3a;
+          }
+
+          /* ============ PALETTE: OCEAN SAPPHIRE ============ */
+          body.palette-ocean {
+               --primary: #0369a1;
+               --primary-dark: #075985;
+               --primary-light: #0ea5e9;
+               --primary-50: #f0f9ff;
+               --accent: #d97706;
+               --accent-light: #f59e0b;
+          }
+
+          body.palette-ocean.dark {
+               --bg: #0a1520;
+               --bg-alt: #121f2e;
+               --card: #121f2e;
+               --primary-50: rgba(14, 165, 233, 0.1);
+               --border: #1a2e40;
+          }
+
+          /* ============ UI ============ */
+          .gradient-text {
+               background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+               -webkit-background-clip: text;
+               background-clip: text;
+               color: transparent;
+          }
+
+          .glass {
+               background: rgba(255, 255, 255, 0.7);
+               backdrop-filter: blur(20px);
+               border: 1px solid rgba(255, 255, 255, 0.3);
+          }
+
+          .dark .glass {
+               background: rgba(19, 26, 40, 0.7);
+               border: 1px solid rgba(255, 255, 255, 0.08);
+          }
+
+          .mesh-bg {
+               background:
+                    radial-gradient(at 20% 30%, color-mix(in srgb, var(--primary) 15%, transparent) 0px, transparent 50%),
+                    radial-gradient(at 80% 20%, color-mix(in srgb, var(--accent) 12%, transparent) 0px, transparent 50%),
+                    radial-gradient(at 40% 80%, color-mix(in srgb, var(--primary) 10%, transparent) 0px, transparent 50%);
+          }
+
+          .btn-primary {
+               background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+               transition: all 0.3s;
+               position: relative;
+               overflow: hidden;
+          }
+
+          .btn-primary:hover {
+               transform: translateY(-2px);
+               box-shadow: 0 15px 30px -5px color-mix(in srgb, var(--primary) 50%, transparent);
+          }
+
+          .palette-card {
+               transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+               position: relative;
+               overflow: hidden;
+          }
+
+          .palette-card::before {
+               content: '';
+               position: absolute;
+               inset: 0;
+               background: linear-gradient(135deg, transparent, rgba(255, 255, 255, 0.05));
+               opacity: 0;
+               transition: opacity 0.4s;
+               pointer-events: none;
+          }
+
+          .palette-card:hover::before {
+               opacity: 1;
+          }
+
+          .palette-card:hover {
+               transform: translateY(-8px);
+               box-shadow: 0 30px 60px -20px var(--shadow);
+          }
+
+          .palette-card.active {
+               border-color: var(--primary) !important;
+               box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 20%, transparent);
+          }
+
+          .swatch {
+               transition: all 0.3s;
+               cursor: pointer;
+               position: relative;
+          }
+
+          .swatch:hover {
+               transform: translateY(-4px) scale(1.05);
+               box-shadow: 0 10px 25px -5px var(--shadow);
+          }
+
+          .swatch.copied::after {
+               content: '✓';
+               position: absolute;
+               inset: 0;
+               display: flex;
+               align-items: center;
+               justify-content: center;
+               background: rgba(0, 0, 0, 0.6);
+               color: white;
+               font-weight: bold;
+               font-size: 20px;
+               border-radius: inherit;
+               animation: fadeIn 0.3s;
+          }
+
+          @keyframes fadeIn {
+               from {
+                    opacity: 0;
+               }
+
+               to {
+                    opacity: 1;
+               }
+          }
+
+          .fade-up {
+               opacity: 0;
+               transform: translateY(30px);
+               transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+          }
+
+          .fade-up.visible {
+               opacity: 1;
+               transform: translateY(0);
+          }
+
+          .mode-toggle {
+               position: relative;
+               width: 60px;
+               height: 32px;
+               background: var(--border);
+               border-radius: 16px;
+               cursor: pointer;
+               transition: background 0.3s;
+          }
+
+          .mode-toggle::after {
+               content: '';
+               position: absolute;
+               top: 3px;
+               right: 3px;
+               width: 26px;
+               height: 26px;
+               background: white;
+               border-radius: 50%;
+               transition: all 0.3s;
+               box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+          }
+
+          .dark .mode-toggle {
+               background: var(--primary);
+          }
+
+          .dark .mode-toggle::after {
+               right: 31px;
+          }
+
+          .preview-card {
+               background: var(--card);
+               border: 1px solid var(--border);
+               border-radius: 1rem;
+               transition: all 0.4s;
+          }
+
+          .toast {
+               animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+          }
+
+          @keyframes slideIn {
+               from {
+                    transform: translateX(-100%);
+                    opacity: 0;
+               }
+
+               to {
+                    transform: translateX(0);
+                    opacity: 1;
+               }
+          }
+
+          .blob {
+               position: absolute;
+               border-radius: 50%;
+               filter: blur(80px);
+               opacity: 0.15;
+               pointer-events: none;
+          }
+
+          .scrollbar-thin::-webkit-scrollbar {
+               width: 6px;
+          }
+
+          .scrollbar-thin::-webkit-scrollbar-track {
+               background: transparent;
+          }
+
+          .scrollbar-thin::-webkit-scrollbar-thumb {
+               background: var(--primary);
+               border-radius: 3px;
+          }
+
+          .palette-preview {
+               background: linear-gradient(135deg, var(--preview-1), var(--preview-2));
+          }
+
+          .hero-glow {
+               position: absolute;
+               width: 500px;
+               height: 500px;
+               border-radius: 50%;
+               filter: blur(100px);
+               opacity: 0.3;
+               transition: all 1s;
+          }
+     </style>
+</head>
+
+<body class="min-h-screen">
+
+     <!-- Decorative blobs -->
+     <div class="blob" style="width: 500px; height: 500px; top: -150px; right: -150px; background: var(--primary);">
+     </div>
+     <div class="blob" style="width: 400px; height: 400px; top: 400px; left: -100px; background: var(--accent);"></div>
+
+     <!-- Header -->
+     <header class="sticky top-0 z-40 glass shadow-sm">
+          <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+               <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-2xl flex items-center justify-center shadow-lg"
+                         style="background: linear-gradient(135deg, var(--primary), var(--primary-dark));">
+                         <i class="fa-solid fa-palette text-white text-lg"></i>
+                    </div>
+                    <div>
+                         <h1 class="text-lg font-black" style="color: var(--text);">استوديو الألوان</h1>
+                         <p class="text-[10px]" style="color: var(--text-muted);">SODFA · 3 لوحات احترافية</p>
+                    </div>
+               </div>
+
+               <div class="flex items-center gap-3">
+                    <span class="hidden sm:inline text-xs font-bold px-3 py-1.5 rounded-full"
+                         style="background: var(--primary-50); color: var(--primary);">
+                         <i class="fa-solid fa-circle-check ml-1"></i>
+                         Light & Dark
+                    </span>
+                    <div class="flex items-center gap-2">
+                         <i class="fa-solid fa-sun text-amber-500"></i>
+                         <div class="mode-toggle" onclick="toggleMode()"></div>
+                         <i class="fa-solid fa-moon text-slate-400"></i>
+                    </div>
+               </div>
+          </div>
+     </header>
+
+     <main class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-10">
+
+          <!-- Hero -->
+          <section class="relative mb-12 fade-up">
+               <div class="relative overflow-hidden rounded-3xl p-8 sm:p-12 text-center mesh-bg"
+                    style="background-color: var(--card); border: 1px solid var(--border);">
+                    <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold mb-5"
+                         style="background: var(--primary-50); color: var(--primary); border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);">
+                         <i class="fa-solid fa-wand-magic-sparkles"></i>
+                         UX Max Pro · تصميم احترافي
+                    </span>
+                    <h2 class="text-3xl sm:text-5xl lg:text-6xl font-black mb-4 leading-tight"
+                         style="color: var(--text);">
+                         ثلاث لوحات ألوان <span class="gradient-text">استثنائية</span>
+                    </h2>
+                    <p class="text-base sm:text-lg max-w-2xl mx-auto mb-6" style="color: var(--text-muted);">
+                         كل لوحة مصممة بعناية لتعكس هوية SODFA — مع دعم كامل للوضع الفاتح والداكن. اختاري اللوحة التي
+                         تعبّر عن علامتك.
+                    </p>
+                    <div class="flex flex-wrap justify-center gap-3">
+                         <div class="flex items-center gap-2 px-4 py-2 rounded-xl glass text-xs font-bold"
+                              style="color: var(--text);">
+                              <i class="fa-solid fa-sun text-amber-500"></i>
+                              <span>Light Mode</span>
+                         </div>
+                         <div class="flex items-center gap-2 px-4 py-2 rounded-xl glass text-xs font-bold"
+                              style="color: var(--text);">
+                              <i class="fa-solid fa-moon text-indigo-400"></i>
+                              <span>Dark Mode</span>
+                         </div>
+                         <div class="flex items-center gap-2 px-4 py-2 rounded-xl glass text-xs font-bold"
+                              style="color: var(--text);">
+                              <i class="fa-solid fa-eye-dropper" style="color: var(--primary);"></i>
+                              <span>انسخي الألوان</span>
+                         </div>
+                    </div>
+               </div>
+          </section>
+
+          <!-- Palette Cards -->
+          <section class="mb-16">
+               <div class="flex items-center gap-3 mb-6 fade-up">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white"
+                         style="background: linear-gradient(135deg, var(--primary), var(--primary-dark));">
+                         <i class="fa-solid fa-palette"></i>
+                    </div>
+                    <div>
+                         <h3 class="text-2xl font-black" style="color: var(--text);">اختاري لوحتك</h3>
+                         <p class="text-sm" style="color: var(--text-muted);">اضغطي على أي لوحة لتطبيقها مباشرة</p>
+                    </div>
+               </div>
+
+               <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                    <!-- ============ PALETTE 1: EMERALD GARDEN ============ -->
+                    <div class="palette-card active fade-up rounded-3xl overflow-hidden"
+                         style="background: var(--card); border: 2px solid var(--border);" data-palette="emerald"
+                         onclick="applyPalette('emerald')">
+                         <!-- Preview Header -->
+                         <div class="relative h-48 overflow-hidden"
+                              style="background: linear-gradient(135deg, #059669 0%, #d97706 100%);">
+                              <div
+                                   class="absolute top-4 right-4 bg-white/20 backdrop-blur rounded-2xl px-3 py-2 text-white">
+                                   <p class="text-[10px] opacity-80">الأكثر شعبية</p>
+                                   <p class="text-sm font-black">✨ الافتراضية</p>
+                              </div>
+                              <div class="absolute bottom-4 right-4 left-4">
+                                   <div
+                                        class="bg-white/95 backdrop-blur rounded-2xl p-3 shadow-xl flex items-center justify-between">
+                                        <div>
+                                             <p class="text-[10px] text-slate-500">حديقة الزمرد</p>
+                                             <p class="text-lg font-black gradient-text"
+                                                  style="background: linear-gradient(135deg, #059669, #d97706); -webkit-background-clip: text; background-clip: text; color: transparent;">
+                                                  Emerald Garden</p>
+                                        </div>
+                                        <div class="flex -space-x-1 space-x-reverse">
+                                             <div class="w-8 h-8 rounded-full border-2 border-white"
+                                                  style="background: #059669;"></div>
+                                             <div class="w-8 h-8 rounded-full border-2 border-white"
+                                                  style="background: #10b981;"></div>
+                                             <div class="w-8 h-8 rounded-full border-2 border-white"
+                                                  style="background: #d97706;"></div>
+                                        </div>
+                                   </div>
+                              </div>
+                         </div>
+
+                         <div class="p-5">
+                              <div class="flex items-center justify-between mb-4">
+                                   <div>
+                                        <h3 class="font-black text-xl" style="color: var(--text);">حديقة الزمرد</h3>
+                                        <p class="text-xs" style="color: var(--text-muted);">طبيعة · ثقة · أصالة</p>
+                                   </div>
+                                   <div class="flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full"
+                                        style="background: var(--primary-50); color: var(--primary);">
+                                        <i class="fa-solid fa-leaf"></i>
+                                        <span>طبيعي</span>
+                                   </div>
+                              </div>
+
+                              <!-- Color Swatches -->
+                              <div class="grid grid-cols-5 gap-2 mb-4">
+                                   <div class="swatch aspect-square rounded-xl flex items-end p-1.5"
+                                        style="background: #059669;"
+                                        onclick="event.stopPropagation(); copyColor('#059669', this)">
+                                        <span class="text-[9px] text-white font-bold">Primary</span>
+                                   </div>
+                                   <div class="swatch aspect-square rounded-xl flex items-end p-1.5"
+                                        style="background: #10b981;"
+                                        onclick="event.stopPropagation(); copyColor('#10b981', this)">
+                                        <span class="text-[9px] text-white font-bold">Light</span>
+                                   </div>
+                                   <div class="swatch aspect-square rounded-xl flex items-end p-1.5"
+                                        style="background: #d97706;"
+                                        onclick="event.stopPropagation(); copyColor('#d97706', this)">
+                                        <span class="text-[9px] text-white font-bold">Accent</span>
+                                   </div>
+                                   <div class="swatch aspect-square rounded-xl flex items-end p-1.5 border"
+                                        style="background: #fafaf7; border-color: #e2e8f0;"
+                                        onclick="event.stopPropagation(); copyColor('#fafaf7', this)">
+                                        <span class="text-[9px] font-bold text-slate-600">BG</span>
+                                   </div>
+                                   <div class="swatch aspect-square rounded-xl flex items-end p-1.5"
+                                        style="background: #0f172a;"
+                                        onclick="event.stopPropagation(); copyColor('#0f172a', this)">
+                                        <span class="text-[9px] text-white font-bold">Text</span>
+                                   </div>
+                              </div>
+
+                              <!-- Description -->
+                              <p class="text-xs leading-relaxed mb-4" style="color: var(--text-muted);">
+                                   لوحة مستوحاة من الطبيعة المغربية — الزمرد الأخضر يرمز للنقاء والأصالة، والذهبي يضيف
+                                   لمسة من الفخامة والدّفء. مثالية لعلامات العناية الطبيعية.
+                              </p>
+
+                              <!-- Light/Dark Preview -->
+                              <div class="grid grid-cols-2 gap-2 mb-4">
+                                   <div class="rounded-xl p-3 border"
+                                        style="background: #fafaf7; border-color: #e2e8f0;">
+                                        <div class="flex items-center gap-2 mb-2">
+                                             <i class="fa-solid fa-sun text-amber-500 text-xs"></i>
+                                             <span class="text-[10px] font-bold text-slate-700">Light</span>
+                                        </div>
+                                        <div class="h-2 rounded-full mb-1" style="background: #059669;"></div>
+                                        <div class="h-1.5 rounded-full w-3/4" style="background: #d97706;"></div>
+                                   </div>
+                                   <div class="rounded-xl p-3 border"
+                                        style="background: #0a0f1a; border-color: #1e293b;">
+                                        <div class="flex items-center gap-2 mb-2">
+                                             <i class="fa-solid fa-moon text-indigo-400 text-xs"></i>
+                                             <span class="text-[10px] font-bold text-slate-300">Dark</span>
+                                        </div>
+                                        <div class="h-2 rounded-full mb-1" style="background: #10b981;"></div>
+                                        <div class="h-1.5 rounded-full w-3/4" style="background: #f59e0b;"></div>
+                                   </div>
+                              </div>
+
+                              <!-- Apply Button -->
+                              <button
+                                   class="w-full btn-primary py-3 rounded-xl text-white font-black text-sm flex items-center justify-center gap-2">
+                                   <i class="fa-solid fa-check-circle"></i>
+                                   <span>تطبيق هذه اللوحة</span>
+                              </button>
+                         </div>
+                    </div>
+
+                    <!-- ============ PALETTE 2: ROSE BLOOM ============ -->
+                    <div class="palette-card fade-up rounded-3xl overflow-hidden"
+                         style="background: var(--card); border: 2px solid var(--border);" data-palette="rose"
+                         onclick="applyPalette('rose')">
+                         <div class="relative h-48 overflow-hidden"
+                              style="background: linear-gradient(135deg, #e11d48 0%, #d97706 100%);">
+                              <div
+                                   class="absolute top-4 right-4 bg-white/20 backdrop-blur rounded-2xl px-3 py-2 text-white">
+                                   <p class="text-[10px] opacity-80">أنثوي</p>
+                                   <p class="text-sm font-black">💎 راقي</p>
+                              </div>
+                              <div class="absolute bottom-4 right-4 left-4">
+                                   <div
+                                        class="bg-white/95 backdrop-blur rounded-2xl p-3 shadow-xl flex items-center justify-between">
+                                        <div>
+                                             <p class="text-[10px] text-slate-500">تفتح الورد</p>
+                                             <p class="text-lg font-black"
+                                                  style="background: linear-gradient(135deg, #e11d48, #d97706); -webkit-background-clip: text; background-clip: text; color: transparent;">
+                                                  Rose Bloom</p>
+                                        </div>
+                                        <div class="flex -space-x-1 space-x-reverse">
+                                             <div class="w-8 h-8 rounded-full border-2 border-white"
+                                                  style="background: #e11d48;"></div>
+                                             <div class="w-8 h-8 rounded-full border-2 border-white"
+                                                  style="background: #fb7185;"></div>
+                                             <div class="w-8 h-8 rounded-full border-2 border-white"
+                                                  style="background: #d97706;"></div>
+                                        </div>
+                                   </div>
+                              </div>
+                         </div>
+
+                         <div class="p-5">
+                              <div class="flex items-center justify-between mb-4">
+                                   <div>
+                                        <h3 class="font-black text-xl" style="color: var(--text);">تفتح الورد</h3>
+                                        <p class="text-xs" style="color: var(--text-muted);">أنوثة · جمال · جاذبية</p>
+                                   </div>
+                                   <div class="flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full"
+                                        style="background: #fff1f2; color: #e11d48;">
+                                        <i class="fa-solid fa-heart"></i>
+                                        <span>رومانسي</span>
+                                   </div>
+                              </div>
+
+                              <div class="grid grid-cols-5 gap-2 mb-4">
+                                   <div class="swatch aspect-square rounded-xl flex items-end p-1.5"
+                                        style="background: #e11d48;"
+                                        onclick="event.stopPropagation(); copyColor('#e11d48', this)">
+                                        <span class="text-[9px] text-white font-bold">Primary</span>
+                                   </div>
+                                   <div class="swatch aspect-square rounded-xl flex items-end p-1.5"
+                                        style="background: #fb7185;"
+                                        onclick="event.stopPropagation(); copyColor('#fb7185', this)">
+                                        <span class="text-[9px] text-white font-bold">Light</span>
+                                   </div>
+                                   <div class="swatch aspect-square rounded-xl flex items-end p-1.5"
+                                        style="background: #d97706;"
+                                        onclick="event.stopPropagation(); copyColor('#d97706', this)">
+                                        <span class="text-[9px] text-white font-bold">Accent</span>
+                                   </div>
+                                   <div class="swatch aspect-square rounded-xl flex items-end p-1.5 border"
+                                        style="background: #fff5f7; border-color: #fecdd3;"
+                                        onclick="event.stopPropagation(); copyColor('#fff5f7', this)">
+                                        <span class="text-[9px] font-bold text-rose-700">BG</span>
+                                   </div>
+                                   <div class="swatch aspect-square rounded-xl flex items-end p-1.5"
+                                        style="background: #1a0a12;"
+                                        onclick="event.stopPropagation(); copyColor('#1a0a12', this)">
+                                        <span class="text-[9px] text-white font-bold">Dark</span>
+                                   </div>
+                              </div>
+
+                              <p class="text-xs leading-relaxed mb-4" style="color: var(--text-muted);">
+                                   لوحة أنثوية بامتياز — الوردي الجريء يعبّر عن الأنوثة والثقة، مع لمسة ذهبية تضيف
+                                   الفخامة. مثالية لعلامات الجمال والعناية النسائية.
+                              </p>
+
+                              <div class="grid grid-cols-2 gap-2 mb-4">
+                                   <div class="rounded-xl p-3 border"
+                                        style="background: #fff5f7; border-color: #fecdd3;">
+                                        <div class="flex items-center gap-2 mb-2">
+                                             <i class="fa-solid fa-sun text-amber-500 text-xs"></i>
+                                             <span class="text-[10px] font-bold text-slate-700">Light</span>
+                                        </div>
+                                        <div class="h-2 rounded-full mb-1" style="background: #e11d48;"></div>
+                                        <div class="h-1.5 rounded-full w-3/4" style="background: #d97706;"></div>
+                                   </div>
+                                   <div class="rounded-xl p-3 border"
+                                        style="background: #1a0a12; border-color: #3a1a28;">
+                                        <div class="flex items-center gap-2 mb-2">
+                                             <i class="fa-solid fa-moon text-indigo-400 text-xs"></i>
+                                             <span class="text-[10px] font-bold text-slate-300">Dark</span>
+                                        </div>
+                                        <div class="h-2 rounded-full mb-1" style="background: #fb7185;"></div>
+                                        <div class="h-1.5 rounded-full w-3/4" style="background: #fbbf24;"></div>
+                                   </div>
+                              </div>
+
+                              <button
+                                   class="w-full btn-primary py-3 rounded-xl text-white font-black text-sm flex items-center justify-center gap-2">
+                                   <i class="fa-solid fa-check-circle"></i>
+                                   <span>تطبيق هذه اللوحة</span>
+                              </button>
+                         </div>
+                    </div>
+
+                    <!-- ============ PALETTE 3: ROYAL AMETHYST ============ -->
+                    <div class="palette-card fade-up rounded-3xl overflow-hidden"
+                         style="background: var(--card); border: 2px solid var(--border);" data-palette="amethyst"
+                         onclick="applyPalette('amethyst')">
+                         <div class="relative h-48 overflow-hidden"
+                              style="background: linear-gradient(135deg, #7c3aed 0%, #d97706 100%);">
+                              <div
+                                   class="absolute top-4 right-4 bg-white/20 backdrop-blur rounded-2xl px-3 py-2 text-white">
+                                   <p class="text-[10px] opacity-80">فاخر</p>
+                                   <p class="text-sm font-black">👑 ملكي</p>
+                              </div>
+                              <div class="absolute bottom-4 right-4 left-4">
+                                   <div
+                                        class="bg-white/95 backdrop-blur rounded-2xl p-3 shadow-xl flex items-center justify-between">
+                                        <div>
+                                             <p class="text-[10px] text-slate-500">الجمشت الملكي</p>
+                                             <p class="text-lg font-black"
+                                                  style="background: linear-gradient(135deg, #7c3aed, #d97706); -webkit-background-clip: text; background-clip: text; color: transparent;">
+                                                  Royal Amethyst</p>
+                                        </div>
+                                        <div class="flex -space-x-1 space-x-reverse">
+                                             <div class="w-8 h-8 rounded-full border-2 border-white"
+                                                  style="background: #7c3aed;"></div>
+                                             <div class="w-8 h-8 rounded-full border-2 border-white"
+                                                  style="background: #a78bfa;"></div>
+                                             <div class="w-8 h-8 rounded-full border-2 border-white"
+                                                  style="background: #d97706;"></div>
+                                        </div>
+                                   </div>
+                              </div>
+                         </div>
+
+                         <div class="p-5">
+                              <div class="flex items-center justify-between mb-4">
+                                   <div>
+                                        <h3 class="font-black text-xl" style="color: var(--text);">الجمشت الملكي</h3>
+                                        <p class="text-xs" style="color: var(--text-muted);">فخامة · تميّز · إبداع</p>
+                                   </div>
+                                   <div class="flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full"
+                                        style="background: #f5f3ff; color: #7c3aed;">
+                                        <i class="fa-solid fa-crown"></i>
+                                        <span>فاخر</span>
+                                   </div>
+                              </div>
+
+                              <div class="grid grid-cols-5 gap-2 mb-4">
+                                   <div class="swatch aspect-square rounded-xl flex items-end p-1.5"
+                                        style="background: #7c3aed;"
+                                        onclick="event.stopPropagation(); copyColor('#7c3aed', this)">
+                                        <span class="text-[9px] text-white font-bold">Primary</span>
+                                   </div>
+                                   <div class="swatch aspect-square rounded-xl flex items-end p-1.5"
+                                        style="background: #a78bfa;"
+                                        onclick="event.stopPropagation(); copyColor('#a78bfa', this)">
+                                        <span class="text-[9px] text-white font-bold">Light</span>
+                                   </div>
+                                   <div class="swatch aspect-square rounded-xl flex items-end p-1.5"
+                                        style="background: #d97706;"
+                                        onclick="event.stopPropagation(); copyColor('#d97706', this)">
+                                        <span class="text-[9px] text-white font-bold">Accent</span>
+                                   </div>
+                                   <div class="swatch aspect-square rounded-xl flex items-end p-1.5 border"
+                                        style="background: #faf8ff; border-color: #e9d5ff;"
+                                        onclick="event.stopPropagation(); copyColor('#faf8ff', this)">
+                                        <span class="text-[9px] font-bold text-purple-700">BG</span>
+                                   </div>
+                                   <div class="swatch aspect-square rounded-xl flex items-end p-1.5"
+                                        style="background: #0f0a1a;"
+                                        onclick="event.stopPropagation(); copyColor('#0f0a1a', this)">
+                                        <span class="text-[9px] text-white font-bold">Dark</span>
+                                   </div>
+                              </div>
+
+                              <p class="text-xs leading-relaxed mb-4" style="color: var(--text-muted);">
+                                   لوحة ملكية فاخرة — البنفسجي العميق يرمز للفخامة والتميّز، مع لمسة ذهبية تضفي الدّفء.
+                                   مثالية للعلامات الراقية التي تريد التفرّد.
+                              </p>
+
+                              <div class="grid grid-cols-2 gap-2 mb-4">
+                                   <div class="rounded-xl p-3 border"
+                                        style="background: #faf8ff; border-color: #e9d5ff;">
+                                        <div class="flex items-center gap-2 mb-2">
+                                             <i class="fa-solid fa-sun text-amber-500 text-xs"></i>
+                                             <span class="text-[10px] font-bold text-slate-700">Light</span>
+                                        </div>
+                                        <div class="h-2 rounded-full mb-1" style="background: #7c3aed;"></div>
+                                        <div class="h-1.5 rounded-full w-3/4" style="background: #d97706;"></div>
+                                   </div>
+                                   <div class="rounded-xl p-3 border"
+                                        style="background: #0f0a1a; border-color: #2a1a3a;">
+                                        <div class="flex items-center gap-2 mb-2">
+                                             <i class="fa-solid fa-moon text-indigo-400 text-xs"></i>
+                                             <span class="text-[10px] font-bold text-slate-300">Dark</span>
+                                        </div>
+                                        <div class="h-2 rounded-full mb-1" style="background: #a78bfa;"></div>
+                                        <div class="h-1.5 rounded-full w-3/4" style="background: #fbbf24;"></div>
+                                   </div>
+                              </div>
+
+                              <button
+                                   class="w-full btn-primary py-3 rounded-xl text-white font-black text-sm flex items-center justify-center gap-2">
+                                   <i class="fa-solid fa-check-circle"></i>
+                                   <span>تطبيق هذه اللوحة</span>
+                              </button>
+                         </div>
+                    </div>
+
+               </div>
+          </section>
+
+          <!-- ============ LIVE PREVIEW SECTION ============ -->
+          <section class="mb-16 fade-up">
+               <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white"
+                         style="background: linear-gradient(135deg, var(--primary), var(--primary-dark));">
+                         <i class="fa-solid fa-eye"></i>
+                    </div>
+                    <div>
+                         <h3 class="text-2xl font-black" style="color: var(--text);">معاينة حية</h3>
+                         <p class="text-sm" style="color: var(--text-muted);">شاهدي كيف تبدو اللوحة على عناصر حقيقية</p>
+                    </div>
+               </div>
+
+               <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                    <!-- Product Card Preview -->
+                    <div class="preview-card p-6">
+                         <div class="flex items-center justify-between mb-4">
+                              <h4 class="font-black" style="color: var(--text);">بطاقة منتج</h4>
+                              <span class="text-xs px-2 py-1 rounded-full"
+                                   style="background: var(--primary-50); color: var(--primary);">معاينة</span>
+                         </div>
+
+                         <div class="rounded-2xl overflow-hidden border"
+                              style="background: var(--bg); border-color: var(--border);">
+                              <div class="aspect-square p-6 flex items-center justify-center relative"
+                                   style="background: linear-gradient(135deg, var(--primary-50), color-mix(in srgb, var(--accent) 10%, transparent));">
+                                   <div class="w-24 h-32 rounded-xl shadow-xl flex items-center justify-center"
+                                        style="background: linear-gradient(135deg, var(--primary), var(--primary-dark));">
+                                        <i class="fa-solid fa-bottle-droplet text-white text-4xl"></i>
+                                   </div>
+                                   <div class="absolute top-3 right-3 text-white text-xs font-black px-2 py-1 rounded-full"
+                                        style="background: var(--accent);">-20%</div>
+                              </div>
+                              <div class="p-4">
+                                   <div class="flex items-center gap-1 mb-2">
+                                        <i class="fa-solid fa-star text-xs" style="color: var(--accent);"></i>
+                                        <span class="text-xs font-bold" style="color: var(--text);">5.0</span>
+                                        <span class="text-xs" style="color: var(--text-muted);">(128)</span>
+                                   </div>
+                                   <h5 class="font-black mb-2" style="color: var(--text);">سيروم SODFA الأصلي</h5>
+                                   <div class="flex items-baseline gap-2 mb-3">
+                                        <span class="text-xl font-black gradient-text">120</span>
+                                        <span class="text-xs" style="color: var(--text-muted);">د.م.</span>
+                                        <span class="text-xs line-through" style="color: var(--text-muted);">150</span>
+                                   </div>
+                                   <button class="w-full btn-primary py-2 rounded-lg text-white text-xs font-black">
+                                        <i class="fa-solid fa-bag-shopping ml-1"></i>
+                                        أضيفي للسلة
+                                   </button>
+                              </div>
+                         </div>
+                    </div>
+
+                    <!-- Stats & Buttons Preview -->
+                    <div class="space-y-6">
+                         <!-- Stat Card -->
+                         <div class="preview-card p-6">
+                              <div class="flex items-center justify-between mb-4">
+                                   <h4 class="font-black" style="color: var(--text);">بطاقة إحصائية</h4>
+                                   <span class="text-xs px-2 py-1 rounded-full"
+                                        style="background: var(--primary-50); color: var(--primary);">معاينة</span>
+                              </div>
+
+                              <div class="grid grid-cols-2 gap-3">
+                                   <div class="p-4 rounded-xl border"
+                                        style="background: var(--bg); border-color: var(--border);">
+                                        <div class="w-10 h-10 rounded-lg flex items-center justify-center text-white mb-3"
+                                             style="background: linear-gradient(135deg, var(--primary), var(--primary-dark));">
+                                             <i class="fa-solid fa-users"></i>
+                                        </div>
+                                        <p class="text-xs" style="color: var(--text-muted);">العملاء</p>
+                                        <p class="text-xl font-black" style="color: var(--text);">+8,500</p>
+                                   </div>
+                                   <div class="p-4 rounded-xl border"
+                                        style="background: var(--bg); border-color: var(--border);">
+                                        <div class="w-10 h-10 rounded-lg flex items-center justify-center text-white mb-3"
+                                             style="background: linear-gradient(135deg, var(--accent), var(--accent-light));">
+                                             <i class="fa-solid fa-star"></i>
+                                        </div>
+                                        <p class="text-xs" style="color: var(--text-muted);">التقييم</p>
+                                        <p class="text-xl font-black" style="color: var(--text);">4.9/5</p>
+                                   </div>
+                              </div>
+                         </div>
+
+                         <!-- Buttons Preview -->
+                         <div class="preview-card p-6">
+                              <div class="flex items-center justify-between mb-4">
+                                   <h4 class="font-black" style="color: var(--text);">الأزرار</h4>
+                                   <span class="text-xs px-2 py-1 rounded-full"
+                                        style="background: var(--primary-50); color: var(--primary);">معاينة</span>
+                              </div>
+
+                              <div class="space-y-3">
+                                   <button
+                                        class="w-full btn-primary py-3 rounded-xl text-white font-black text-sm flex items-center justify-center gap-2">
+                                        <i class="fa-brands fa-whatsapp"></i>
+                                        <span>اطلبي عبر الواتساب</span>
+                                   </button>
+                                   <button
+                                        class="w-full py-3 rounded-xl font-black text-sm flex items-center justify-center gap-2 border-2 transition hover:opacity-80"
+                                        style="color: var(--text); border-color: var(--border);">
+                                        <i class="fa-solid fa-eye"></i>
+                                        <span>شاهد النتائج</span>
+                                   </button>
+                                   <div class="flex gap-2">
+                                        <button class="flex-1 py-2 rounded-lg text-white text-xs font-black"
+                                             style="background: #22c55e;">
+                                             <i class="fa-brands fa-whatsapp ml-1"></i> واتساب
+                                        </button>
+                                        <button class="flex-1 py-2 rounded-lg text-white text-xs font-black"
+                                             style="background: var(--text);">
+                                             <i class="fa-solid fa-phone ml-1"></i> اتصال
+                                        </button>
+                                   </div>
+                              </div>
+                         </div>
+                    </div>
+               </div>
+          </section>
+
+          <!-- ============ DETAILED COLOR SYSTEM ============ -->
+          <section class="mb-16 fade-up">
+               <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white"
+                         style="background: linear-gradient(135deg, var(--primary), var(--primary-dark));">
+                         <i class="fa-solid fa-swatchbook"></i>
+                    </div>
+                    <div>
+                         <h3 class="text-2xl font-black" style="color: var(--text);">نظام الألوان الكامل</h3>
+                         <p class="text-sm" style="color: var(--text-muted);">جميع درجات اللوحة المختارة — اضغطي للنسخ
+                         </p>
+                    </div>
+               </div>
+
+               <div class="preview-card p-6">
+                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                         <div>
+                              <div class="swatch aspect-square rounded-2xl mb-2 shadow-lg"
+                                   style="background: var(--primary);"
+                                   onclick="copyColor(getComputedStyle(document.body).getPropertyValue('--primary').trim(), this)">
+                              </div>
+                              <p class="text-xs font-bold" style="color: var(--text);">Primary</p>
+                              <p class="text-[10px] font-mono" style="color: var(--text-muted);" id="primaryHex">#059669
+                              </p>
+                         </div>
+                         <div>
+                              <div class="swatch aspect-square rounded-2xl mb-2 shadow-lg"
+                                   style="background: var(--primary-light);"
+                                   onclick="copyColor(getComputedStyle(document.body).getPropertyValue('--primary-light').trim(), this)">
+                              </div>
+                              <p class="text-xs font-bold" style="color: var(--text);">Primary Light</p>
+                              <p class="text-[10px] font-mono" style="color: var(--text-muted);" id="primaryLightHex">
+                                   #10b981</p>
+                         </div>
+                         <div>
+                              <div class="swatch aspect-square rounded-2xl mb-2 shadow-lg"
+                                   style="background: var(--primary-dark);"
+                                   onclick="copyColor(getComputedStyle(document.body).getPropertyValue('--primary-dark').trim(), this)">
+                              </div>
+                              <p class="text-xs font-bold" style="color: var(--text);">Primary Dark</p>
+                              <p class="text-[10px] font-mono" style="color: var(--text-muted);" id="primaryDarkHex">
+                                   #047857</p>
+                         </div>
+                         <div>
+                              <div class="swatch aspect-square rounded-2xl mb-2 shadow-lg"
+                                   style="background: var(--accent);"
+                                   onclick="copyColor(getComputedStyle(document.body).getPropertyValue('--accent').trim(), this)">
+                              </div>
+                              <p class="text-xs font-bold" style="color: var(--text);">Accent</p>
+                              <p class="text-[10px] font-mono" style="color: var(--text-muted);" id="accentHex">#d97706
+                              </p>
+                         </div>
+                         <div>
+                              <div class="swatch aspect-square rounded-2xl mb-2 shadow-lg border"
+                                   style="background: var(--bg); border-color: var(--border);"
+                                   onclick="copyColor(getComputedStyle(document.body).getPropertyValue('--bg').trim(), this)">
+                              </div>
+                              <p class="text-xs font-bold" style="color: var(--text);">Background</p>
+                              <p class="text-[10px] font-mono" style="color: var(--text-muted);" id="bgHex">#fafaf7</p>
+                         </div>
+                         <div>
+                              <div class="swatch aspect-square rounded-2xl mb-2 shadow-lg"
+                                   style="background: var(--text);"
+                                   onclick="copyColor(getComputedStyle(document.body).getPropertyValue('--text').trim(), this)">
+                              </div>
+                              <p class="text-xs font-bold" style="color: var(--text);">Text</p>
+                              <p class="text-[10px] font-mono" style="color: var(--text-muted);" id="textHex">#0f172a
+                              </p>
+                         </div>
+                    </div>
+
+                    <div class="mt-6 pt-6 border-t flex flex-wrap gap-2" style="border-color: var(--border);">
+                         <button onclick="copyAllColors()"
+                              class="px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition hover:opacity-80"
+                              style="background: var(--primary-50); color: var(--primary);">
+                              <i class="fa-solid fa-copy"></i>
+                              <span>نسخ كل الألوان</span>
+                         </button>
+                         <button onclick="exportCSS()"
+                              class="px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition hover:opacity-80"
+                              style="background: var(--primary-50); color: var(--primary);">
+                              <i class="fa-solid fa-code"></i>
+                              <span>تصدير CSS</span>
+                         </button>
+                         <button onclick="resetPalette()"
+                              class="px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition hover:opacity-80"
+                              style="background: var(--bg); color: var(--text); border: 1px solid var(--border);">
+                              <i class="fa-solid fa-rotate-left"></i>
+                              <span>استعادة الافتراضي</span>
+                         </button>
+                    </div>
+               </div>
+          </section>
+
+          <!-- ============ COMPARISON ============ -->
+          <section class="mb-16 fade-up">
+               <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white"
+                         style="background: linear-gradient(135deg, var(--primary), var(--primary-dark));">
+                         <i class="fa-solid fa-table-columns"></i>
+                    </div>
+                    <div>
+                         <h3 class="text-2xl font-black" style="color: var(--text);">مقارنة الوضعين</h3>
+                         <p class="text-sm" style="color: var(--text-muted);">شاهدي اللوحة في الوضع الفاتح والداكن جنباً
+                              إلى جنب</p>
+                    </div>
+               </div>
+
+               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Light Mode Preview -->
+                    <div class="rounded-3xl overflow-hidden border-2"
+                         style="background: #fafaf7; border-color: #e2e8f0;">
+                         <div class="p-4 flex items-center justify-between border-b" style="border-color: #e2e8f0;">
+                              <div class="flex items-center gap-2">
+                                   <i class="fa-solid fa-sun text-amber-500"></i>
+                                   <span class="font-black text-sm text-slate-800">الوضع الفاتح</span>
+                              </div>
+                              <span class="text-[10px] font-bold px-2 py-1 rounded-full bg-amber-100 text-amber-700">Light
+                                   Mode</span>
+                         </div>
+                         <div class="p-5">
+                              <div class="rounded-2xl p-4 mb-3"
+                                   style="background: linear-gradient(135deg, var(--primary), var(--primary-dark));">
+                                   <p class="text-white text-xs opacity-80 mb-1">مرحباً بك</p>
+                                   <p class="text-white font-black">استعيدي <span style="color: #fbbf24;">كثافة
+                                             شعرك</span></p>
+                              </div>
+                              <div class="grid grid-cols-2 gap-2 mb-3">
+                                   <div class="rounded-xl p-3 bg-white border" style="border-color: #e2e8f0;">
+                                        <div class="w-8 h-8 rounded-lg mb-2 flex items-center justify-center text-white"
+                                             style="background: var(--primary);"><i
+                                                  class="fa-solid fa-leaf text-xs"></i></div>
+                                        <p class="text-[10px] text-slate-500">طبيعي</p>
+                                        <p class="text-sm font-black text-slate-800">100%</p>
+                                   </div>
+                                   <div class="rounded-xl p-3 bg-white border" style="border-color: #e2e8f0;">
+                                        <div class="w-8 h-8 rounded-lg mb-2 flex items-center justify-center text-white"
+                                             style="background: var(--accent);"><i class="fa-solid fa-star text-xs"></i>
+                                        </div>
+                                        <p class="text-[10px] text-slate-500">تقييم</p>
+                                        <p class="text-sm font-black text-slate-800">4.9</p>
+                                   </div>
+                              </div>
+                              <button class="w-full py-2 rounded-lg text-white text-xs font-black"
+                                   style="background: var(--primary);">اطلبي الآن</button>
+                         </div>
+                    </div>
+
+                    <!-- Dark Mode Preview -->
+                    <div class="rounded-3xl overflow-hidden border-2"
+                         style="background: #0a0f1a; border-color: #1e293b;">
+                         <div class="p-4 flex items-center justify-between border-b" style="border-color: #1e293b;">
+                              <div class="flex items-center gap-2">
+                                   <i class="fa-solid fa-moon text-indigo-400"></i>
+                                   <span class="font-black text-sm text-slate-100">الوضع الداكن</span>
+                              </div>
+                              <span class="text-[10px] font-bold px-2 py-1 rounded-full bg-indigo-900 text-indigo-300">Dark
+                                   Mode</span>
+                         </div>
+                         <div class="p-5">
+                              <div class="rounded-2xl p-4 mb-3"
+                                   style="background: linear-gradient(135deg, var(--primary), var(--primary-dark));">
+                                   <p class="text-white text-xs opacity-80 mb-1">مرحباً بك</p>
+                                   <p class="text-white font-black">استعيدي <span style="color: #fbbf24;">كثافة
+                                             شعرك</span></p>
+                              </div>
+                              <div class="grid grid-cols-2 gap-2 mb-3">
+                                   <div class="rounded-xl p-3 border"
+                                        style="background: #131a28; border-color: #1e293b;">
+                                        <div class="w-8 h-8 rounded-lg mb-2 flex items-center justify-center text-white"
+                                             style="background: var(--primary);"><i
+                                                  class="fa-solid fa-leaf text-xs"></i></div>
+                                        <p class="text-[10px] text-slate-400">طبيعي</p>
+                                        <p class="text-sm font-black text-slate-100">100%</p>
+                                   </div>
+                                   <div class="rounded-xl p-3 border"
+                                        style="background: #131a28; border-color: #1e293b;">
+                                        <div class="w-8 h-8 rounded-lg mb-2 flex items-center justify-center text-white"
+                                             style="background: var(--accent);"><i class="fa-solid fa-star text-xs"></i>
+                                        </div>
+                                        <p class="text-[10px] text-slate-400">تقييم</p>
+                                        <p class="text-sm font-black text-slate-100">4.9</p>
+                                   </div>
+                              </div>
+                              <button class="w-full py-2 rounded-lg text-white text-xs font-black"
+                                   style="background: var(--primary);">اطلبي الآن</button>
+                         </div>
+                    </div>
+               </div>
+          </section>
+
+          <!-- ============ TIPS ============ -->
+          <section class="mb-10 fade-up">
+               <div class="rounded-3xl p-6 sm:p-8 mesh-bg"
+                    style="background-color: var(--card); border: 1px solid var(--border);">
+                    <div class="flex items-center gap-3 mb-5">
+                         <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-white"
+                              style="background: linear-gradient(135deg, var(--accent), var(--accent-light));">
+                              <i class="fa-solid fa-lightbulb text-xl"></i>
+                         </div>
+                         <div>
+                              <h3 class="text-xl font-black" style="color: var(--text);">نصائح لاختيار اللوحة</h3>
+                              <p class="text-xs" style="color: var(--text-muted);">اختاري ما يناسب هوية علامتك</p>
+                         </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                         <div class="p-4 rounded-2xl border"
+                              style="background: var(--bg); border-color: var(--border);">
+                              <div class="flex items-center gap-2 mb-2">
+                                   <i class="fa-solid fa-leaf" style="color: var(--primary);"></i>
+                                   <span class="font-black text-sm" style="color: var(--text);">حديقة الزمرد</span>
+                              </div>
+                              <p class="text-xs leading-relaxed" style="color: var(--text-muted);">
+                                   <b>الأفضل لـ:</b> العلامات الطبيعية، المنتجات العضوية، العناية بالشعر، الجمال الصحي.
+                                   تعكس الثقة والأصالة المغربية.
+                              </p>
+                         </div>
+                         <div class="p-4 rounded-2xl border"
+                              style="background: var(--bg); border-color: var(--border);">
+                              <div class="flex items-center gap-2 mb-2">
+                                   <i class="fa-solid fa-heart text-rose-500"></i>
+                                   <span class="font-black text-sm" style="color: var(--text);">تفتح الورد</span>
+                              </div>
+                              <p class="text-xs leading-relaxed" style="color: var(--text-muted);">
+                                   <b>الأفضل لـ:</b> منتجات النساء، مستحضرات التجميل، العطور، الهدايا. تعكس الأنوثة
+                                   والجاذبية والرومانسية.
+                              </p>
+                         </div>
+                         <div class="p-4 rounded-2xl border"
+                              style="background: var(--bg); border-color: var(--border);">
+                              <div class="flex items-center gap-2 mb-2">
+                                   <i class="fa-solid fa-crown text-purple-500"></i>
+                                   <span class="font-black text-sm" style="color: var(--text);">الجمشت الملكي</span>
+                              </div>
+                              <p class="text-xs leading-relaxed" style="color: var(--text-muted);">
+                                   <b>الأفضل لـ:</b> العلامات الفاخرة، المنتجات المميزة، الإصدارات الخاصة. تعكس الفخامة
+                                   والتميّز والإبداع.
+                              </p>
+                         </div>
+                    </div>
+               </div>
+          </section>
+
+          <!-- Footer -->
+          <footer class="text-center py-8">
+               <p class="text-sm" style="color: var(--text-muted);">
+                    صُنع بحب لـ <span class="font-black gradient-text">SODFA</span> · جمال · طبيعة · ثقة 🌿
+               </p>
+               <p class="text-xs mt-2" style="color: var(--text-muted);">
+                    © 2026 · UX Max Pro Design System
+               </p>
+          </footer>
+
+     </main>
+
+     <!-- Toast -->
+     <div id="toast" class="fixed bottom-6 right-6 z-50 hidden">
+          <div class="toast px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-white"
+               style="background: var(--primary);">
+               <i class="fa-solid fa-circle-check text-xl"></i>
+               <span id="toastMessage" class="font-black text-sm">تم النسخ!</span>
+          </div>
+     </div>
+
+     <script>
+          // ============ PALETTE DEFINITIONS ============
+          const palettes = {
+               emerald: {
+                    name: 'حديقة الزمرد',
+                    nameEn: 'Emerald Garden',
+                    light: {
+                         '--primary': '#059669',
+                         '--primary-dark': '#047857',
+                         '--primary-light': '#10b981',
+                         '--primary-50': '#ecfdf5',
+                         '--accent': '#d97706',
+                         '--accent-light': '#f59e0b',
+                         '--bg': '#fafaf7',
+                         '--bg-alt': '#ffffff',
+                         '--card': '#ffffff',
+                         '--text': '#0f172a',
+                         '--text-muted': '#64748b',
+                         '--border': '#e2e8f0',
+                    },
+                    dark: {
+                         '--bg': '#0a0f1a',
+                         '--bg-alt': '#131a28',
+                         '--card': '#131a28',
+                         '--text': '#f1f5f9',
+                         '--text-muted': '#94a3b8',
+                         '--border': '#1e293b',
+                         '--primary-50': 'rgba(16, 185, 129, 0.1)',
+                    }
+               },
+               rose: {
+                    name: 'تفتح الورد',
+                    nameEn: 'Rose Bloom',
+                    light: {
+                         '--primary': '#e11d48',
+                         '--primary-dark': '#be123c',
+                         '--primary-light': '#fb7185',
+                         '--primary-50': '#fff1f2',
+                         '--accent': '#d97706',
+                         '--accent-light': '#f59e0b',
+                         '--bg': '#fff5f7',
+                         '--bg-alt': '#ffffff',
+                         '--card': '#ffffff',
+                         '--text': '#1a0a12',
+                         '--text-muted': '#7c4a5a',
+                         '--border': '#fecdd3',
+                    },
+                    dark: {
+                         '--bg': '#1a0a12',
+                         '--bg-alt': '#241018',
+                         '--card': '#241018',
+                         '--text': '#fce7eb',
+                         '--text-muted': '#c8a0ae',
+                         '--border': '#3a1a28',
+                         '--primary-50': 'rgba(251, 113, 133, 0.1)',
+                    }
+               },
+               amethyst: {
+                    name: 'الجمشت الملكي',
+                    nameEn: 'Royal Amethyst',
+                    light: {
+                         '--primary': '#7c3aed',
+                         '--primary-dark': '#6d28d9',
+                         '--primary-light': '#a78bfa',
+                         '--primary-50': '#f5f3ff',
+                         '--accent': '#d97706',
+                         '--accent-light': '#f59e0b',
+                         '--bg': '#faf8ff',
+                         '--bg-alt': '#ffffff',
+                         '--card': '#ffffff',
+                         '--text': '#1e1b2e',
+                         '--text-muted': '#6b6580',
+                         '--border': '#e9d5ff',
+                    },
+                    dark: {
+                         '--bg': '#0f0a1a',
+                         '--bg-alt': '#1a1428',
+                         '--card': '#1a1428',
+                         '--text': '#f1efff',
+                         '--text-muted': '#a8a0c0',
+                         '--border': '#2a1a3a',
+                         '--primary-50': 'rgba(167, 139, 250, 0.1)',
+                    }
+               }
+          };
+
+          let currentPalette = 'emerald';
+
+          // ============ APPLY PALETTE ============
+          function applyPalette(name) {
+               currentPalette = name;
+               const body = document.body;
+
+               // Remove all palette classes
+               body.classList.remove('palette-rose', 'palette-amethyst', 'palette-ocean');
+
+               // Add selected palette class
+               if (name !== 'emerald') {
+                    body.classList.add('palette-' + name);
+               }
+
+               // Update active state on cards
+               document.querySelectorAll('.palette-card').forEach(card => {
+                    card.classList.remove('active');
+                    if (card.dataset.palette === name) {
+                         card.classList.add('active');
+                    }
+               });
+
+               // Update hex displays
+               updateHexDisplays();
+
+               // Save to localStorage
+               localStorage.setItem('sodfa-palette', name);
+
+               showToast(`تم تطبيق لوحة "${palettes[name].name}" ✨`);
+          }
+
+          // ============ MODE TOGGLE ============
+          function toggleMode() {
+               document.documentElement.classList.toggle('dark');
+               document.body.classList.toggle('dark');
+               updateHexDisplays();
+               localStorage.setItem('sodfa-mode', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+          }
+
+          // ============ UPDATE HEX DISPLAYS ============
+          function updateHexDisplays() {
+               const styles = getComputedStyle(document.body);
+               const getValue = (v) => styles.getPropertyValue(v).trim();
+
+               const mapping = {
+                    'primaryHex': '--primary',
+                    'primaryLightHex': '--primary-light',
+                    'primaryDarkHex': '--primary-dark',
+                    'accentHex': '--accent',
+                    'bgHex': '--bg',
+                    'textHex': '--text'
+               };
+
+               Object.entries(mapping).forEach(([id, varName]) => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                         const value = getValue(varName);
+                         el.textContent = value.startsWith('rgba') ? value : value.toUpperCase();
+                    }
+               });
+          }
+
+          // ============ COPY COLOR ============
+          function copyColor(color, element) {
+               navigator.clipboard.writeText(color).then(() => {
+                    element.classList.add('copied');
+                    setTimeout(() => element.classList.remove('copied'), 1200);
+                    showToast(`تم نسخ ${color}`);
+               });
+          }
+
+          // ============ COPY ALL COLORS ============
+          function copyAllColors() {
+               const styles = getComputedStyle(document.body);
+               const vars = ['--primary', '--primary-dark', '--primary-light', '--accent', '--bg', '--text', '--text-muted', '--border'];
+               let output = `/* SODFA - ${palettes[currentPalette].name} (${palettes[currentPalette].nameEn}) */\n`;
+               output += `/* الوضع: ${document.documentElement.classList.contains('dark') ? 'داكن' : 'فاتح'} */\n\n`;
+               output += `:root {\n`;
+               vars.forEach(v => {
+                    output += `  ${v}: ${styles.getPropertyValue(v).trim()};\n`;
+               });
+               output += `}`;
+
+               navigator.clipboard.writeText(output).then(() => {
+                    showToast('تم نسخ كل الألوان ✨');
+               });
+          }
+
+          // ============ EXPORT CSS ============
+          function exportCSS() {
+               const palette = palettes[currentPalette];
+               let css = `/* ========================================\n`;
+               css += `   SODFA - ${palette.name} (${palette.nameEn})\n`;
+               css += `   UX Max Pro Design System\n`;
+               css += `   ======================================== */\n\n`;
+
+               css += `/* Light Mode */\n:root {\n`;
+               Object.entries(palette.light).forEach(([k, v]) => {
+                    css += `  ${k}: ${v};\n`;
+               });
+               css += `}\n\n`;
+
+               css += `/* Dark Mode */\n.dark {\n`;
+               Object.entries(palette.dark).forEach(([k, v]) => {
+                    css += `  ${k}: ${v};\n`;
+               });
+               css += `}\n`;
+
+               const blob = new Blob([css], { type: 'text/css' });
+               const url = URL.createObjectURL(blob);
+               const a = document.createElement('a');
+               a.href = url;
+               a.download = `sodfa-${currentPalette}-palette.css`;
+               a.click();
+               URL.revokeObjectURL(url);
+
+               showToast('تم تصدير ملف CSS 📦');
+          }
+
+          // ============ RESET ============
+          function resetPalette() {
+               applyPalette('emerald');
+               if (document.documentElement.classList.contains('dark')) {
+                    toggleMode();
+               }
+               showToast('تم استعادة الإعدادات الافتراضية');
+          }
+
+          // ============ TOAST ============
+          function showToast(message) {
+               const toast = document.getElementById('toast');
+               document.getElementById('toastMessage').textContent = message;
+               toast.classList.remove('hidden');
+               setTimeout(() => toast.classList.add('hidden'), 2500);
+          }
+
+          // ============ INIT ============
+          document.addEventListener('DOMContentLoaded', () => {
+               // Restore saved preferences
+               const savedPalette = localStorage.getItem('sodfa-palette');
+               const savedMode = localStorage.getItem('sodfa-mode');
+
+               if (savedPalette && palettes[savedPalette]) {
+                    applyPalette(savedPalette);
+               }
+               if (savedMode === 'dark') {
+                    document.documentElement.classList.add('dark');
+                    document.body.classList.add('dark');
+               }
+
+               updateHexDisplays();
+
+               // Observe fade-up animations
+               const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                         if (entry.isIntersecting) entry.target.classList.add('visible');
+                    });
+               }, { threshold: 0.1 });
+
+               document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+          });
+     </script>
+
+</body>
+
+</html>

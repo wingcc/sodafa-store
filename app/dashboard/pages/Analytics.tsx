@@ -28,6 +28,7 @@ import {
 } from 'recharts';
 import StatCard from '../components/ui/StatCard';
 import { salesData, categorySales } from '../data/mockData';
+import { useTranslation } from '../i18n/useTranslation';
 
 const weeklyData = [
   { day: 'Mon', revenue: 3200, orders: 11 },
@@ -51,6 +52,7 @@ const cityData = [
 const COLORS = ['#C084FC', '#F472B6', '#FB923C', '#38BDF8', '#4ADE80', '#FBBF24'];
 
 const Analytics: React.FC = () => {
+  const { t } = useTranslation();
   const [dateRange, setDateRange] = useState('7d');
 
   return (
@@ -58,7 +60,7 @@ const Analytics: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Analytics</h2>
+          <h2 className="text-xl font-bold text-gray-900">{t('analytics.title')}</h2>
           <p className="text-sm text-gray-500 mt-1">Track your store performance</p>
         </div>
         <div className="flex bg-gray-100 rounded-xl p-1">

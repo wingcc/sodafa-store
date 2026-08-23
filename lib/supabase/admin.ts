@@ -15,19 +15,35 @@ import { publicConfig, serverConfig } from './config';
 export type AdminSupabaseClient = SupabaseClient;
 
 /**
- * Creates a dummy client that throws when used
+ * Creates a dummy client that returns empty results without throwing
  */
 function createDummyClient() {
+  const emptyResult = { data: [], count: 0, error: null };
+  const queryStub: any = {
+    select: () => queryStub,
+    insert: () => queryStub,
+    update: () => queryStub,
+    delete: () => queryStub,
+    eq: () => queryStub,
+    neq: () => queryStub,
+    gt: () => queryStub,
+    gte: () => queryStub,
+    lt: () => queryStub,
+    lte: () => queryStub,
+    in: () => queryStub,
+    ilike: () => queryStub,
+    or: () => queryStub,
+    order: () => queryStub,
+    limit: () => queryStub,
+    range: () => queryStub,
+    single: () => Promise.resolve({ data: null, error: new Error('Supabase admin not configured') }),
+    then: (resolve: any) => resolve(emptyResult),
+  };
   const dummy = {
     auth: {
       getSession: () => Promise.resolve({ data: { session: null }, error: new Error('Supabase admin not configured') }),
     },
-    from: () => ({
-      select: () => ({ data: null, error: new Error('Supabase admin not configured') }),
-      insert: () => ({ data: null, error: new Error('Supabase admin not configured') }),
-      update: () => ({ data: null, error: new Error('Supabase admin not configured') }),
-      delete: () => ({ data: null, error: new Error('Supabase admin not configured') }),
-    }),
+    from: () => queryStub,
   };
   return dummy as unknown as AdminSupabaseClient;
 }

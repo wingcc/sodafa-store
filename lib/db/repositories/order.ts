@@ -18,7 +18,7 @@ export class OrderRepository {
     limit?: number;
     offset?: number;
   }) {
-    let query = this.supabase.from('orders').select('*');
+    let query = this.supabase.from('orders').select('*, items:order_items(*)');
 
     if (options?.status) {
       query = query.eq('order_status', options.status);
@@ -46,11 +46,11 @@ export class OrderRepository {
   }
 
   async findById(id: string) {
-    return this.supabase.from('orders').select('*').eq('id', id).single();
+    return this.supabase.from('orders').select('*, items:order_items(*)').eq('id', id).single();
   }
 
   async findByOrderNumber(orderNumber: string) {
-    return this.supabase.from('orders').select('*').eq('order_number', orderNumber).single();
+    return this.supabase.from('orders').select('*, items:order_items(*)').eq('order_number', orderNumber).single();
   }
 
   async create(order: OrderInsert) {

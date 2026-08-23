@@ -47,7 +47,7 @@ function InteractiveStars({
         >
           <Star
             size={24}
-            className={star <= value ? 'text-[#cda552] fill-[#cda552]' : 'text-gray-300'}
+            className={star <= value ? 'text-[#d97706] fill-[#d97706]' : 'text-gray-300'}
           />
         </button>
       ))}
@@ -203,7 +203,7 @@ export default function ReviewsTab() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-[#cda552] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-[#d97706] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -274,7 +274,7 @@ export default function ReviewsTab() {
               </span>
 
               {/* Stars — horizontal row, first star on the right */}
-              <div className="text-[#cda552] mb-3">
+              <div className="text-[#d97706] mb-3">
                 <StarRating rating={Number(t.rating)} size={15} id={`dash-${t.id}`} />
               </div>
 
@@ -292,7 +292,7 @@ export default function ReviewsTab() {
                   </span>
                   {t.city && (
                     <span className="inline-flex items-center gap-1 text-xs text-gray-400">
-                      <MapPin size={12} className="text-[#cda552]" />
+                      <MapPin size={12} className="text-[#d97706]" />
                       {t.city}
                     </span>
                   )}

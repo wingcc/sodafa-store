@@ -12,7 +12,6 @@ import {
   CategorySales,
   TopProduct,
   DashboardStats,
-  ShippingZone,
 } from '../types';
 
 type AdminUser = {
@@ -990,17 +989,7 @@ export const orders: Order[] = [
   },
 ];
 
-// Reviews
-export const reviews: Review[] = [
-  { id: 'rev-1', customerId: 'cust-1', customerName: 'Fatima Zahra Benali', productId: 'prod-1', productName: 'Pure Argan Oil - Premium Grade', rating: 5, comment: 'Amazing quality! My hair has never been this soft. Will definitely order again.', status: 'approved', createdAt: '2026-08-01T10:00:00Z' },
-  { id: 'rev-2', customerId: 'cust-3', customerName: 'Khadija Alaoui', productId: 'prod-4', productName: 'Prickly Pear Seed Oil', rating: 5, comment: 'The best prickly pear oil I have ever used. Pure and effective.', status: 'approved', createdAt: '2026-07-28T14:30:00Z' },
-  { id: 'rev-3', customerId: 'cust-2', customerName: 'Amina El Fassi', productId: 'prod-2', productName: 'Rose Petal Face Serum', rating: 4, comment: 'Very hydrating serum. The rose scent is lovely. Could be a bit more affordable.', status: 'approved', createdAt: '2026-07-25T09:15:00Z' },
-  { id: 'rev-4', customerId: 'cust-5', customerName: 'Salma Bennani', productId: 'prod-3', productName: 'Keratin Hair Repair Mask', rating: 5, comment: 'Transformed my damaged hair! After just 2 uses, I could see the difference.', status: 'approved', createdAt: '2026-07-20T11:00:00Z' },
-  { id: 'rev-5', customerId: 'cust-7', customerName: 'Yasmine Toumi', productId: 'prod-10', productName: 'Volumizing Mascara - Black', rating: 3, comment: 'Good mascara but tends to smudge after a few hours. Needs improvement.', status: 'pending', createdAt: '2026-08-05T16:45:00Z' },
-  { id: 'rev-6', customerId: 'cust-6', customerName: 'Laila Idrissi', productId: 'prod-5', productName: 'Moroccan Black Soap', rating: 5, comment: 'Authentic product! Exactly like the one I use in the hammam. Great value.', status: 'approved', createdAt: '2026-08-03T08:00:00Z' },
-  { id: 'rev-7', customerId: 'cust-4', customerName: 'Nadia Chraibi', productId: 'prod-9', productName: 'Gentle Face Cleanser', rating: 4, comment: 'Very gentle on my sensitive skin. Leaves my face feeling clean but not dry.', status: 'approved', createdAt: '2026-07-18T13:00:00Z' },
-  { id: 'rev-8', customerId: 'cust-1', customerName: 'Fatima Zahra Benali', productId: 'prod-8', productName: 'Jasmine Hair Oil', rating: 5, comment: 'The jasmine fragrance is divine! My hair smells amazing all day.', status: 'approved', createdAt: '2026-08-06T10:30:00Z' },
-];
+ 
 
 // Coupons
 export const coupons: Coupon[] = [
@@ -1013,16 +1002,16 @@ export const coupons: Coupon[] = [
 
 // Notifications
 export const notifications: Notification[] = [
-  { id: 'notif-1', type: 'order', title: 'New Order', message: 'Order SOD-2026-0847 received from Fatima Zahra Benali', read: true, timestamp: '2026-08-05T10:30:00Z', actionUrl: '/orders/ord-1' },
-  { id: 'notif-2', type: 'order', title: 'New Order', message: 'Order SOD-2026-0846 received from Khadija Alaoui', read: true, timestamp: '2026-08-08T09:15:00Z', actionUrl: '/orders/ord-2' },
-  { id: 'notif-3', type: 'stock', title: 'Low Stock Alert', message: 'Glossy Lipstick - Rose Gold has only 8 units remaining', read: false, timestamp: '2026-08-09T08:00:00Z' },
-  { id: 'notif-4', type: 'stock', title: 'Out of Stock', message: 'Volumizing Mascara - Black (Brown variant) is out of stock', read: false, timestamp: '2026-08-09T08:00:00Z' },
-  { id: 'notif-5', type: 'review', title: 'New Review', message: 'Yasmine Toumi left a 3-star review on Volumizing Mascara', read: false, timestamp: '2026-08-05T16:45:00Z', actionUrl: '/reviews' },
-  { id: 'notif-6', type: 'customer', title: 'New Customer', message: 'Hajar Amrani registered on SODFA MARKETPLACE', read: true, timestamp: '2025-09-10T10:00:00Z' },
-  { id: 'notif-7', type: 'order', title: 'Order Cancelled', message: 'Order SOD-2026-0841 was cancelled by Nadia Chraibi', read: true, timestamp: '2026-07-22T10:00:00Z', actionUrl: '/orders/ord-7' },
-  { id: 'notif-8', type: 'payment', title: 'Payment Pending', message: '3 orders have pending COD payments', read: false, timestamp: '2026-08-09T12:00:00Z' },
-  { id: 'notif-9', type: 'system', title: 'System Update', message: 'Dashboard has been updated to version 2.1', read: true, timestamp: '2026-08-01T00:00:00Z' },
-  { id: 'notif-10', type: 'stock', title: 'Low Stock Alert', message: 'Volumizing Mascara - Black has only 5 units remaining', read: false, timestamp: '2026-08-09T09:00:00Z' },
+  { id: 'notif-1', type: 'order', title: 'New Order', message: 'Order SOD-2026-0847 received from Fatima Zahra Benali', read: true, timestamp: '2026-08-05T10:30:00Z', actionUrl: '/orders/ord-1', starred: false, priority: 'medium' },
+  { id: 'notif-2', type: 'order', title: 'New Order', message: 'Order SOD-2026-0846 received from Khadija Alaoui', read: true, timestamp: '2026-08-08T09:15:00Z', actionUrl: '/orders/ord-2', starred: false, priority: 'medium' },
+  { id: 'notif-3', type: 'stock', title: 'Low Stock Alert', message: 'Glossy Lipstick - Rose Gold has only 8 units remaining', read: false, timestamp: '2026-08-09T08:00:00Z', starred: false, priority: 'medium' },
+  { id: 'notif-4', type: 'stock', title: 'Out of Stock', message: 'Volumizing Mascara - Black (Brown variant) is out of stock', read: false, timestamp: '2026-08-09T08:00:00Z', starred: false, priority: 'medium' },
+  { id: 'notif-5', type: 'review', title: 'New Review', message: 'Yasmine Toumi left a 3-star review on Volumizing Mascara', read: false, timestamp: '2026-08-05T16:45:00Z', actionUrl: '/reviews', starred: false, priority: 'medium' },
+  { id: 'notif-6', type: 'customer', title: 'New Customer', message: 'Hajar Amrani registered on SODFA MARKETPLACE', read: true, timestamp: '2025-09-10T10:00:00Z', starred: false, priority: 'medium' },
+  { id: 'notif-7', type: 'order', title: 'Order Cancelled', message: 'Order SOD-2026-0841 was cancelled by Nadia Chraibi', read: true, timestamp: '2026-07-22T10:00:00Z', actionUrl: '/orders/ord-7', starred: false, priority: 'medium' },
+  { id: 'notif-8', type: 'payment', title: 'Payment Pending', message: '3 orders have pending COD payments', read: false, timestamp: '2026-08-09T12:00:00Z', starred: false, priority: 'medium' },
+  { id: 'notif-9', type: 'system', title: 'System Update', message: 'Dashboard has been updated to version 2.1', read: true, timestamp: '2026-08-01T00:00:00Z', starred: false, priority: 'medium' },
+  { id: 'notif-10', type: 'stock', title: 'Low Stock Alert', message: 'Volumizing Mascara - Black has only 5 units remaining', read: false, timestamp: '2026-08-09T09:00:00Z', starred: false, priority: 'medium' },
 ];
 
 // Sales Data

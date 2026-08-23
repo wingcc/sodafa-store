@@ -7,6 +7,7 @@
 import { createServerClient } from '@/lib/supabase';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { ReviewRepository } from '@/lib/db';
+import { notificationService } from '@/lib/services/notificationService';
 import { successResponse, internalServerError, badRequest } from '@/lib/api';
 
 export async function GET(request: Request) {
@@ -34,8 +35,8 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const supabase = createServerClient();
-    const repo = new ReviewRepository(supabase);
+    const admin = createAdminClient();
+    const repo = new ReviewRepository(admin);
 
     if (!body.rating || !body.productId) {
       return badRequest('Rating and productId are required');
@@ -51,9 +52,21 @@ export async function POST(request: Request) {
       product_name: body.productName ?? '',
       rating: body.rating,
       comment: body.comment ?? '',
+      status: body.status ?? 'pending',
     });
 
     if (error) throw error;
+
+    // Create notification for new review
+    if (data) {
+      await notificationService.notifyNewReview(
+        data.id,
+        data.product_name,
+        data.customer_name,
+        data.rating
+      );
+    }
+
     return successResponse(data, 201);
   } catch (err: any) {
     console.error('POST /api/reviews error:', err);

@@ -1,5 +1,6 @@
 // lib/theme/cssVariables.ts
 import { ThemeColors } from './colors'
+import type { DashboardPalette } from './palettes'
 
 // Map our color names to CSS custom property names
 export const colorToCssVar = (colorName: keyof ThemeColors): string => {
@@ -26,4 +27,24 @@ export const applyTheme = (colors: ThemeColors): void => {
     const rgbVarName = varName + '-rgb'
     root.style.setProperty(rgbVarName, hexToRgb(value))
   })
+}
+
+export const applyDashboardPalettes = (light: DashboardPalette, dark: DashboardPalette): void => {
+  if (typeof document === 'undefined') return
+  const root = document.documentElement
+  // Light dashboard tokens
+  root.style.setProperty('--dashboard-bg-light', light.light.bg)
+  root.style.setProperty('--dashboard-card-light', light.light.card)
+  root.style.setProperty('--dashboard-card-border-light', light.light.cardBorder)
+  root.style.setProperty('--dashboard-input-bg-light', light.light.inputBg)
+  root.style.setProperty('--dashboard-input-border-light', light.light.inputBorder)
+  // Dark dashboard tokens
+  root.style.setProperty('--dashboard-bg-dark', dark.dark.bg)
+  root.style.setProperty('--dashboard-card-dark', dark.dark.card)
+  root.style.setProperty('--dashboard-card-border-dark', dark.dark.cardBorder)
+  root.style.setProperty('--dashboard-input-bg-dark', dark.dark.inputBg)
+  root.style.setProperty('--dashboard-input-border-dark', dark.dark.inputBorder)
+  // Accent colors for active states, buttons, highlights
+  root.style.setProperty('--color-accent-light', light.accent)
+  root.style.setProperty('--color-accent-dark', dark.accent)
 }

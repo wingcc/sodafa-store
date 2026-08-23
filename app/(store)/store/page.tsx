@@ -1,9 +1,6 @@
 import React from 'react';
 import type { Product } from '../../types/product';
-import { Navbar } from '../../sections/Navbar';
-import { Footer } from '../../sections/Footer';
 import StoreClient from './components/StoreClient';
-import { AnnouncementBar } from '../../sections/AnnouncementBar';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { mapProductRow } from '@/lib/product-mapper';
 
@@ -44,14 +41,5 @@ export default async function StorePage() {
     console.error('Failed to fetch products:', err);
   }
 
-  return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <AnnouncementBar />
-      <Navbar />
-      <main>
-        <StoreClient initialProducts={products} />
-      </main>
-      <Footer />
-    </div>
-  );
+  return <StoreClient initialProducts={products} />;
 }

@@ -93,7 +93,7 @@ export function ProductHeroCarousel({ products }: ProductHeroCarouselProps) {
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : null;
 
- return (
+  return (
   <section
     ref={carouselRef}
     role="region"
@@ -102,23 +102,34 @@ export function ProductHeroCarousel({ products }: ProductHeroCarouselProps) {
     tabIndex={0}
     onMouseEnter={() => setIsHovering(true)}
     onMouseLeave={() => setIsHovering(false)}
-    className="relative isolate w-full overflow-hidden border-b border-border/50 bg-[#0a2c23] shadow-[0_20px_60px_-20px_rgba(250,204,21,0.08)]"
+    style={{ margin: 0 }}
   >
-    {/* =========================================================
-        HERO BACKGROUND
-    ========================================================== */}
+    {/* Hero background — using inline style for CSS variable compatibility */}
     <div
       className="absolute inset-0 -z-10"
       style={{
         background:
-          'linear-gradient(120deg, #0f3d31 0%, #0a2c23 60%, #0a2c23 100%)',
+          'radial-gradient(800px 400px at 85% 15%, rgba(198,161,91,.14), transparent 60%), linear-gradient(180deg, #0F3A28 0%, #07231A 100%)',
+      }}
+    />
+    <div
+      className="absolute inset-0 -z-10"
+      style={{
+        backgroundColor: '#07231A',
       }}
     />
 
     {/* =========================================================
         MAIN HERO
     ========================================================== */}
-    <div className="relative grid min-h-[400px] w-full grid-cols-1 lg:min-h-[520px] lg:grid-cols-2">
+    <div
+      className="relative grid min-h-[400px] w-full grid-cols-1 lg:min-h-[520px] lg:grid-cols-2"
+      style={{
+        borderRadius: '28px',
+        overflow: 'hidden',
+        boxShadow: '0 20px 60px rgba(17,64,47,0.12)',
+      }}
+    >
 
       {/* =======================================================
           IMAGE HALF — FULL BLEED PRODUCT IMAGE
@@ -201,9 +212,9 @@ export function ProductHeroCarousel({ products }: ProductHeroCarouselProps) {
       </div>
 
       {/* =======================================================
-          CONTENT HALF
+          CONTENT HALF — editorial
       ======================================================== */}
-      <div className="relative z-20 flex items-center bg-[#0a2c23] p-6 sm:p-8 lg:p-12 hero-content-side">
+      <div className="relative z-20 flex items-center bg-transparent p-6 sm:p-8 lg:p-12 hero-content-side">
 
         {/* Extra center-edge blend into image */}
         <div className="pointer-events-none absolute inset-y-0 hidden w-24 lg:block hero-content-edge" />
@@ -224,7 +235,7 @@ export function ProductHeroCarousel({ products }: ProductHeroCarouselProps) {
 
           {/* Product title + description */}
           <div className="space-y-3">
-            <h2 className="text-3xl font-bold leading-tight tracking-tight text-white sm:text-4xl md:text-5xl">
+            <h2 className="text-3xl font-bold leading-tight tracking-tight text-white sm:text-4xl md:text-[42px]" style={{ fontFamily: 'var(--disp)' }}>
               {product.name}
             </h2>
 

@@ -9,13 +9,13 @@ export type ThemeColors = {
   white: string
 }
 
-// Default brand colors
+// Default brand colors — SSS Emerald Garden (chosen as dashboard default)
 export const defaultColors: ThemeColors = {
-  darkGreen: "#0a2c23",
-  mediumGreen: "#0f3d31",
-  gold: "#cda552",
-  cream: "#f7f3ec",
-  warmCream: "#ece3d4",
+  darkGreen: "#047857",
+  mediumGreen: "#059669",
+  gold: "#d97706",
+  cream: "#fafaf7",
+  warmCream: "#ecfdf5",
   white: "#ffffff",
 }
 

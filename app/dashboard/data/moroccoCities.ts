@@ -2,8 +2,8 @@
 //
 // NOTE: This file stores only GEOGRAPHIC coordinates (lat/lng) of real Moroccan
 // cities and the country outline. It is NOT shipping/delivery data.
-// Delivery STATUS is always derived at runtime from the live `shipping_zones`
-// and `shipping_methods` rows served from Supabase — never hard-coded here.
+// Delivery STATUS is always derived at runtime from the live `delivery_zones` /
+// `delivery_cities` / `delivery_methods` rows served from Supabase.
 
 export interface MoroccanCity {
   name: string;
@@ -49,6 +49,22 @@ export const MOROCCAN_CITIES: MoroccanCity[] = [
   { name: 'Taza', lat: 34.1961, lng: -5.4244, region: 'Taza' },
   { name: 'Beni Mellal', lat: 32.3069, lng: -6.1728, region: 'Béni Mellal-Khénifra' },
   { name: 'Khouribga', lat: 32.2934, lng: -6.6477, region: 'Béni Mellal-Khénifra' },
+  // ── Supplemental cities merged from Resources/Shipping (40-city reference) ──
+  // Keeps dashboard geo model & normalizeCity compatibility; adds coverage.
+  { name: 'Sidi Kacem', lat: 34.2322, lng: -5.7078, region: 'Rabat-Sale-Kenitra' },
+  { name: 'Berkane', lat: 35.0543, lng: -2.3214, region: 'Oriental' },
+  { name: 'Errachidia', lat: 31.9314, lng: -4.4269, region: 'Drâa-Tafilalet' },
+  { name: 'Ifrane', lat: 33.5228, lng: -5.1107, region: 'Fès-Meknès' },
+  { name: 'Tiznit', lat: 29.6974, lng: -9.8022, region: 'Souss-Massa' },
+  { name: 'Khemisset', lat: 33.8241, lng: -6.0664, region: 'Rabat-Sale-Kenitra' },
+  { name: 'Tan-Tan', lat: 28.4381, lng: -10.9071, region: 'Guelmim-Oued Noun' },
+  { name: 'Berrechid', lat: 33.2654, lng: -7.5866, region: 'Casablanca-Settat' },
+  { name: 'Nouaceur', lat: 33.3667, lng: -7.5833, region: 'Casablanca-Settat' },
+  { name: 'Youssoufia', lat: 31.96, lng: -8.85, region: 'Marrakech-Safi' },
+  { name: 'Azrou', lat: 33.4344, lng: -5.2217, region: 'Fès-Meknès' },
+  { name: 'Midelt', lat: 32.6853, lng: -4.7381, region: 'Drâa-Tafilalet' },
+  { name: 'Sidi Slimane', lat: 34.2597, lng: -5.9267, region: 'Rabat-Sale-Kenitra' },
+  { name: 'Sefrou', lat: 33.9903, lng: -4.8336, region: 'Fès-Meknès' },
 ];
 
 /** Morocco (incl. Western Sahara) border as a clockwise ring of [lat, lng]. */
@@ -111,6 +127,8 @@ export function projectLatLon(lat: number, lng: number) {
 const CITY_ALIASES: Record<string, string> = {
   tanger: 'tangier',
   meknas: 'meknes',
+  fes: 'fez',
+  guelmine: 'guelmim',
 };
 
 export function normalizeCity(name: string): string {

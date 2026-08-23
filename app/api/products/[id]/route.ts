@@ -8,6 +8,7 @@
 import { createServerClient } from '@/lib/supabase';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { ProductRepository } from '@/lib/db';
+import { notificationService } from '@/lib/services/notificationService';
 import { successResponse, errorResponse, internalServerError, notFound } from '@/lib/api';
 
 export async function GET(
@@ -37,6 +38,9 @@ export async function PUT(
     const body = await request.json();
     const admin = createAdminClient();
     const repo = new ProductRepository(admin);
+
+    // Get current product for stock comparison
+    const { data: currentProduct } = await repo.findById(id);
 
     const updates: Record<string, any> = {};
     if (body.name !== undefined) updates.name = body.name;
@@ -68,6 +72,23 @@ export async function PUT(
 
     const { data, error } = await repo.update(id, updates);
     if (error) throw error;
+
+    // Check for stock alerts
+    if (data && currentProduct && body.stock !== undefined && body.trackInventory !== false) {
+      const newStock = Number(body.stock);
+      const oldStock = Number(currentProduct.stock);
+      const threshold = Number(data.low_stock_threshold || 10);
+
+      // Only notify if stock decreased significantly
+      if (newStock < oldStock) {
+        if (newStock <= 0) {
+          await notificationService.notifyOutOfStock(data.id, data.name);
+        } else if (newStock <= threshold) {
+          await notificationService.notifyLowStock(data.id, data.name, newStock, threshold);
+        }
+      }
+    }
+
     return successResponse(data);
   } catch (err: any) {
     console.error('PUT /api/products/[id] error:', err);

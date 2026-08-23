@@ -8,6 +8,7 @@
 import { createServerClient } from '@/lib/supabase';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { OrderRepository } from '@/lib/db';
+import { notificationService } from '@/lib/services/notificationService';
 import { successResponse, internalServerError, notFound } from '@/lib/api';
 
 export async function GET(
@@ -42,9 +43,22 @@ export async function PUT(
     const admin = createAdminClient();
     const repo = new OrderRepository(admin);
 
+    // Get current order for notification
+    const { data: currentOrder } = await repo.findById(id);
+
     if (body.orderStatus) {
       const { data, error } = await repo.updateStatus(id, body.orderStatus, body.note);
       if (error) throw error;
+
+      // Notify on status change
+      if (currentOrder && data) {
+        await notificationService.notifyOrderStatusChange(
+          data.id,
+          data.order_number,
+          body.orderStatus
+        );
+      }
+
       return successResponse(data);
     }
 

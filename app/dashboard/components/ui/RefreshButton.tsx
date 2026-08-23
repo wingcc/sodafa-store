@@ -46,9 +46,9 @@ const RefreshButton: React.FC<RefreshButtonProps> = ({
   };
 
   const variantClasses = {
-    default: 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-[#cda552] hover:border-[#cda552]/30 shadow-sm',
-    minimal: 'bg-transparent text-gray-500 hover:text-[#cda552] hover:bg-[#cda552]/10',
-    gradient: 'bg-gradient-to-r from-[#cda552] to-[#b8933e] text-white hover:shadow-lg hover:shadow-[#cda552]/25',
+    default: 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-[#d97706] hover:border-[#d97706]/30 shadow-sm',
+    minimal: 'bg-transparent text-gray-500 hover:text-[#d97706] hover:bg-[#d97706]/10',
+    gradient: 'bg-gradient-to-r from-[#d97706] to-[#b8933e] text-white hover:shadow-lg hover:shadow-[#d97706]/25',
   };
 
   return (

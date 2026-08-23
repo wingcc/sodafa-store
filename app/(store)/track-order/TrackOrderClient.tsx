@@ -2,9 +2,6 @@
 
 import { useState, useRef } from 'react';
 import Link from 'next/link';
-import { Navbar } from '@/app/sections/Navbar';
-import { Footer } from '@/app/sections/Footer';
-import { AnnouncementBar } from '@/app/sections/AnnouncementBar';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { WHATSAPP_LINK } from '@/app/constants';
 import { fetchOrderByNumber, OrderTrackingData } from '@/lib/order-utils';
@@ -118,11 +115,8 @@ export default function TrackOrderClient() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-stone-50" dir={isAr ? 'rtl' : 'ltr'}>
-      <AnnouncementBar />
-      <Navbar />
-
-      <main className="flex-1 py-12 md:py-16">
+    <div className="bg-stone-50" dir={isAr ? 'rtl' : 'ltr'}>
+      <main className="py-12 md:py-16">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
           <div className="text-center mb-10">
@@ -569,8 +563,6 @@ export default function TrackOrderClient() {
           )}
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 }

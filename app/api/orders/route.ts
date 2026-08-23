@@ -6,6 +6,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin';
 import { OrderRepository } from '@/lib/db';
+import { notificationService } from '@/lib/services/notificationService';
 import { successResponse, internalServerError, badRequest } from '@/lib/api';
 
 export async function GET(request: Request) {
@@ -76,6 +77,14 @@ export async function POST(request: Request) {
           total: item.total ?? (item.quantity ?? 1) * (item.unitPrice ?? item.price ?? 0),
         });
       }
+
+      // Create notification for new order
+      await notificationService.notifyNewOrder(
+        order.id,
+        order.order_number,
+        order.customer_name,
+        order.total
+      );
     }
 
     return successResponse(order, 201);

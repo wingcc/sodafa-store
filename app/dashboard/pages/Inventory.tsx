@@ -19,8 +19,10 @@ import StatCard from '../components/ui/StatCard';
 import RefreshButton from '../components/ui/RefreshButton';
 import { useStore } from '../store/useStore';
 import { useToast } from '@/lib/toast';
+import { useTranslation } from '../i18n/useTranslation';
 
 const Inventory: React.FC = () => {
+  const { t } = useTranslation();
   const {
     products,
     isLoadingProducts,
@@ -57,7 +59,7 @@ const Inventory: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Inventory</h2>
+          <h2 className="text-xl font-bold text-gray-900">{t('inventory.title')}</h2>
           <p className="text-sm text-gray-500 mt-1">
             {isLoadingProducts ? 'Loading inventory...' : 'Track and manage your stock levels'}
           </p>

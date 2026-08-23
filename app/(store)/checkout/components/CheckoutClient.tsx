@@ -3,9 +3,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Navbar } from '../../../sections/Navbar';
-import { Footer } from '../../../sections/Footer';
-import { AnnouncementBar } from '../../../sections/AnnouncementBar';
 import { useUI } from '../../../contexts/UIContext';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { useToast } from '@/lib/toast';
@@ -63,20 +60,35 @@ const CITY_LABELS: Record<string, string> = {
 
 interface ShippingMethodData {
   id: string;
+  city_id: string;
   zone_id: string;
-  zone_name: string;
+  zone_name?: string;
   name: string;
+  slug: string;
   price: number;
-  estimated_days: string;
-  free_shipping_threshold: number | null;
+  estimated_days: number;
+  estimated_hours: number | null;
+  description: string;
+  is_active: boolean;
+}
+
+interface ShippingCityData {
+  id: string;
+  name: string;
+  name_ar: string;
+  zone_id: string;
+  latitude: number;
+  longitude: number;
+  is_active: boolean;
+  methods: ShippingMethodData[];
 }
 
 interface ShippingZoneData {
   id: string;
   name: string;
-  cities: unknown; // JSONB from Supabase — could be string[] or JSON string
-  created_at: string;
-  methods?: ShippingMethodData[];
+  description: string;
+  is_active: boolean;
+  cities: ShippingCityData[];
 }
 
 interface FormData {
@@ -101,20 +113,6 @@ const INITIAL_FORM: FormData = {
   notes: '',
 };
 
-/** Helper: safely parse the JSONB `cities` column into a string array. */
-function parseCities(cities: unknown): string[] {
-  if (Array.isArray(cities)) return cities.map(String);
-  if (typeof cities === 'string') {
-    try {
-      const parsed = JSON.parse(cities);
-      return Array.isArray(parsed) ? parsed.map(String) : [];
-    } catch {
-      return [];
-    }
-  }
-  return [];
-}
-
 export default function CheckoutClient() {
   const router = useRouter();
   const { cartItems, cartTotal, clearCart } = useUI();
@@ -130,19 +128,22 @@ export default function CheckoutClient() {
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number } | null>(null);
   const [couponApplying, setCouponApplying] = useState(false);
 
-  // ─── Fetch shipping zones + methods from DB (once) ──────────────
+  // ─── Fetch shipping zones + cities + methods from DB (once) ──────
   useEffect(() => {
     const loadShipping = async () => {
       try {
         const res = await fetch('/api/shipping');
         const json = await res.json();
         if (json.success) {
-          // Normalise method shape (add zone_name)
+          // API returns zones with nested cities, each city has nested methods
           const zones = (json.data ?? []).map((zone: ShippingZoneData) => ({
             ...zone,
-            methods: (zone.methods ?? []).map((m: ShippingMethodData) => ({
-              ...m,
-              zone_name: zone.name,
+            cities: (zone.cities ?? []).map((city: ShippingCityData) => ({
+              ...city,
+              methods: (city.methods ?? []).map((m: ShippingMethodData) => ({
+                ...m,
+                zone_name: zone.name,
+              })),
             })),
           }));
           setShippingZones(zones);
@@ -163,8 +164,8 @@ export default function CheckoutClient() {
   const availableCities = useMemo(() => {
     const cities: string[] = [];
     for (const zone of shippingZones) {
-      for (const c of parseCities(zone.cities)) {
-        if (!cities.includes(c)) cities.push(c);
+      for (const city of zone.cities ?? []) {
+        if (!cities.includes(city.name)) cities.push(city.name);
       }
     }
     return cities.sort();
@@ -175,10 +176,10 @@ export default function CheckoutClient() {
     if (!form.city) return [];
     if (form.city === 'Other City') return [];
     for (const zone of shippingZones) {
-      const zoneCities = parseCities(zone.cities);
-      if (zoneCities.some((c) => c.toLowerCase() === form.city.toLowerCase())) {
-        // Methods come pre-sorted by price ascending from API
-        return zone.methods ?? [];
+      for (const city of zone.cities ?? []) {
+        if (city.name.toLowerCase() === form.city.toLowerCase()) {
+          return (city.methods ?? []).filter((m) => m.is_active);
+        }
       }
     }
     return [];
@@ -209,7 +210,7 @@ export default function CheckoutClient() {
     if (!selectedMethod) return 0;
     return calcDeliveryFee({
       methodPrice: selectedMethod.price,
-      freeShippingThreshold: selectedMethod.free_shipping_threshold,
+      freeShippingThreshold: null,
       subtotal,
       globalThreshold: GLOBAL_FREE_SHIPPING_THRESHOLD,
     });
@@ -356,10 +357,7 @@ export default function CheckoutClient() {
 
   // ─── Render ──────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-stone-50 text-stone-800 font-sans" dir={isAr ? 'rtl' : 'ltr'}>
-      <AnnouncementBar />
-      <Navbar />
-
+    <div className="bg-stone-50 text-stone-800 font-sans" dir={isAr ? 'rtl' : 'ltr'}>
       <main className="pt-8 pb-20">
         {/* Page Header & Breadcrumb */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
@@ -556,7 +554,7 @@ export default function CheckoutClient() {
                           {deliveryOptionsForCity.map((method) => {
                             const isSelected = selectedMethod?.id === method.id;
                             const isFree =
-                              subtotal >= (method.free_shipping_threshold ?? GLOBAL_FREE_SHIPPING_THRESHOLD);
+                              subtotal >= GLOBAL_FREE_SHIPPING_THRESHOLD;
                             const priceDisplay = isFree
                               ? (isAr ? 'مجاني 🎉' : 'FREE 🎉')
                               : `${method.price.toFixed(2)} ${isAr ? 'د.م' : 'MAD'}`;
@@ -576,7 +574,7 @@ export default function CheckoutClient() {
                                       {method.name}
                                     </span>
                                     <span className="text-xs text-stone-500 block mt-0.5">
-                                      {method.estimated_days}
+                                      {method.estimated_days} day(s)
                                     </span>
                                   </div>
                                   <span className={`text-sm font-bold ${isSelected ? 'text-emerald-800' : 'text-stone-900'}`}>
@@ -853,8 +851,6 @@ export default function CheckoutClient() {
           </div>
         )}
       </main>
-
-      <Footer />
     </div>
   );
 }

@@ -2,9 +2,6 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Navbar } from '../../../sections/Navbar';
-import { Footer } from '../../../sections/Footer';
-import { AnnouncementBar } from '../../../sections/AnnouncementBar';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import {
   CheckCircle2,
@@ -150,10 +147,7 @@ export default function OrderConfirmationClient() {
   );
 
   return (
-    <div className="min-h-screen bg-stone-50 text-stone-800 font-sans" dir={isAr ? 'rtl' : 'ltr'}>
-      <AnnouncementBar />
-      <Navbar />
-
+    <div className="bg-stone-50 text-stone-800 font-sans" dir={isAr ? 'rtl' : 'ltr'}>
       <main className="pb-20">
         {/* Banner Section */}
         <section
@@ -392,8 +386,6 @@ export default function OrderConfirmationClient() {
           </div>
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 }

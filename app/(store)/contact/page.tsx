@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Navbar } from "../../sections/Navbar";
-import { Footer } from "../../sections/Footer";
 import { ContactSection } from "../../sections/ContactSection";
 import type { SiteConfig } from "../../sections/common/types";
 
@@ -37,13 +35,5 @@ export default function ContactPage() {
       .catch(() => {});
   }, []);
 
-  return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar site={site} />
-      <main className="flex-1">
-        <ContactSection site={site} />
-      </main>
-      <Footer site={site} />
-    </div>
-  );
+  return <ContactSection site={site} />;
 }

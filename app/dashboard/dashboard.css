@@ -9,7 +9,7 @@
    to prevent any bleed-out to other routes.
    ───────────────────────────────────────────────────── */
 
-/* Dashboard scrollbar */
+/* Dashboard scrollbar — uses gold accent */
 .dashboard-root ::-webkit-scrollbar {
   width: 6px;
 }
@@ -17,11 +17,11 @@
   background: #f1f5f9;
 }
 .dashboard-root ::-webkit-scrollbar-thumb {
-  background: rgba(205, 165, 82, 0.4);
+  background: rgba(var(--color-gold-rgb, 217,119,6), 0.4);
   border-radius: 3px;
 }
 .dashboard-root ::-webkit-scrollbar-thumb:hover {
-  background: rgba(205, 165, 82, 0.65);
+  background: rgba(var(--color-gold-rgb, 217,119,6), 0.65);
 }
 
 /* Sidebar navigation link utility */
@@ -40,12 +40,12 @@
 
 .dashboard-root .sidebar-link:hover,
 .dashboard-root .sidebar-link.active {
-  background: rgba(205, 165, 82, 0.15);
+  background: rgba(var(--color-gold-rgb, 217,119,6), 0.15);
   color: #ffffff;
 }
 
 .dashboard-root .sidebar-link.active {
-  color: #cda552;
+  color: var(--color-gold, #d97706);
 }
 
 /* Chart tooltip */
@@ -64,7 +64,7 @@
   width: 40px;
   height: 40px;
   border: 4px solid transparent;
-  border-top-color: #cda552;
+  border-top-color: var(--color-gold, #d97706);
   border-radius: 50%;
   animation: dashboard-spin 0.8s linear infinite;
 }
@@ -82,3 +82,189 @@
 .dashboard-root .animate-fade-in {
   animation: dashboard-fade-up 0.35s ease forwards;
 }
+
+/* ── CSS Variables — SSS palette-aware (defaults = Emerald Garden) ── */
+:root {
+  --dashboard-bg-light: #fafaf7;
+  --dashboard-card-light: #ffffff;
+  --dashboard-card-border-light: #e2e8f0;
+  --dashboard-input-bg-light: #ffffff;
+  --dashboard-input-border-light: #e2e8f0;
+  --dashboard-bg-dark: #0a0f1a;
+  --dashboard-card-dark: #131a28;
+  --dashboard-card-border-dark: #1e293b;
+  --dashboard-input-bg-dark: #131a28;
+  --dashboard-input-border-dark: #1e293b;
+}
+
+/* ── Light mode polish ── */
+.dashboard-root {
+  background-color: var(--dashboard-bg-light);
+  transition: background-color 0.25s ease;
+}
+.dashboard-root .bg-white {
+  background-color: var(--dashboard-card-light) !important;
+  border-color: var(--dashboard-card-border-light) !important;
+  box-shadow: 0 1px 3px rgba(16, 24, 16, 0.04), 0 1px 2px rgba(16, 24, 16, 0.06);
+}
+
+/* ── Dark mode — palette-aware ── */
+.dashboard-root.dark {
+  color-scheme: dark;
+  background-color: var(--dashboard-bg-dark) !important;
+}
+
+.dashboard-root.dark ::-webkit-scrollbar-track {
+  background: #121a16;
+}
+.dashboard-root.dark ::-webkit-scrollbar-thumb {
+  background: rgba(var(--color-gold-rgb, 217,119,6), 0.22);
+}
+.dashboard-root.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--color-gold-rgb, 217,119,6), 0.38);
+}
+
+/* Surfaces — now palette-aware via CSS vars */
+.dashboard-root.dark .bg-white {
+  background-color: var(--dashboard-card-dark) !important;
+  border-color: var(--dashboard-card-border-dark) !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.4), 0 4px 12px rgba(0,0,0,0.25) !important;
+}
+.dashboard-root.dark .bg-gray-50 {
+  background-color: color-mix(in srgb, var(--dashboard-card-dark) 88%, white 12%) !important;
+  border-color: rgba(255,255,255,0.06) !important;
+}
+.dashboard-root.dark .bg-gray-100,
+.dashboard-root.dark .bg-stone-50,
+.dashboard-root.dark .bg-stone-100 {
+  background-color: color-mix(in srgb, var(--dashboard-card-dark) 82%, white 18%) !important;
+}
+.dashboard-root.dark .bg-gray-50\/50 {
+  background-color: rgba(31,46,39,0.6) !important;
+}
+.dashboard-root.dark .border-gray-100,
+.dashboard-root.dark .border-stone-100 {
+  border-color: rgba(255,255,255,0.06) !important;
+}
+.dashboard-root.dark .border-gray-200,
+.dashboard-root.dark .border-stone-200 {
+  border-color: rgba(255,255,255,0.08) !important;
+}
+
+/* Typography — warmer, higher contrast but not pure white */
+.dashboard-root.dark .text-gray-900,
+.dashboard-root.dark .text-stone-900 {
+  color: #eef2ee !important;
+}
+.dashboard-root.dark .text-gray-800,
+.dashboard-root.dark .text-stone-800 {
+  color: #dde5de !important;
+}
+.dashboard-root.dark .text-gray-700,
+.dashboard-root.dark .text-stone-700 {
+  color: #c2ccc6 !important;
+}
+.dashboard-root.dark .text-gray-600,
+.dashboard-root.dark .text-stone-600 {
+  color: #9aa8a0 !important;
+}
+.dashboard-root.dark .text-gray-500,
+.dashboard-root.dark .text-stone-500 {
+  color: #7f8f87 !important;
+}
+.dashboard-root.dark .text-gray-400,
+.dashboard-root.dark .text-stone-400 {
+  color: #6b7a72 !important;
+}
+
+/* Hover states */
+.dashboard-root.dark .hover\:bg-gray-50:hover,
+.dashboard-root.dark .hover\:bg-stone-50:hover {
+  background-color: rgba(255,255,255,0.05) !important;
+}
+.dashboard-root.dark .hover\:bg-gray-100:hover,
+.dashboard-root.dark .hover\:bg-stone-100:hover {
+  background-color: rgba(255,255,255,0.07) !important;
+}
+.dashboard-root.dark .divide-gray-50 > * + *,
+.dashboard-root.dark .divide-gray-100 > * + *,
+.dashboard-root.dark .divide-stone-100 > * + * {
+  border-color: rgba(255,255,255,0.06) !important;
+}
+
+/* Colored icon pills — mute them in dark so they don't glow */
+.dashboard-root.dark .bg-purple-50 { background-color: rgba(192,132,252,0.14) !important; }
+.dashboard-root.dark .bg-pink-50 { background-color: rgba(244,114,182,0.14) !important; }
+.dashboard-root.dark .bg-sky-50 { background-color: rgba(56,189,248,0.13) !important; }
+.dashboard-root.dark .bg-amber-50 { background-color: rgba(251,191,36,0.13) !important; }
+.dashboard-root.dark .bg-emerald-50 { background-color: rgba(16,185,129,0.13) !important; }
+.dashboard-root.dark .bg-red-50 { background-color: rgba(248,113,113,0.13) !important; }
+.dashboard-root.dark .bg-blue-50 { background-color: rgba(96,165,250,0.13) !important; }
+.dashboard-root.dark .bg-indigo-50 { background-color: rgba(129,140,248,0.13) !important; }
+.dashboard-root.dark .bg-teal-50 { background-color: rgba(45,212,191,0.13) !important; }
+
+/* Alert tints */
+.dashboard-root.dark .bg-amber-50.border-amber-100,
+.dashboard-root.dark .bg-red-50.border-red-100,
+.dashboard-root.dark .bg-blue-50.border-blue-100 {
+  border-color: rgba(255,255,255,0.07) !important;
+}
+
+/* Inputs — palette-aware */
+.dashboard-root.dark input,
+.dashboard-root.dark textarea,
+.dashboard-root.dark select {
+  color: #eef2ee;
+  background-color: var(--dashboard-input-bg-dark) !important;
+  border-color: var(--dashboard-input-border-dark) !important;
+}
+.dashboard-root.dark input::placeholder,
+.dashboard-root.dark textarea::placeholder {
+  color: rgba(255,255,255,0.38);
+}
+.dashboard-root.dark .bg-gray-50.border {
+  background-color: var(--dashboard-input-bg-dark) !important;
+}
+/* Light inputs */
+.dashboard-root input,
+.dashboard-root textarea,
+.dashboard-root select {
+  background-color: var(--dashboard-input-bg-light);
+  border-color: var(--dashboard-input-border-light);
+}
+
+/* Recharts & tooltips dark */
+.dashboard-root.dark .recharts-cartesian-grid-horizontal line,
+.dashboard-root.dark .recharts-cartesian-grid-vertical line {
+  stroke: rgba(255,255,255,0.07) !important;
+}
+.dashboard-root.dark .recharts-tooltip-wrapper .bg-white {
+  background-color: #1e2e27 !important;
+  border-color: rgba(255,255,255,0.08) !important;
+  color: #eef2ee;
+}
+
+/* RTL support */
+.dashboard-root[dir="rtl"] {
+  font-family: Tajawal, Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+/* ── Shipping integration: scoped animations ported from Resources/Shipping/index.css ── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes zoomIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+@keyframes dropPinPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 2px 12px rgba(217,119,6,0.45); }
+  50% { transform: scale(1.12); box-shadow: 0 2px 20px rgba(217,119,6,0.75); }
+}
+.dashboard-root .animate-in { animation: fadeIn 0.2s ease-out; }
+.dashboard-root .zoom-in-95 { animation: zoomIn 0.2s ease-out; }
+.dashboard-root .drop-pin-pulse { animation: dropPinPulse 1.2s ease-in-out infinite; }
+
+/* Shipping modal helpers — ensures modal overlay stays above dashboard chrome */
+.dashboard-root .dashboard-modal { animation: zoomIn 0.18s ease-out; }

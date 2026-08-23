@@ -22,6 +22,7 @@ import Badge from '../components/ui/Badge';
 import RefreshButton from '../components/ui/RefreshButton';
 import { useStore } from '../store/useStore';
 import { orders } from '../data/mockData';
+import { useTranslation } from '../i18n/useTranslation';
 
 const container = {
   hidden: { opacity: 0 },
@@ -31,6 +32,7 @@ const container = {
 type ViewMode = 'cards' | 'table';
 
 const Customers: React.FC = () => {
+  const { t } = useTranslation();
   const {
     customers,
     isLoadingCustomers,
@@ -132,14 +134,14 @@ const Customers: React.FC = () => {
   const totalOrders = customers.reduce((s, c) => s + c.totalOrders, 0);
   const avgSpent = customers.length > 0 ? totalSpent / customers.length : 0;
 
-  const inputClass = 'w-full bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#cda552]/20 focus:border-[#cda552]/50 transition-all';
+  const inputClass = 'w-full bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#d97706]/20 focus:border-[#d97706]/50 transition-all';
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Customers</h2>
+          <h2 className="text-xl font-bold text-gray-900">{t('customers.title')}</h2>
           <p className="text-sm text-gray-500 mt-1">
             {isLoadingCustomers ? 'Loading customers...' : `${customers.length} registered customers`}
           </p>
@@ -159,8 +161,8 @@ const Customers: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { label: 'Total Customers', value: customers.length, icon: <Users className="w-5 h-5" />, color: 'from-[#0f3d31] to-[#0a2c23]' },
-          { label: 'Total Orders', value: totalOrders, icon: <ShoppingCart className="w-5 h-5" />, color: 'from-[#cda552] to-[#b8933e]' },
-          { label: 'Avg. Spent', value: avgSpent.toLocaleString() + ' MAD', icon: <DollarSign className="w-5 h-5" />, color: 'from-[#0f3d31] to-[#cda552]' },
+          { label: 'Total Orders', value: totalOrders, icon: <ShoppingCart className="w-5 h-5" />, color: 'from-[#d97706] to-[#b8933e]' },
+          { label: 'Avg. Spent', value: avgSpent.toLocaleString() + ' MAD', icon: <DollarSign className="w-5 h-5" />, color: 'from-[#0f3d31] to-[#d97706]' },
         ].map((s) => (
           <div key={s.label} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
             <div className="flex items-center gap-3 mb-3">
@@ -181,14 +183,14 @@ const Customers: React.FC = () => {
             <div className="flex items-center gap-3 mb-3">
               <div className="relative">
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-sm ${
-                  index === 0 ? 'bg-gradient-to-br from-[#cda552] to-[#b8933e]' :
+                  index === 0 ? 'bg-gradient-to-br from-[#d97706] to-[#b8933e]' :
                   index === 1 ? 'bg-gradient-to-br from-gray-400 to-gray-600' :
                   'bg-gradient-to-br from-[#0f3d31] to-[#0a2c23]'
                 }`}>
                   {customer.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
                 </div>
                 {index === 0 && (
-                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-[#cda552] rounded-full flex items-center justify-center">
+                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-[#d97706] rounded-full flex items-center justify-center">
                     <Star size={10} className="text-white fill-white" />
                   </div>
                 )}
@@ -281,7 +283,7 @@ const Customers: React.FC = () => {
                   className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow"
                 >
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#0f3d31] to-[#0a2c23] flex items-center justify-center text-white font-semibold text-xs flex-shrink-0 ring-2 ring-[#cda552]/20">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#0f3d31] to-[#0a2c23] flex items-center justify-center text-white font-semibold text-xs flex-shrink-0 ring-2 ring-[#d97706]/20">
                       {customer.avatar ? (
                         <img src={customer.avatar} alt={customer.name} className="w-full h-full rounded-full object-cover" />
                       ) : (
@@ -313,7 +315,7 @@ const Customers: React.FC = () => {
                       <p className="text-[10px] text-gray-400 uppercase tracking-wide">Orders</p>
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-[#cda552]">{customer.totalSpent.toLocaleString()} MAD</p>
+                      <p className="text-sm font-bold text-[#d97706]">{customer.totalSpent.toLocaleString()} MAD</p>
                       <p className="text-[10px] text-gray-400 uppercase tracking-wide">Spent</p>
                     </div>
                   </div>
@@ -329,7 +331,7 @@ const Customers: React.FC = () => {
 
                   <button
                     onClick={() => setSelectedCustomer(customer)}
-                    className="w-full mt-3 py-2 text-xs font-medium text-[#0a2c23] bg-[#cda552]/10 hover:bg-[#cda552]/20 rounded-xl transition-colors"
+                    className="w-full mt-3 py-2 text-xs font-medium text-[#0a2c23] bg-[#d97706]/10 hover:bg-[#d97706]/20 rounded-xl transition-colors"
                   >
                     View Details
                   </button>
@@ -341,7 +343,7 @@ const Customers: React.FC = () => {
           {/* Loading indicator */}
           {isLoadingMore && (
             <div className="flex items-center justify-center py-8 gap-3">
-              <div className="w-5 h-5 border-2 border-[#cda552] border-t-transparent rounded-full animate-spin" />
+              <div className="w-5 h-5 border-2 border-[#d97706] border-t-transparent rounded-full animate-spin" />
               <span className="text-sm text-gray-500">Loading more customers...</span>
             </div>
           )}
@@ -426,7 +428,7 @@ const Customers: React.FC = () => {
                     <td className="px-5 py-4">
                       <button
                         onClick={() => setSelectedCustomer(customer)}
-                        className="p-2 rounded-lg hover:bg-[#cda552]/10 text-gray-400 hover:text-[#cda552] transition-colors"
+                        className="p-2 rounded-lg hover:bg-[#d97706]/10 text-gray-400 hover:text-[#d97706] transition-colors"
                       >
                         <Eye size={14} />
                       </button>
@@ -541,9 +543,9 @@ const Customers: React.FC = () => {
                     <p className="text-2xl font-bold text-[#0f3d31]">{selectedCustomer.totalOrders}</p>
                     <p className="text-xs text-[#0f3d31]/70 mt-1">Total Orders</p>
                   </div>
-                  <div className="p-4 rounded-xl bg-[#cda552]/10 text-center">
-                    <p className="text-2xl font-bold text-[#cda552]">{selectedCustomer.totalSpent.toLocaleString()}</p>
-                    <p className="text-xs text-[#cda552]/70 mt-1">Total Spent (MAD)</p>
+                  <div className="p-4 rounded-xl bg-[#d97706]/10 text-center">
+                    <p className="text-2xl font-bold text-[#d97706]">{selectedCustomer.totalSpent.toLocaleString()}</p>
+                    <p className="text-xs text-[#d97706]/70 mt-1">Total Spent (MAD)</p>
                   </div>
                   <div className="p-4 rounded-xl bg-gray-100 text-center">
                     <p className="text-2xl font-bold text-gray-700">
@@ -597,7 +599,7 @@ const Customers: React.FC = () => {
                     <h4 className="text-sm font-semibold text-gray-900 mb-3">Favorite Categories</h4>
                     <div className="flex flex-wrap gap-2">
                       {selectedCustomer.favoriteCategories.map((cat: string) => (
-                        <span key={cat} className="px-3 py-1 bg-[#cda552]/10 text-[#8B7034] rounded-full text-xs font-medium">
+                        <span key={cat} className="px-3 py-1 bg-[#d97706]/10 text-[#8B7034] rounded-full text-xs font-medium">
                           {cat}
                         </span>
                       ))}

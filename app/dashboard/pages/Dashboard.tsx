@@ -24,6 +24,7 @@ import RefreshButton from '../components/ui/RefreshButton';
 import RevenueChart from '../components/charts/RevenueChart';
 import SalesByCategory from '../components/charts/SalesByCategory';
 import { useStore } from '../store/useStore';
+import { useTranslation } from '../i18n/useTranslation';
 
 const Dashboard: React.FC = () => {
   const {
@@ -32,6 +33,7 @@ const Dashboard: React.FC = () => {
     isLoadingProducts, isLoadingOrders, isLoadingCustomers,
     fetchProducts, fetchOrders, fetchCustomers,
   } = useStore();
+  const { t } = useTranslation();
 
   const isLoading = isLoadingProducts || isLoadingOrders || isLoadingCustomers;
 
@@ -70,20 +72,20 @@ const Dashboard: React.FC = () => {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
-          <Loader2 size={48} className="animate-spin text-[#cda552] mx-auto mb-4" />
-          <p className="text-gray-500">Loading dashboard data...</p>
+          <Loader2 size={48} className="animate-spin text-[#d97706] mx-auto mb-4" />
+          <p className="text-gray-500">{t('dashboard.loading')}</p>
         </div>
       </div>
     );
   }
 
   const quickActions = [
-    { label: 'Add Product', icon: <Plus size={16} />, page: 'products' as const, color: 'from-purple-500 to-purple-600' },
-    { label: 'Create Coupon', icon: <Tag size={16} />, page: 'coupons' as const, color: 'from-pink-500 to-pink-600' },
-    { label: 'View Orders', icon: <FileText size={16} />, page: 'orders' as const, color: 'from-blue-500 to-blue-600' },
-    { label: 'Add Category', icon: <FolderPlus size={16} />, page: 'categories' as const, color: 'from-amber-500 to-amber-600' },
-    { label: 'Customers', icon: <UserCheck size={16} />, page: 'customers' as const, color: 'from-emerald-500 to-emerald-600' },
-    { label: 'Inventory', icon: <PackageCheck size={16} />, page: 'inventory' as const, color: 'from-red-500 to-red-600' },
+    { label: t('dashboard.quick.addProduct'), icon: <Plus size={16} />, page: 'products' as const, color: 'from-purple-500 to-purple-600' },
+    { label: t('dashboard.quick.createCoupon'), icon: <Tag size={16} />, page: 'coupons' as const, color: 'from-pink-500 to-pink-600' },
+    { label: t('dashboard.quick.viewOrders'), icon: <FileText size={16} />, page: 'orders' as const, color: 'from-blue-500 to-blue-600' },
+    { label: t('dashboard.quick.addCategory'), icon: <FolderPlus size={16} />, page: 'categories' as const, color: 'from-amber-500 to-amber-600' },
+    { label: t('dashboard.quick.customers'), icon: <UserCheck size={16} />, page: 'customers' as const, color: 'from-emerald-500 to-emerald-600' },
+    { label: t('dashboard.quick.inventory'), icon: <PackageCheck size={16} />, page: 'inventory' as const, color: 'from-red-500 to-red-600' },
   ];
 
   return (
@@ -91,9 +93,9 @@ const Dashboard: React.FC = () => {
       {/* Header with Refresh */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Dashboard</h2>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('dashboard.title')}</h2>
           <p className="text-sm text-gray-500 mt-1">
-            {isLoading ? 'Loading dashboard data...' : 'Welcome back! Here\'s what\'s happening today.'}
+            {isLoading ? t('dashboard.loading') : t('dashboard.welcome')}
           </p>
         </div>
         <RefreshButton
@@ -107,37 +109,37 @@ const Dashboard: React.FC = () => {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          title="Total Revenue"
+          title={t('dashboard.totalRevenue')}
           value={`${totalRevenue.toLocaleString()} MAD`}
           change={0}
-          changeLabel="from live data"
+          changeLabel={t('dashboard.fromLiveData')}
           icon={<DollarSign size={22} />}
           iconBg="bg-purple-50"
           iconColor="text-purple-600"
         />
         <StatCard
-          title="Total Orders"
+          title={t('dashboard.totalOrders')}
           value={totalOrders.toLocaleString()}
           change={0}
-          changeLabel="from live data"
+          changeLabel={t('dashboard.fromLiveData')}
           icon={<ShoppingCart size={22} />}
           iconBg="bg-pink-50"
           iconColor="text-pink-600"
         />
         <StatCard
-          title="Total Customers"
+          title={t('dashboard.totalCustomers')}
           value={totalCustomers.toLocaleString()}
           change={0}
-          changeLabel="from live data"
+          changeLabel={t('dashboard.fromLiveData')}
           icon={<Users size={22} />}
           iconBg="bg-sky-50"
           iconColor="text-sky-600"
         />
         <StatCard
-          title="Total Products"
+          title={t('dashboard.totalProducts')}
           value={totalProducts.toLocaleString()}
           change={0}
-          changeLabel="from live data"
+          changeLabel={t('dashboard.fromLiveData')}
           icon={<Package size={22} />}
           iconBg="bg-amber-50"
           iconColor="text-amber-600"
@@ -145,21 +147,21 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white rounded-2xl p-5 border border-gray-100">
-        <h3 className="text-base font-semibold text-gray-900 mb-4">Quick Actions</h3>
+      <div className="bg-white rounded-2xl p-5 border border-gray-100 dark:border-white/5">
+        <h3 className="text-base font-semibold text-gray-900 mb-4">{t('dashboard.quickActions')}</h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {quickActions.map((action) => (
             <button
               key={action.label}
               onClick={() => setCurrentPage(action.page)}
-              className="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-100 hover:border-purple-200 hover:bg-purple-50/30 transition-all group"
+              className="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-100 dark:border-white/5 hover:border-purple-200 hover:bg-purple-50/30 dark:hover:bg-white/5 transition-all group"
             >
               <div
                 className={`w-10 h-10 rounded-xl bg-gradient-to-br ${action.color} flex items-center justify-center text-white group-hover:scale-110 transition-transform`}
               >
                 {action.icon}
               </div>
-              <span className="text-xs font-medium text-gray-700">{action.label}</span>
+              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{action.label}</span>
             </button>
           ))}
         </div>
@@ -178,12 +180,12 @@ const Dashboard: React.FC = () => {
         {/* Recent Orders */}
         <div className="bg-white rounded-2xl p-5 border border-gray-100">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-base font-semibold text-gray-900">Recent Orders</h3>
+            <h3 className="text-base font-semibold text-gray-900">{t('dashboard.recentOrders')}</h3>
             <button
               onClick={() => setCurrentPage('orders')}
               className="text-sm text-purple-600 font-medium hover:text-purple-700 flex items-center gap-1"
             >
-              View all <ArrowRight size={14} />
+              {t('dashboard.viewAll')} <ArrowRight size={14} />
             </button>
           </div>
           <div className="space-y-3">
@@ -222,12 +224,12 @@ const Dashboard: React.FC = () => {
         {/* Top Products */}
         <div className="bg-white rounded-2xl p-5 border border-gray-100">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-base font-semibold text-gray-900">Top Products</h3>
+            <h3 className="text-base font-semibold text-gray-900">{t('dashboard.topProducts')}</h3>
             <button
               onClick={() => setCurrentPage('products')}
               className="text-sm text-purple-600 font-medium hover:text-purple-700 flex items-center gap-1"
             >
-              View all <ArrowRight size={14} />
+              {t('dashboard.viewAll')} <ArrowRight size={14} />
             </button>
           </div>
           <div className="space-y-3">
@@ -262,13 +264,13 @@ const Dashboard: React.FC = () => {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <AlertTriangle size={18} className="text-amber-500" />
-              <h3 className="text-base font-semibold text-gray-900">Low Stock Alerts</h3>
+              <h3 className="text-base font-semibold text-gray-900">{t('dashboard.lowStockAlerts')}</h3>
             </div>
             <button
               onClick={() => setCurrentPage('inventory')}
               className="text-sm text-purple-600 font-medium hover:text-purple-700 flex items-center gap-1"
             >
-              Manage <ArrowRight size={14} />
+              {t('dashboard.manage')} <ArrowRight size={14} />
             </button>
           </div>
           <div className="space-y-2">
@@ -282,10 +284,10 @@ const Dashboard: React.FC = () => {
                   />
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">{product.name}</p>
-                    <p className="text-xs text-amber-600">Only {product.stock} left in stock</p>
+                    <p className="text-xs text-amber-600">{t('dashboard.onlyLeft', { count: String(product.stock) })}</p>
                   </div>
                 </div>
-                <Badge variant="warning" size="sm" dot>Low Stock</Badge>
+                <Badge variant="warning" size="sm" dot>{t('dashboard.lowStock')}</Badge>
               </div>
             ))}
             {outOfStockProducts.map((product) => (
@@ -298,10 +300,10 @@ const Dashboard: React.FC = () => {
                   />
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">{product.name}</p>
-                    <p className="text-xs text-red-600">Out of stock</p>
+                    <p className="text-xs text-red-600">{t('dashboard.outOfStock')}</p>
                   </div>
                 </div>
-                <Badge variant="danger" size="sm" dot>Out of Stock</Badge>
+                <Badge variant="danger" size="sm" dot>{t('dashboard.outOfStockBadge')}</Badge>
               </div>
             ))}
           </div>
@@ -312,13 +314,13 @@ const Dashboard: React.FC = () => {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Clock size={18} className="text-blue-500" />
-              <h3 className="text-base font-semibold text-gray-900">Pending Actions</h3>
+              <h3 className="text-base font-semibold text-gray-900">{t('dashboard.pendingActions')}</h3>
             </div>
             <button
               onClick={() => setCurrentPage('orders')}
               className="text-sm text-purple-600 font-medium hover:text-purple-700 flex items-center gap-1"
             >
-              View all <ArrowRight size={14} />
+              {t('dashboard.viewAll')} <ArrowRight size={14} />
             </button>
           </div>
           <div className="space-y-2">

@@ -1,211 +1,56 @@
-# Dashboard Architecture Separation — Implementation Plan
+# Shipping Integration Plan — Dashboard + Resources/Shipping
 
-## Current Architecture Analysis
+## 1. Analysis Summary
 
-### Project Structure Summary
+### Dashboard (Primary) — Already Native
+- **Routing:** SPA state router `AppDashboard.tsx` `switch(currentPage)` + `useStore.currentPage: PageSection` + `Sidebar` `PageSection='shipping'` under Operations. No Next route per tab; entry `app/dashboard/page.tsx` renders `<App/>`.
+- **Layout:** `app/dashboard/layout.tsx` (`'use client'`, auth gate via `createClient().auth.getSession()` + `onAuthStateChange`, ThemeProvider, `.dashboard-root` scope, LTR/RTL).
+- **State:** Single zustand `useStore` at `app/dashboard/store/useStore.ts` — shipping slice `shippingZones: ShippingZone[], isLoadingShipping, shippingError, fetchShippingZones, addShippingZone, updateShippingZone, deleteShippingZone` with `ShippingZoneInput` `{name,cities:string[],methods:ShippingMethodInput[]}`. Mappers `mapZone`/`mapMethod`.
+- **Types:** `app/dashboard/types/index.ts` `ShippingZone {id,name,cities:string[],methods:ShippingMethod[]}` `ShippingMethod {id,name,price,estimatedDays:string,freeShippingThreshold?:number}` `PageSection` includes `'shipping'`.
+- **API:** `app/api/shipping/route.ts` (GET list with methods, POST zone/method via `createServerClient`+`createAdminClient`+`ShippingRepository`) and `app/api/shipping/[id]/route.ts` (GET/PUT/DELETE with method diff-sync). Standard `{success,data,error}` via `lib/api`.
+- **DB Schema (2 tables):** `shipping_zones {id,name,cities JSONB,created_at}` + `shipping_methods {id,zone_id,name,price,estimated_days VARCHAR, free_shipping_threshold DECIMAL, created_at}` with FK CASCADE, RLS public read + admin full. Migrations `001_initial_schema.sql` + `005_checkout_and_orders.sql`.
+- **UI:** `app/dashboard/pages/Shipping.tsx` ~1100-line monolith, 5 tabs `overview|zones|cities|delivery|settings` with `MoroccoMap` SVG, `Badge/StatCard/RefreshButton`, `ZoneModal/DeleteConfirm/StatusBadge/MethodLine/CityDetails/MethodEditor/SettingsTab/ZoneRow`. Dashboard.css scoped under `.dashboard-root`.
+- **Geo:** `app/dashboard/data/moroccoCities.ts` 32 cities + `MOROCCO_BORDER` polygon (28 pts) + `MAP_BOUNDS` + `projectLatLon` + `CITY_ALIASES/normalizeCity`.
 
-The project is a Next.js 16 app (App Router, Tailwind CSS v4, React 19) with three areas:
+### Resources/Shipping (Reference) — Vite SPA
+- **Stack:** `youware-react-template` Vite + `react-router-dom` + `zustand` `useDeliveryStore` + `react-hot-toast` + leaflet (empty) — incompatible with Dashboard Next.js SPA routing.
+- **Structure:** `DeliveryManager.tsx` shell (sticky header+tabs, Toaster, 5 tabs) + `pages/delivery/{Overview,Zones,Cities,DeliveryMethods,Settings}Tab.tsx` decomposed + `components/{map/MoroccoMap.tsx (empty), ui/{Modal,SearchInput,StatusBadge,TabNavigation,LoadingSpinner}}` + `store/delivery.ts` + `types/delivery.ts` + `data/morocco-cities.ts` (40 cities, name_ar, population) + `api/delivery.ts` (mockZones + `deliveryService` via missing `api/supabase.ts` `getSupabase()`) + `supabase/{schema.sql (3 tables), seed.sql, SETUP.md}` + `index.css` (tailwind+leaflet+pulse) + `package.json`.
+- **3-Table Schema:** `delivery_zones {id,name,description,is_active}` + `delivery_cities {id,name,name_ar,zone_id,lat,lng,is_active}` + `delivery_methods {id,city_id,zone_id,name,slug,price,estimated_days INT,estimated_hours,is_active}` — richer (per-city methods, geo, i18n) but incompatible with Dashboard's 2-table JSON-cities model.
+- **UX Highlights:** 8-card overview + gradient progress + zones health table; Zones with SearchInput+clear + hover cards + city-chip cross-nav; Cities with Drop-Pin on map; DeliveryMethods global flat table with filters; Settings with connection badge + schema dump; reusable Modal (Esc, blur, body lock).
 
-| Area | Routes | Layout |
+## 2. Merge / Reuse / Remove / Conflict Map
+
+| Area | Action | Detail |
 |------|--------|--------|
-| Landing Page | `/` | Root `layout.tsx` → `Providers` → `PageShell` → `MainContent` |
-| Store | `/store`, `/store/[id]` | Root `layout.tsx` → `Providers` → Store pages |
-| Dashboard | `/dashboard` | Root `layout.tsx` → `Providers` → Dashboard `layout.tsx` |
-| Other Website | `/checkout`, `/contact`, `/login`, `/register`, `/order-confirmation`, `/track-order` | Root layout |
+| **Routing** | **REUSE Dashboard** | Keep `AppDashboard.tsx` switch + `PageSection='shipping'` + Sidebar (Truck/Operations). **Remove** react-router-dom + DeliveryManager shell. |
+| **Layout/Auth** | **REUSE Dashboard** | Keep `layout.tsx` auth gate + `.dashboard-root` scoping + ThemeProvider. Drop Resources Toaster/standalone header. |
+| **Store** | **REUSE Dashboard** | Keep single `useStore` shipping slice. **Remove** `useDeliveryStore` (allCities/selectedCity/getStats). Port useful pure helpers (`getCityStatus`, `getStats`) as utils if needed inside Shipping.tsx (already has `zoneStatus/methodOf`). |
+| **Types** | **REUSE Dashboard** | Keep `ShippingZone{cities:string[],methods:ShippingMethod[]}`. **Remove** Resources `DeliveryZone/City/DeliveryMethod` 3-table types; incompatible (would require DB migration + rewrite of repo/API). Add optional `freeShippingThreshold` already present. |
+| **API/Supabase** | **REUSE Dashboard** | Keep `app/api/shipping` + `ShippingRepository` + `lib/supabase/*` singleton (anon/admin). **Remove** `deliveryService` + missing `api/supabase.ts` `getSupabase()` + mockZones. No new tables. |
+| **DB Schema** | **REUSE Dashboard** | Keep 2-table schema (`001_initial_schema.sql`). **Do NOT run** `Resources/supabase/schema.sql` (would create orphan `delivery_*` tables, no data migration, break API). Optional future: migration adding `description/is_active` could be additive. |
+| **Geo Data** | **MERGE** | Merge supplemental cities from Resources (population/name_ar) into `dashboard/data/moroccoCities.ts` while **preserving** `MOROCCO_BORDER`, `projectLatLon`, `normalizeCity`/`CITY_ALIASES`. Deduplicate by normalized name. |
+| **UI — Tabs** | **ENHANCE in place** | Keep existing 5-tab Shipping.tsx. Backport valuable UX: (1) Overview: gradient progress bar + zones health table (Resources OverviewTab), (2) Zones: SearchInput with clear X, (3) Cities: clearable search + preserved normalizeCity, (4) Settings: threshold note already exists — optionally add schema reference. Drop-Pin deferred (needs per-city lat/lng table, future). |
+| **Components** | **PORT + ADAPT** | Add reusable `SearchInput` (with clear X, dashboard palette `#d97706`) under `app/dashboard/components/ui/SearchInput.tsx`. Add reusable `Modal` (Esc, overlay, body lock) under `app/dashboard/components/ui/Modal.tsx` (adapt to dashboard palette `#0b2e22`). Keep existing `MoroccoMap` SVG (leaflet file empty). Keep `Badge/StatCard/RefreshButton`. |
+| **Styles** | **SCOPE** | Do NOT copy `index.css` global `@tailwind` + leaflet CSS. Extract only animation utilities (`fadeIn/zoomIn/dropPinPulse/scrollbar`) into `app/dashboard/dashboard.css` under `.dashboard-root` scope. Dashboard already scopes all styles. |
+| **Deps** | **REUSE Dashboard** | Dashboard already has `zustand @supabase/supabase-js lucide-react framer-motion`. **Remove** vite-only deps (react-router-dom, headlessui, cannon-es, three, react-leaflet) — not installed in Dashboard. Keep existing deps. |
+| **Source dir** | **KEEP as reference** | Leave `app/Resources/Shipping/` untouched as reference (not imported by Dashboard). Add note in this file. No build impact (not under `pages` routing, just data files). |
 
-### Key Problems Identified
+## 3. Conflicts Resolved
+- **Import paths:** `getSupabase from './supabase'` (missing) → `createClient from '@/lib/supabase/client'`.
+- **Aliases:** `VITE_SUPABASE_URL` vs `NEXT_PUBLIC_SUPABASE_URL` → next publicConfig.
+- **Component names:** `StatusBadge/StatCard/TabNavigation` duplicated → dashboard variants already exist; new `SearchInput/Modal` use unique names.
+- **Duplicate types/stores/clients:** Resolved by consolidating on Dashboard variants.
+- **Routing:** No new routes; `currentPage='shipping'` remains single Dashboard page; sub-tabs stay client state (`activeTab`).
+- **CSS leakage:** Dashboard `.dashboard-root` scoping prevents global bleed; Resources leaflet CSS dropped.
+- **Env:** No new vars; reuse existing Supabase URL/anon/service_role.
 
-1. **Shared Root Layout**: The Dashboard inherits `lang="ar" dir="rtl"` from the root `<html>`, but the Dashboard layout overrides this with `dir="ltr"` on its container div. This is fragile.
+## 4. Steps Executed
+1. Create `app/dashboard/components/ui/SearchInput.tsx` + `Modal.tsx` (scoped, dashboard palette).
+2. Merge `morocco-cities.ts` → `moroccoCities.ts` (supplemental cities, keep border/normalizeCity).
+3. Enhance `app/dashboard/pages/Shipping.tsx`: add SearchInput to cities search, add progress bar + zones table to overview, scope Resources animations into `dashboard.css`.
+4. Verify: `npx tsc --noEmit --skipLibCheck` clean, `npm run build` succeeds, Shipping page mounts under Dashboard routing without new dependencies.
+5. `app/Resources/Shipping` left as reference only, not imported.
 
-2. **Global CSS Leakage**: Three CSS sources load globally for ALL pages:
-   - [globals.css](file:///c:/Users/Readcode/Desktop/my-beauty-store/sodafa-store/app/globals.css) — Tailwind v4, fonts, theme variables, scrollbar styling
-   - [style.css](file:///c:/Users/Readcode/Desktop/my-beauty-store/sodafa-store/app/Resources/assets/css/style.css) (~83KB) — Full SODFA website styles with `* { margin:0; padding:0 }`, `body { ... }`, `a`, `button`, `h1-h3` element selectors, etc. This is a **website-only** stylesheet that leaks into the Dashboard.
-   - [tailwind.css](file:///c:/Users/Readcode/Desktop/my-beauty-store/sodafa-store/app/styles/tailwind.css) — Located in `app/styles/` but only imported by `app/styles/index.css` which is **never imported** by any file (dead code). Contains dashboard-related `.sidebar-link`, `.chart-tooltip` classes mixed with website utilities.
-
-3. **Provider Pollution**: The root [providers.tsx](file:///c:/Users/Readcode/Desktop/my-beauty-store/sodafa-store/app/providers.tsx) wraps everything in `UIProvider` (cart/search/checkout state), `ThemeProvider`, and `LanguageProvider`. It already conditionally hides website modals for dashboard routes, but the Dashboard still gets all providers.
-
-4. **Duplicate Sidebar**: The dashboard `layout.tsx` renders `<Sidebar />` and then `AppDashboard.tsx` renders `<DashboardLayout>` which renders `<Sidebar />` again along with `<Header />`.
-
----
-
-## Proposed Changes
-
-### 1. Website Route Group `(website)/`
-
-Move all non-dashboard routes into a `(website)` route group. This creates a clean layout boundary.
-
-> [!IMPORTANT]
-> Route groups don't change URLs. `/store` stays `/store`, `/contact` stays `/contact`, etc.
-
-#### [NEW] `app/(website)/layout.tsx`
-- Website-specific layout wrapper
-- Imports and renders the website-specific providers (UIProvider, LanguageProvider, ThemeProvider)
-- Renders `CartDrawer`, `SearchDialog`, `CheckoutFormModal`, `FloatingWhatsappButton`
-- Sets `dir="rtl"` on the wrapper (not on `<html>`)
-
-#### [MOVE] Website routes into `(website)/`
-Move these directories/files into `app/(website)/`:
-- `page.tsx` → `(website)/page.tsx`
-- `App.tsx` → `(website)/App.tsx`
-- `store/` → `(website)/store/`
-- `checkout/` → `(website)/checkout/`
-- `contact/` → `(website)/contact/`
-- `order-confirmation/` → `(website)/order-confirmation/`
-- `track-order/` → `(website)/track-order/`
-- `login/` → `(website)/login/`
-- `register/` → `(website)/register/`
-- `resend-confirmation/` → `(website)/resend-confirmation/`
-- `not-found.tsx` → `(website)/not-found.tsx`
-
-Directories that are NOT routes but shared code (components, contexts, sections, hooks, etc.) remain in `app/`.
-
----
-
-### 2. Separate CSS Responsibilities
-
-#### [MODIFY] `app/globals.css`
-Keep only truly global concerns:
-- `@import "tailwindcss"`
-- Font-face declarations (Inter, Amiri, Tajawal)
-- Tailwind `@theme inline` block
-- `:root` and `.dark` CSS variables
-- Minimal base layer (body background/color, `overflow-x: hidden`)
-- Accordion keyframes and utilities
-
-**Remove from globals.css:**
-- `@import "./Resources/assets/css/style.css"` — This is website-only
-- Scrollbar styles (will be duplicated into website and dashboard separately)
-- Toast styles (website-only)
-- `.animate-fade-up` (website-only)
-
-#### [NEW] `app/(website)/website.css`
-- `@import "../Resources/assets/css/style.css"`
-- Scrollbar styles (website variant with green thumb)
-- Toast notification styles
-- `.animate-fade-up`
-
-This file will be imported in `app/(website)/layout.tsx`.
-
-#### [NEW] `app/dashboard/dashboard.css`
-- Dashboard-specific scrollbar styles
-- Any dashboard-specific utility classes from `tailwind.css` (`.sidebar-link`, `.chart-tooltip`)
-- Dashboard CSS variables/overrides if needed
-
----
-
-### 3. Simplify Root Layout
-
-#### [MODIFY] `app/layout.tsx`
-- Remove website-specific providers from the root
-- Keep only: HTML structure, global CSS import, fonts, `ToastSettingsProvider`, `ToastProvider`
-- Remove hard-coded `lang="ar" dir="rtl"` from `<html>` — the website layout will set direction
-
-> [!WARNING]
-> The root `<html>` currently has `lang="ar" dir="rtl"`. The Dashboard uses `dir="ltr"`. After refactoring:
-> - Root `<html>` will have no `dir` attribute (default LTR)
-> - The website layout wrapper will set `dir="rtl"` on its container
-> - The dashboard layout will use `dir="ltr"` explicitly
-
-#### [MODIFY] `app/providers.tsx`
-- Remove the `isDashboard` conditional logic
-- Remove website-only imports (CartDrawer, SearchDialog, etc.)
-- Simplify to only contain providers that are genuinely global (Toast)
-- Or remove entirely if no truly global providers remain beyond Toast
-
----
-
-### 4. Fix Dashboard Layout Duplication
-
-#### [MODIFY] `app/dashboard/layout.tsx`
-- Import `dashboard.css`
-- Already has Sidebar and auth check — keep as-is
-- Wrap children in a `.dashboard-root` container for CSS scoping
-
-#### [MODIFY] `app/dashboard/AppDashboard.tsx`
-- Remove the duplicate `<DashboardLayout>` wrapper (which renders a second Sidebar)
-- Keep only the page-switching logic with Header rendered directly
-
-#### [MODIFY] `app/dashboard/components/layout/DashboardLayout.tsx`
-- Refactor to render only Header + main content area (remove Sidebar since layout.tsx already renders it)
-- Or remove this component if AppDashboard can use Header directly
-
----
-
-### 5. Provider Separation
-
-| Provider | Scope | Where |
-|----------|-------|-------|
-| `ToastSettingsProvider` | Global | Root `layout.tsx` |
-| `ToastProvider` | Global | Root `layout.tsx` |
-| `UIProvider` (cart, search, checkout, mobile menu) | Website only | `(website)/layout.tsx` |
-| `ThemeProvider` (brand colors, dark mode) | Website + Dashboard shared | Root `layout.tsx` |
-| `LanguageProvider` | Website only | `(website)/layout.tsx` |
-
-> [!NOTE]
-> The `ThemeProvider` manages brand colors used by both website and dashboard (via CSS variables like `--color-gold`, etc.), so it stays global. If the dashboard doesn't use `useTheme()` or these CSS variables, it can be moved to website-only. Let me know your preference.
-
----
-
-### 6. Files Summary
-
-#### Files to Create
-| File | Purpose |
-|------|---------|
-| `app/(website)/layout.tsx` | Website-specific layout with RTL, providers, modals |
-| `app/(website)/website.css` | Website-specific styles (Resources CSS import, scrollbar, toast) |
-| `app/dashboard/dashboard.css` | Dashboard-scoped styles |
-
-#### Files to Move (rename path)
-| From | To |
-|------|-----|
-| `app/page.tsx` | `app/(website)/page.tsx` |
-| `app/App.tsx` | `app/(website)/App.tsx` |
-| `app/store/` | `app/(website)/store/` |
-| `app/checkout/` | `app/(website)/checkout/` |
-| `app/contact/` | `app/(website)/contact/` |
-| `app/order-confirmation/` | `app/(website)/order-confirmation/` |
-| `app/track-order/` | `app/(website)/track-order/` |
-| `app/login/` | `app/(website)/login/` |
-| `app/register/` | `app/(website)/register/` |
-| `app/resend-confirmation/` | `app/(website)/resend-confirmation/` |
-| `app/not-found.tsx` | `app/(website)/not-found.tsx` |
-
-#### Files to Modify
-| File | Change |
-|------|--------|
-| `app/layout.tsx` | Simplify — remove website providers, adjust html attributes |
-| `app/globals.css` | Remove website-only imports and styles |
-| `app/providers.tsx` | Simplify or remove — move website providers to website layout |
-| `app/dashboard/layout.tsx` | Import dashboard.css, add `.dashboard-root` wrapper |
-| `app/dashboard/AppDashboard.tsx` | Fix duplicate Sidebar/DashboardLayout issue |
-| `app/dashboard/components/layout/DashboardLayout.tsx` | Remove Sidebar (already in layout.tsx) |
-
----
-
-## Open Questions
-
-> [!IMPORTANT]
-> **ThemeProvider scope**: The `ThemeProvider` sets CSS variables (`--color-darkGreen`, `--color-gold`, etc.) and manages light/dark mode. The Dashboard [loading.tsx](file:///c:/Users/Readcode/Desktop/my-beauty-store/sodafa-store/app/dashboard/loading.tsx) uses `var(--color-mediumGreen)` and `var(--color-gold)`. Should the ThemeProvider remain global (serving both website and dashboard), or should the dashboard use its own hard-coded color values from [colors.ts](file:///c:/Users/Readcode/Desktop/my-beauty-store/sodafa-store/app/dashboard/theme/colors.ts)?
-
-> [!IMPORTANT]
-> **Dashboard DashboardLayout + Sidebar duplication**: Currently `layout.tsx` renders `<Sidebar />` and then `AppDashboard.tsx` wraps content in `<DashboardLayout>` which also renders `<Sidebar />`. This appears to result in **two sidebars**. Should I:
-> 1. Keep Sidebar only in `layout.tsx` (the Next.js route layout) and remove it from `DashboardLayout.tsx`?
-> 2. Or move all UI (Sidebar + Header) into `DashboardLayout.tsx` and make `layout.tsx` minimal (just auth + CSS)?
-
----
-
-## Verification Plan
-
-### Automated Tests
-```bash
-npm run lint
-npm run build
-```
-
-### Manual Verification
-After build succeeds:
-- Verify `/` (Landing Page) loads correctly with RTL, Arabic fonts, all sections
-- Verify `/store` loads with products, Navbar, Footer
-- Verify `/dashboard` loads with LTR, Sidebar, Header, auth check
-- Verify no CSS leakage: Dashboard should not have SODFA website styles; website should not have dashboard styles
-- Verify route navigation between areas works correctly
+## 5. Preservation Guarantees
+- Dashboard navigation, auth, layouts, APIs, state, Supabase, existing Shipping CRUD (add/update/delete zones+methods) unchanged.
+- Shipping UI retains dashboard palette `#0b2e22/#d97706/stone`, responsive grids, MoroccoMap SVG, existing flow.

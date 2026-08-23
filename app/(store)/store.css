@@ -1,11 +1,20 @@
 /* =====================================================
    Store-only styles — imported by app/(store)/layout.tsx
-   These styles apply ONLY to /checkout, /contact, /order-confirmation,
-   /store, and /track-order routes.
+   Shared brand system with website, plus store refinements.
+   2026 Quiet Luxury refresh.
    ===================================================== */
 
 /* SODFA brand styles — shared with the website */
 @import "../Resources/assets/css/style.css";
+
+/* ── Store design tokens (align with website) ── */
+:root {
+  --store-card: #FFFDF8;
+  --store-line: rgba(23, 64, 47, .08);
+  --store-radius: 22px;
+  --store-shadow: 0 10px 30px rgba(17, 64, 47, .06);
+  --store-shadow-hover: 0 22px 55px rgba(17, 64, 47, .13);
+}
 
 /* ── Store scrollbar ── */
 ::-webkit-scrollbar {
@@ -15,11 +24,11 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #21C65B;
+  background: #1E7A57;
   border-radius: 10px;
 }
 
-/* ── Toast notifications (store only) ── */
+/* ── Toast (store) ── */
 .toast-item {
   position: fixed;
   bottom: 24px;
@@ -44,7 +53,7 @@
   to { opacity: 0; transform: translateX(-50%) translateY(16px); }
 }
 
-/* ── Fade-up animation (store only) ── */
+/* ── Reveal animations (store) ── */
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(16px); }
   to { opacity: 1; transform: translateY(0); }
@@ -52,3 +61,79 @@
 .animate-fade-up {
   animation: fade-up 0.6s ease forwards;
 }
+.reveal { opacity: 0; transform: translateY(14px); transition: .6s cubic-bezier(.2,.7,.2,1); }
+.reveal.visible { opacity: 1; transform: none; }
+.reveal-scale { opacity: 0; transform: scale(.96); transition: .6s cubic-bezier(.2,.7,.2,1); }
+.reveal-scale.visible { opacity: 1; transform: none; }
+.stagger-item { opacity: 0; transform: translateY(10px); transition: .5s ease; }
+.stagger-item.visible { opacity: 1; transform: none; }
+
+/* ── Store scrollbar helper ── */
+.scrollbar-none::-webkit-scrollbar { display: none; }
+.scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ── Floating pill controls (2026) ── */
+.store-controls-pill {
+  position: sticky;
+  top: 88px;
+  z-index: 30;
+  margin-inline: 12px;
+  background: rgba(251, 251, 252, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(38,38,43,.06);
+  border-radius: 18px;
+  box-shadow: 0 1px 1px rgba(38,38,43,.08), 0 8px 24px rgba(17,64,47,.08);
+}
+@media (max-width: 768px) {
+  .store-controls-pill { top: 72px; margin-inline: 8px; border-radius: 16px; }
+}
+
+/* ── Shared chrome — SINGLE SOURCE (was duplicated in website.css) ── */
+/* Floating buttons safety net */
+.fbtn[data-btn="waFab"] { right: 22px; left: auto; bottom: 22px; }
+.fbtn[data-btn="scrollTop"] { left: 22px; right: auto; bottom: 96px; }
+
+/* Page-wide falling leaves */
+.fall-zone { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+#fallZoneBack { z-index: 0; }
+#fallZoneFront { z-index: 55; }
+.faller { position: absolute; top: -8%; color: var(--brand); animation-name: leafFall; animation-timing-function: linear; animation-iteration-count: infinite; will-change: transform; }
+.faller.flower { color: var(--brand-soft); filter: drop-shadow(0 0 2px color-mix(in srgb, var(--brand) 40%, transparent)); }
+@keyframes leafFall {
+  0%   { transform: translate3d(0, -8vh, 0) rotate(0deg); }
+  25%  { transform: translate3d(30px, 26vh, 0) rotate(95deg); }
+  50%  { transform: translate3d(-22px, 52vh, 0) rotate(185deg); }
+  75%  { transform: translate3d(26px, 80vh, 0) rotate(268deg); }
+  100% { transform: translate3d(-12px, 112vh, 0) rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) { .fall-zone { display: block !important; } }
+
+/* Desktop: Store + Footer as one integrated piece */
+@media (min-width: 769px) {
+  #store { padding-bottom: 0 !important; }
+  #store .dark-band.store-band { margin-bottom: 0 !important; border-radius: 38px 38px 0 0 !important; border-bottom: 1px solid rgba(255,255,255,.10) !important; box-shadow: none !important; background: linear-gradient(180deg, #11402F 0%, #07231A 100%) !important; }
+  #footer { padding-top: 0 !important; }
+  footer.site-footer { margin-top: 0 !important; margin-inline: 16px !important; width: auto !important; border-radius: 0 0 38px 38px !important; border-top: none !important; box-shadow: none !important; background: linear-gradient(180deg, #07231A 0%, #0B3323 100%) !important; }
+}
+
+/* Floating pill navbar — identical to website */
+@media (max-width: 768px) {
+  nav { top: 10px; margin-inline: 12px; border-radius: 16px; background: #fbfbfc; backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: 0 1px 1px 0 rgba(38,38,43,.10), 0 0 0 1px rgba(38,38,43,.04), 0 2px 12px -4px rgba(38,38,43,.16); }
+  nav .m-menu { border-bottom: none; border-radius: 0 0 16px 16px; }
+}
+@media (min-width: 769px) {
+  nav { background: #fbfbfc; backdrop-filter: none; -webkit-backdrop-filter: none; }
+  nav.scrolled { top: 14px; width: fit-content; margin-inline: auto; border-radius: 18px; background: #fbfbfc; box-shadow: 0 1px 1px 0 rgba(38,38,43,.10), 0 0 0 1px rgba(38,38,43,.04), 0 2px 12px -4px rgba(38,38,43,.16); }
+}
+
+/* ── Footer on store pages: no reveal observer, force visible ── */
+.site-footer .rv,
+.site-footer .rv.in {
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+/* ── Font utilities (Tajawal / El Messiri) ── */
+.font-tajawal { font-family: var(--body); }
+.font-el-messiri { font-family: var(--disp); }

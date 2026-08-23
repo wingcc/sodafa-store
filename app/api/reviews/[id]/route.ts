@@ -18,6 +18,18 @@ export async function PUT(
     const admin = createAdminClient();
     const repo = new ReviewRepository(admin);
 
+    // Full update (edit review content)
+    if (body.customerName !== undefined || body.rating !== undefined || body.comment !== undefined) {
+      const updates: Record<string, any> = {};
+      if (body.customerName !== undefined) updates.customer_name = body.customerName;
+      if (body.rating !== undefined) updates.rating = body.rating;
+      if (body.comment !== undefined) updates.comment = body.comment;
+      const { data, error } = await repo.update(id, updates);
+      if (error) throw error;
+      return successResponse(data);
+    }
+
+    // Moderate (status + admin reply)
     const { data, error } = await repo.moderate(
       id,
       body.status,

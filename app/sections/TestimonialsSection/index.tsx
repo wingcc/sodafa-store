@@ -8,14 +8,6 @@ interface TestimonialsSectionProps {
   stats?: { count: number; pre?: string; suf?: string; label: string }[];
 }
 
-/* Faithful port of the test.24.html slider (lines 1878-1906):
-   - track content duplicated once for a seamless infinite loop
-   - auto-advances one card every 4s via CSS transition
-   - silent no-anim index reset on transitionend when reaching the copy
-   - nav buttons step manually and restart the auto timer
-   - hovering the viewport pauses, leaving resumes */
-const AUTO_MS = 4000;
-
 export default function TestimonialsSection({ testimonials, stats }: TestimonialsSectionProps) {
   // Get customer count from stats config
   const customerCount = stats?.[0]?.count || 8500;
@@ -53,23 +45,8 @@ export default function TestimonialsSection({ testimonials, stats }: Testimonial
     timerRef.current = setInterval(() => {
       idxRef.current += 1;
       apply();
-    }, AUTO_MS);
+    }, 4000);
   }, [apply]);
-
-  /* Seamless wrap: when the animated index reaches the duplicated copy,
-        snap back by one set without animation (same as the original). */
-  useEffect(() => {
-    const track = trackRef.current;
-    if (!track || total === 0) return;
-    const onEnd = () => {
-      if (idxRef.current >= total) {
-        idxRef.current -= total;
-        apply(false);
-      }
-    };
-    track.addEventListener("transitionend", onEnd);
-    return () => track.removeEventListener("transitionend", onEnd);
-  }, [total, apply]);
 
   useEffect(() => {
     if (total === 0) return;

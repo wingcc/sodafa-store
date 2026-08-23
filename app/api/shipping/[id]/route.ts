@@ -1,30 +1,43 @@
 /**
  * Single Shipping Zone API
- * GET    /api/shipping/[id]  — Get zone with its methods (public read)
- * PUT    /api/shipping/[id]  — Update zone + sync methods (admin)
- * DELETE /api/shipping/[id]  — Delete zone (admin, methods cascade via FK)
+ * GET    /api/shipping/[id]  — Get zone with cities and methods
+ * PUT    /api/shipping/[id]  — Update zone + sync cities and methods (admin)
+ * DELETE /api/shipping/[id]  — Delete zone (admin, cities cascade via FK)
  */
 
 import { createServerClient } from '@/lib/supabase';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { ShippingRepository } from '@/lib/db';
 import { successResponse, internalServerError, notFound } from '@/lib/api';
-import type { Json, ShippingZoneUpdate } from '@/lib/supabase/types';
+import type { DeliveryZoneUpdate } from '@/lib/supabase/types';
 
-interface ShippingMethodBody {
+interface MethodBody {
   id?: string;
+  city_id: string;
   name: string;
+  slug?: string;
   price?: number;
-  estimatedDays?: string;
-  estimated_days?: string;
-  freeShippingThreshold?: number | null;
-  free_shipping_threshold?: number | null;
+  estimated_days?: number;
+  estimated_hours?: number | null;
+  description?: string;
+  isActive?: boolean;
 }
 
-interface ShippingZoneBody {
+interface CityBody {
+  id?: string;
+  name: string;
+  name_ar?: string;
+  latitude?: number;
+  longitude?: number;
+  methods?: MethodBody[];
+}
+
+interface ZoneBody {
   name?: string;
-  cities?: Json;
-  methods?: ShippingMethodBody[];
+  description?: string;
+  is_active?: boolean;
+  city_ids?: string[];
+  cities?: CityBody[];
 }
 
 function toErrorMessage(err: unknown): string {
@@ -42,14 +55,17 @@ export async function GET(
 
     const { data: zone, error } = await repo.findZoneById(id);
     if (error) throw error;
-    if (!zone) return notFound('Shipping zone not found');
+    if (!zone) return notFound('Delivery zone not found');
 
-    const { data: methods } = await repo.findMethodsByZone(zone.id);
+    const { data: cities } = await repo.findCitiesByZone(id);
+    const citiesWithMethods = await Promise.all(
+      (cities ?? []).map(async (city) => {
+        const { data: methods } = await repo.findMethodsByCity(city.id);
+        return { ...city, methods: methods ?? [] };
+      })
+    );
 
-    return successResponse({
-      ...zone,
-      methods: methods ?? [],
-    });
+    return successResponse({ ...zone, cities: citiesWithMethods });
   } catch (err: unknown) {
     console.error('GET /api/shipping/[id] error:', err);
     return internalServerError(toErrorMessage(err));
@@ -62,69 +78,147 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
-    const body = (await request.json()) as ShippingZoneBody;
+    const body = (await request.json()) as ZoneBody;
     const admin = createAdminClient();
     const repo = new ShippingRepository(admin);
 
-    // Verify the zone exists before attempting to update
     const { data: existing, error: findErr } = await repo.findZoneById(id);
     if (findErr) throw findErr;
-    if (!existing) return notFound('Shipping zone not found');
+    if (!existing) return notFound('Delivery zone not found');
 
-    // Update core zone fields
-    const zoneUpdates: ShippingZoneUpdate = {};
+    // Update zone metadata
+    const zoneUpdates: DeliveryZoneUpdate = {};
     if (body.name !== undefined) zoneUpdates.name = body.name;
-    if (body.cities !== undefined) zoneUpdates.cities = body.cities;
+    if (body.description !== undefined) zoneUpdates.description = body.description;
+    if (body.is_active !== undefined) zoneUpdates.is_active = body.is_active;
 
     const { data: updatedZone, error: updErr } = await repo.updateZone(id, zoneUpdates);
     if (updErr) throw updErr;
 
-    // Sync shipping methods (update existing, add new, remove deleted)
-    if (Array.isArray(body.methods)) {
-      const { data: currentMethods } = await repo.findMethodsByZone(id);
-      const current = (currentMethods ?? []) as Array<{ id: string }>;
+    // Handle city_ids — simple reassignment of existing cities to this zone
+    if (Array.isArray(body.city_ids)) {
+      const { data: currentCities } = await repo.findCitiesByZone(id);
+      const currentIds = new Set((currentCities ?? []).map((c: { id: string }) => c.id));
+      const incomingIds = new Set(body.city_ids);
 
-      // Track which incoming methods have IDs so we can delete the rest
-      const incomingIds = new Set<string>();
-
-      for (const method of body.methods) {
-        const methodPayload = {
-          name: method.name,
-          price: Number(method.price ?? 0),
-          estimated_days: method.estimatedDays ?? method.estimated_days ?? '3-5 days',
-          free_shipping_threshold:
-            method.freeShippingThreshold ?? method.free_shipping_threshold ?? null,
-        };
-
-        if (method.id) {
-          incomingIds.add(method.id);
-          const { error: mErr } = await repo.updateMethod(method.id, methodPayload);
-          if (mErr) throw mErr;
-        } else {
-          const { error: mErr } = await repo.createMethod({
-            zone_id: id,
-            ...methodPayload,
-          });
-          if (mErr) throw mErr;
+      // Remove cities no longer in the list (move them out of this zone)
+      for (const cityId of currentIds) {
+        if (!incomingIds.has(cityId)) {
+          await repo.updateCity(cityId, { zone_id: '' });
         }
       }
 
-      // Remove methods that were not in the incoming list
-      for (const m of current) {
-        if (!incomingIds.has(m.id)) {
-          const { error: delErr } = await repo.deleteMethod(m.id);
+      // Assign incoming cities to this zone
+      for (const cityId of body.city_ids) {
+        await repo.updateCity(cityId, { zone_id: id });
+      }
+    }
+
+    // Sync cities if provided (full city objects with methods)
+    if (Array.isArray(body.cities)) {
+      const { data: currentCities } = await repo.findCitiesByZone(id);
+      const current = (currentCities ?? []) as Array<{ id: string }>;
+      const incomingCityIds = new Set<string>();
+
+      for (const city of body.cities) {
+        if (city.id) {
+          incomingCityIds.add(city.id);
+          // Update existing city
+          const { error: cErr } = await repo.updateCity(city.id, {
+            name: city.name,
+            name_ar: city.name_ar,
+            latitude: city.latitude,
+            longitude: city.longitude,
+          });
+          if (cErr) throw cErr;
+
+          // Sync methods for this city
+          if (Array.isArray(city.methods)) {
+            const { data: currentMethods } = await repo.findMethodsByCity(city.id);
+            const currentM = (currentMethods ?? []) as Array<{ id: string }>;
+            const incomingMethodIds = new Set<string>();
+
+            for (const method of city.methods) {
+              const methodPayload = {
+                city_id: city.id,
+                zone_id: id,
+                name: method.name,
+                slug: method.slug ?? 'standard',
+                price: Number(method.price ?? 0),
+                estimated_days: Number(method.estimated_days ?? 2),
+                estimated_hours: method.estimated_hours ?? null,
+                description: method.description ?? '',
+                ...(method.isActive !== undefined ? { is_active: Boolean(method.isActive) } : {}),
+              };
+
+              if (method.id) {
+                incomingMethodIds.add(method.id);
+                const { error: mErr } = await repo.updateMethod(method.id, methodPayload);
+                if (mErr) throw mErr;
+              } else {
+                const { error: mErr } = await repo.createMethod(methodPayload);
+                if (mErr) throw mErr;
+              }
+            }
+
+            // Remove methods not in incoming list
+            for (const m of currentM) {
+              if (!incomingMethodIds.has(m.id)) {
+                const { error: delErr } = await repo.deleteMethod(m.id);
+                if (delErr) throw delErr;
+              }
+            }
+          }
+        } else {
+          // Create new city
+          const { data: newCity, error: cErr } = await repo.createCity({
+            name: city.name,
+            name_ar: city.name_ar ?? '',
+            zone_id: id,
+            latitude: city.latitude ?? 0,
+            longitude: city.longitude ?? 0,
+          });
+          if (cErr) throw cErr;
+          if (newCity) incomingCityIds.add(newCity.id);
+
+          // Create methods for new city
+          if (Array.isArray(city.methods) && newCity) {
+            for (const method of city.methods) {
+              const { error: mErr } = await repo.createMethod({
+                city_id: newCity.id,
+                zone_id: id,
+                name: method.name,
+                slug: method.slug ?? 'standard',
+                price: Number(method.price ?? 0),
+                estimated_days: Number(method.estimated_days ?? 2),
+                estimated_hours: method.estimated_hours ?? null,
+                description: method.description ?? '',
+              });
+              if (mErr) throw mErr;
+            }
+          }
+        }
+      }
+
+      // Remove cities not in incoming list (cascades methods via FK)
+      for (const c of current) {
+        if (!incomingCityIds.has(c.id)) {
+          const { error: delErr } = await repo.deleteCity(c.id);
           if (delErr) throw delErr;
         }
       }
     }
 
-    // Re-fetch the latest set of methods for the response
-    const { data: methods } = await repo.findMethodsByZone(id);
+    // Re-fetch latest
+    const { data: cities } = await repo.findCitiesByZone(id);
+    const citiesWithMethods = await Promise.all(
+      (cities ?? []).map(async (city) => {
+        const { data: methods } = await repo.findMethodsByCity(city.id);
+        return { ...city, methods: methods ?? [] };
+      })
+    );
 
-    return successResponse({
-      ...updatedZone,
-      methods: methods ?? [],
-    });
+    return successResponse({ ...updatedZone, cities: citiesWithMethods });
   } catch (err: unknown) {
     console.error('PUT /api/shipping/[id] error:', err);
     return internalServerError(toErrorMessage(err));

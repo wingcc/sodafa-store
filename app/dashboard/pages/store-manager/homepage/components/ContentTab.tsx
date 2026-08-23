@@ -209,7 +209,7 @@ function HeroEditor() {
   if (loading) {
     return (
       <div className="flex justify-center py-12">
-        <div className="w-8 h-8 border-4 border-[#cda552] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-[#d97706] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -280,7 +280,7 @@ function PricingEditor() {
   if (loading) {
     return (
       <div className="flex justify-center py-12">
-        <div className="w-8 h-8 border-4 border-[#cda552] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-[#d97706] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -359,7 +359,7 @@ function AboutEditor() {
   if (loading) {
     return (
       <div className="flex justify-center py-12">
-        <div className="w-8 h-8 border-4 border-[#cda552] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-[#d97706] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -431,7 +431,7 @@ function VideoEditor() {
   if (loading) {
     return (
       <div className="flex justify-center py-12">
-        <div className="w-8 h-8 border-4 border-[#cda552] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-[#d97706] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -541,7 +541,7 @@ function FaqsEditor() {
   if (loading) {
     return (
       <div className="flex justify-center py-12">
-        <div className="w-8 h-8 border-4 border-[#cda552] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-[#d97706] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -668,7 +668,7 @@ function BenefitsEditor() {
   if (loading) {
     return (
       <div className="flex justify-center py-12">
-        <div className="w-8 h-8 border-4 border-[#cda552] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-[#d97706] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -807,7 +807,7 @@ function StatsEditor() {
   if (loading) {
     return (
       <div className="flex justify-center py-12">
-        <div className="w-8 h-8 border-4 border-[#cda552] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-[#d97706] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -942,7 +942,7 @@ function TrustBadgesEditor() {
   if (loading) {
     return (
       <div className="flex justify-center py-12">
-        <div className="w-8 h-8 border-4 border-[#cda552] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-[#d97706] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -1076,7 +1076,7 @@ function OilsEditor() {
   if (loading) {
     return (
       <div className="flex justify-center py-12">
-        <div className="w-8 h-8 border-4 border-[#cda552] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-[#d97706] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }

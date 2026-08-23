@@ -24,10 +24,12 @@ export const FloatingWhatsappButton = () => {
       {/* Scroll Progress Bar */}
       <div id="progress" style={{ width: `${progress}%` }} aria-hidden="true" />
 
-      {/* WhatsApp FAB */}
+      {/* WhatsApp FAB — same placement as homepage (dashboard setting: waFab right, 22px) */}
       <a
         className="fbtn fab"
         id="waFab"
+        data-btn="waFab"
+        style={{ right: '22px', left: 'auto', bottom: '22px' }}
         href="https://wa.me/212673932389?text=%D8%A3%D8%B1%D9%8A%D8%AF%20%D8%B7%D9%84%D8%A8%20%D8%B3%D9%8A%D8%B1%D9%88%D9%85%20%D8%A7%D9%84%D8%B4%D8%B9%D8%B1%20%D8%A7%D9%84%D8%B7%D8%A8%D9%8A%D8%B9%D9%8A"
         target="_blank"
         rel="noopener"
@@ -38,10 +40,12 @@ export const FloatingWhatsappButton = () => {
         </svg>
       </a>
 
-      {/* Scroll To Top */}
+      {/* Scroll To Top — same as homepage (scrollTop left, 22px / 96px when stacked) */}
       <button
         className={`fbtn top-btn${showTop ? " show" : ""}`}
         id="topBtn"
+        data-btn="scrollTop"
+        style={{ left: '22px', right: 'auto', bottom: '96px' }}
         onClick={scrollTop}
         aria-label="العودة للأعلى"
       >

@@ -175,14 +175,21 @@ export interface Coupon {
   status: 'active' | 'inactive' | 'expired';
 }
 
+export type NotificationType = 'order' | 'customer' | 'stock' | 'review' | 'payment' | 'system' | 'product' | 'shipping' | 'promotion' | 'social' | 'inventory' | 'security' | 'account' | 'message' | 'achievement' | 'reminder' | 'subscription' | 'support' | 'analytics' | 'team' | 'event' | 'custom';
+
+export type NotificationPriority = 'low' | 'medium' | 'high' | 'urgent';
+
 export interface Notification {
   id: string;
-  type: 'order' | 'customer' | 'stock' | 'review' | 'payment' | 'system';
+  type: NotificationType;
   title: string;
   message: string;
   read: boolean;
+  starred: boolean;
+  priority: NotificationPriority;
   timestamp: string;
   actionUrl?: string;
+  metadata?: Record<string, any>;
 }
 
 export interface SalesData {
@@ -230,16 +237,33 @@ export interface DashboardStats {
 export interface ShippingZone {
   id: string;
   name: string;
-  cities: string[];
+  description: string;
+  isActive: boolean;
+  cities: ShippingCity[];
+}
+
+export interface ShippingCity {
+  id: string;
+  name: string;
+  nameAr: string;
+  zoneId: string;
+  latitude: number;
+  longitude: number;
+  isActive: boolean;
   methods: ShippingMethod[];
 }
 
 export interface ShippingMethod {
   id: string;
+  cityId: string;
+  zoneId: string;
   name: string;
+  slug: string;
   price: number;
-  estimatedDays: string;
-  freeShippingThreshold?: number;
+  estimatedDays: number;
+  estimatedHours: number | null;
+  description: string;
+  isActive: boolean;
 }
 
 export interface StoreSettings {
