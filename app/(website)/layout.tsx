@@ -6,6 +6,7 @@
 import './website.css';
 import { UIProvider } from '../contexts/UIContext';
 import { LanguageProvider } from '../contexts/LanguageContext';
+import { FavoritesProvider } from '../contexts/FavoritesContext';
 import { ThemeProvider } from '@/lib/theme';
 import { CartDrawer } from '../components/CartDrawer';
 import { SearchDialog } from '../components/SearchDialog';
@@ -42,12 +43,14 @@ export default function WebsiteLayout({
       <ThemeProvider>
       <UIProvider>
         <LanguageProvider>
-          <div dir="rtl" lang="ar" className="flex flex-col min-h-screen">
-            {children}
-            <CartDrawer />
-            <SearchDialog />
-            <CheckoutFormModal />
-          </div>
+          <FavoritesProvider>
+            <div className="website-root" dir="rtl" lang="ar">
+              {children}
+              <CartDrawer />
+              <SearchDialog />
+              <CheckoutFormModal />
+            </div>
+          </FavoritesProvider>
         </LanguageProvider>
       </UIProvider>
       </ThemeProvider>

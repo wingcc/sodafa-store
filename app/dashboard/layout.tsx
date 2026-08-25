@@ -99,15 +99,28 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
         className="dashboard-root flex h-screen w-screen items-center justify-center"
         dir="ltr"
         style={{
-          background: 'var(--color-darkGreen, #061c16)',
+          background: prefTheme === 'dark' ? 'var(--dashboard-bg-dark, #0f1411)' : 'var(--dashboard-bg-light, #f8f6f3)',
         }}
       >
-        <div className="flex flex-col items-center gap-3">
+        <div className="relative" style={{ width: 76, height: 76 }}>
           <div
-            className="h-10 w-10 animate-spin rounded-full border-4"
-            style={{ borderColor: 'var(--color-gold, #d97706)', borderTopColor: 'transparent' }}
+            className="absolute inset-0 animate-spin rounded-full"
+            style={{
+              border: '3px solid color-mix(in srgb, var(--color-gold, #d97706) 25%, transparent)',
+              borderTopColor: 'var(--color-gold, #d97706)',
+            }}
           />
-          <p className="text-sm font-medium text-white/80">Checking authentication...</p>
+          <div
+            className="absolute inset-0 flex items-center justify-center"
+            style={{
+              fontFamily: "'Inter', sans-serif",
+              color: 'var(--color-gold, #d97706)',
+              fontSize: '1.6rem',
+              fontWeight: 700,
+            }}
+          >
+            ص
+          </div>
         </div>
       </div>
     );

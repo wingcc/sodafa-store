@@ -26,4 +26,6 @@ export type Product = {
   highlights?: string[];
   images?: Array<{ src: string | StaticImageData; alt?: string }>;
   variants?: Record<string, string[]>;
+  isOffer?: boolean;
+  offerTime?: string;
 };

@@ -5,41 +5,44 @@ import { usePathname, useRouter } from "next/navigation";
 import { WhatsAppIcon } from "../common/icons";
 import type { SiteConfig } from "../common/types";
 import { useUI } from "@/app/contexts/UIContext";
+import { useLanguage } from "../../contexts/LanguageContext";
+import { useFavorites } from "../../contexts/FavoritesContext";
+import { LanguageDropdown } from "../../components/LanguageDropdown";
 
 // ── Link sets per variant ──
 const HOME_LINKS = [
-  { href: "#flash", label: "العروض" },
-  { href: "#oils", label: "المكونات" },
-  { href: "#products", label: "منتجاتنا" },
-  { href: "#cases", label: "النتائج" },
-  { href: "#about", label: "قصتنا" },
-  { href: "#reviews", label: "آراء الزبونات" },
-  { href: "#order", label: "طريقة الطلب" },
-  { href: "#store", label: "المتجر" },
+  { href: "#flash", ar: "العروض", en: "Offers" },
+  { href: "#oils", ar: "المكونات", en: "Ingredients" },
+  { href: "#products", ar: "منتجاتنا", en: "Products" },
+  { href: "#cases", ar: "النتائج", en: "Results" },
+  { href: "#about", ar: "قصتنا", en: "Our Story" },
+  { href: "#reviews", ar: "آراء الزبونات", en: "Reviews" },
+  { href: "#order", ar: "طريقة الطلب", en: "How to Order" },
+  { href: "#store", ar: "المتجر", en: "Store" },
 ];
 
 const STORE_LINKS = [
-  { href: "/", label: "الرئيسية" },
-  { href: "/store", label: "المتجر" },
-  { href: "/#oils", label: "المكونات" },
-  { href: "/#reviews", label: "الآراء" },
-  { href: "/track-order", label: "تتبع الطلب" },
+  { href: "/", ar: "الرئيسية", en: "Home" },
+  { href: "/store", ar: "المتجر", en: "Store" },
+  { href: "/#oils", ar: "المكونات", en: "Ingredients" },
+  { href: "/#reviews", ar: "الآراء", en: "Reviews" },
+  { href: "/track-order", ar: "تتبع الطلب", en: "Track Order" },
 ];
 
 const HOME_MOBILE_LINKS = [
-  { href: "#home", label: "الرئيسية" },
+  { href: "#home", ar: "الرئيسية", en: "Home" },
   ...HOME_LINKS,
-  { href: "#faq", label: "الأسئلة الشائعة" },
+  { href: "#faq", ar: "الأسئلة الشائعة", en: "FAQ" },
 ];
 
 const STORE_MOBILE_LINKS = [
-  { href: "/", label: "الرئيسية" },
-  { href: "/store", label: "المتجر" },
-  { href: "/#oils", label: "المكونات" },
-  { href: "/#reviews", label: "الآراء" },
-  { href: "/track-order", label: "تتبع الطلب" },
-  { href: "/contact", label: "اتصل بنا" },
-  { href: "#faq", label: "الأسئلة الشائعة" },
+  { href: "/", ar: "الرئيسية", en: "Home" },
+  { href: "/store", ar: "المتجر", en: "Store" },
+  { href: "/#oils", ar: "المكونات", en: "Ingredients" },
+  { href: "/#reviews", ar: "الآراء", en: "Reviews" },
+  { href: "/track-order", ar: "تتبع الطلب", en: "Track Order" },
+  { href: "/contact", ar: "اتصل بنا", en: "Contact" },
+  { href: "#faq", ar: "الأسئلة الشائعة", en: "FAQ" },
 ];
 
 const DEFAULT_SITE: SiteConfig = {
@@ -75,7 +78,7 @@ function resolveVariant(pathname: string, explicit?: NavbarVariant): NavbarVaria
   if (explicit) return explicit;
   if (pathname === "/") return "home";
   if (pathname.startsWith("/store")) return "store";
-  if (pathname.startsWith("/checkout") || pathname.startsWith("/order-confirmation")) return "minimal";
+  if (pathname.startsWith("/checkout") || pathname.startsWith("/order-confirmation")) return "store";
   if (pathname.startsWith("/contact") || pathname.startsWith("/track-order")) return "store";
   return "store";
 }
@@ -84,6 +87,9 @@ export function Navbar({ site: siteProp = DEFAULT_SITE, onOpenContact = () => {}
   const pathname = usePathname() || "/";
   const router = useRouter();
   const { openSearch, openCart, cartItems } = useUI();
+  const { locale, setLocale } = useLanguage();
+  const { favorites } = useFavorites();
+  const isAr = locale === "ar";
   const activeVariant = resolveVariant(pathname, variant);
 
   const [site, setSite] = useState<SiteConfig>(siteProp);
@@ -124,6 +130,16 @@ export function Navbar({ site: siteProp = DEFAULT_SITE, onOpenContact = () => {}
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
+
+  // Body scroll lock when mobile menu is open
+  useEffect(() => {
+    if (menuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [menuOpen]);
 
   const waUrl = `https://wa.me/${site.whatsappMain}?text=${encodeURIComponent(site.whatsappMessage || "")}`;
   const closeMenu = () => setMenuOpen(false);
@@ -176,13 +192,43 @@ export function Navbar({ site: siteProp = DEFAULT_SITE, onOpenContact = () => {}
             <img src={site.NavbarLogo} alt="SODFA" aria-hidden="true" />
           </Link>
           <div className="nav-links">
-            <Link href="/store">المتجر</Link>
-            <Link href="/contact">تواصلي معنا</Link>
+            <Link href="/store">{isAr ? "المتجر" : "Store"}</Link>
+            <Link href="/contact">{isAr ? "تواصلي معنا" : "Contact Us"}</Link>
           </div>
-          <Link className="btn btn-main nav-cta" href={waUrl} target="_blank" rel="noopener">
+          <a className="btn btn-main nav-cta" href={waUrl} target="_blank" rel="noopener">
             <WhatsAppIcon size={17} />
-            واتساب
+            <span className="cta-text">{isAr ? "واتساب" : "WhatsApp"}</span>
+          </a>
+          <button
+            className={`burger${menuOpen ? " open" : ""}`}
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="القائمة"
+            id="burger"
+          >
+            <span />
+            <span />
+            <span />
+          </button>
+        </div>
+        <div className={`m-menu${menuOpen ? " open" : ""}`} id="mMenu">
+          <Link href="/store" onClick={closeMenu}>{isAr ? "المتجر" : "Store"}</Link>
+          <Link href="/contact" onClick={closeMenu}>{isAr ? "تواصلي معنا" : "Contact Us"}</Link>
+          <Link href="/favorites" onClick={closeMenu}>
+            {isAr ? "❤️ المفضلة" : locale === "fr" ? "❤️ Favoris" : "❤️ Favorites"}
+            {favorites.length > 0 && ` (${favorites.length})`}
           </Link>
+          <button onClick={() => { setLocale("ar"); closeMenu(); }}>
+            🇲🇦 {isAr ? "العربية" : locale === "fr" ? "Arabe" : "Arabic"}
+          </button>
+          <button onClick={() => { setLocale("fr"); closeMenu(); }}>
+            🇫🇷 {isAr ? "الفرنسية" : locale === "fr" ? "Français" : "French"}
+          </button>
+          <button onClick={() => { setLocale("en"); closeMenu(); }}>
+            🇬🇧 {isAr ? "الإنجليزية" : locale === "fr" ? "Anglais" : "English"}
+          </button>
+          <a className="btn btn-wa" href={waUrl} target="_blank" rel="noopener" onClick={closeMenu}>
+            {isAr ? "اطبي عبر الواتساب" : "Order via WhatsApp"}
+          </a>
         </div>
       </nav>
     );
@@ -206,29 +252,77 @@ export function Navbar({ site: siteProp = DEFAULT_SITE, onOpenContact = () => {}
                 href={link.href}
                 onClick={(e) => handleHashClick(e as unknown as React.MouseEvent<HTMLAnchorElement>, link.href)}
               >
-                {link.label}
+                {isAr ? link.ar : link.en}
               </Link>
             ) : (
               <a key={link.href} href={link.href}>
-                {link.label}
+                {isAr ? link.ar : link.en}
               </a>
             )
           )}
           {activeVariant === "home" ? (
             <button className="nav-plain" onClick={handleContactClick}>
-              تواصلي معنا
+              {isAr ? "تواصلي معنا" : "Contact Us"}
             </button>
           ) : (
-            <Link href="/contact">تواصلي معنا</Link>
+            <Link href="/contact">{isAr ? "تواصلي معنا" : "Contact Us"}</Link>
           )}
         </div>
 
         <div className="nav-actions" style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-          {/* Store variant: Search + Cart */}
+          {/* Store variant: Favorites + Language + Search + Cart */}
           {activeVariant === "store" && (
             <>
+              {/* Language Dropdown */}
+              <LanguageDropdown />
+
+              {/* Favorites */}
+              <Link
+                href="/favorites"
+                aria-label={isAr ? "المفضلة" : "Favorites"}
+                className="nav-icon-btn"
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 12,
+                  border: "1.5px solid var(--line)",
+                  background: "var(--card)",
+                  display: "grid",
+                  placeItems: "center",
+                  cursor: "pointer",
+                  position: "relative",
+                }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill={favorites.length > 0 ? "var(--brand)" : "none"} stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+                </svg>
+                {favorites.length > 0 && (
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: -6,
+                      right: -6,
+                      background: "var(--brand)",
+                      color: "#fff",
+                      fontSize: 10,
+                      fontWeight: 800,
+                      minWidth: 18,
+                      height: 18,
+                      borderRadius: 9,
+                      display: "grid",
+                      placeItems: "center",
+                      padding: "0 4px",
+                      lineHeight: 1,
+                    }}
+                  >
+                    {favorites.length}
+                  </span>
+                )}
+              </Link>
+
+              {/* Search */}
               <button
-                aria-label="بحث"
+                aria-label={isAr ? "بحث" : "Search"}
                 onClick={openSearch}
                 className="nav-icon-btn"
                 style={{
@@ -247,8 +341,10 @@ export function Navbar({ site: siteProp = DEFAULT_SITE, onOpenContact = () => {}
                   <path d="M21 21l-3.5-3.5" />
                 </svg>
               </button>
+
+              {/* Cart */}
               <button
-                aria-label="سلة التسوق"
+                aria-label={isAr ? "سلة التسوق" : "Cart"}
                 onClick={openCart}
                 className="nav-icon-btn"
                 style={{
@@ -296,7 +392,7 @@ export function Navbar({ site: siteProp = DEFAULT_SITE, onOpenContact = () => {}
           )}
           <a className="btn btn-main nav-cta" href={waUrl} target="_blank" rel="noopener">
             <WhatsAppIcon size={17} />
-            تواصل واتساب
+            <span className="cta-text">{isAr ? "تواصل واتساب" : "WhatsApp"}</span>
           </a>
         </div>
 
@@ -322,10 +418,23 @@ export function Navbar({ site: siteProp = DEFAULT_SITE, onOpenContact = () => {}
               closeMenu();
             }}
           >
-            {link.label}
+            {isAr ? link.ar : link.en}
           </Link>
         ))}
-        <button onClick={handleContactClick}>تواصلي معنا ✉</button>
+        <Link href="/favorites" onClick={closeMenu}>
+          {isAr ? "❤️ المفضلة" : locale === "fr" ? "❤️ Favoris" : "❤️ Favorites"}
+          {favorites.length > 0 && ` (${favorites.length})`}
+        </Link>
+        <button onClick={() => { setLocale("ar"); closeMenu(); }}>
+          🇲🇦 {isAr ? "العربية" : locale === "fr" ? "Arabe" : "Arabic"}
+        </button>
+        <button onClick={() => { setLocale("fr"); closeMenu(); }}>
+          🇫🇷 {isAr ? "الفرنسية" : locale === "fr" ? "Français" : "French"}
+        </button>
+        <button onClick={() => { setLocale("en"); closeMenu(); }}>
+          🇬🇧 {isAr ? "الإنجليزية" : locale === "fr" ? "Anglais" : "English"}
+        </button>
+        <button onClick={handleContactClick}>{isAr ? "تواصلي معنا ✉" : locale === "fr" ? "Contactez-nous ✉" : "Contact Us ✉"}</button>
         {activeVariant === "store" && (
           <>
             <button
@@ -334,7 +443,7 @@ export function Navbar({ site: siteProp = DEFAULT_SITE, onOpenContact = () => {}
                 closeMenu();
               }}
             >
-              🔍 بحث
+              🔍 {isAr ? "بحث" : "Search"}
             </button>
             <button
               onClick={() => {
@@ -342,12 +451,12 @@ export function Navbar({ site: siteProp = DEFAULT_SITE, onOpenContact = () => {}
                 closeMenu();
               }}
             >
-              🛒 السلة {cartCount > 0 ? `(${cartCount})` : ""}
+              🛒 {isAr ? "السلة" : "Cart"} {cartCount > 0 ? `(${cartCount})` : ""}
             </button>
           </>
         )}
         <a className="btn btn-wa" href={waUrl} target="_blank" rel="noopener" onClick={closeMenu}>
-          اطلبي عبر الواتساب
+          {isAr ? "اطبي عبر الواتساب" : "Order via WhatsApp"}
         </a>
       </div>
     </nav>

@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { SodfaConfig } from "../../sections/common/types";
 import { loadPublicConfig } from "@/lib/public-content";
-import Preloader from "../../sections/common/Preloader";
+import Preloader from "../common/Preloader";
 import VideoModal from "../../sections/common/VideoModal";
 import ContactModal from "../../sections/common/ContactModal";
 import FloatingButtons from "../../sections/common/FloatingButtons";
@@ -181,10 +181,10 @@ export const MainContent = () => {
         </section>
       )}
 
-      {/* Flash Sale Section (disabled by default) */}
-      {isEnabled("flash") && flash && (
+      {/* Flash Sale Section */}
+      {isEnabled("flash") && (
         <section data-section="flash" id="flash">
-          <FlashSaleSection flash={flash} site={site} />
+          <FlashSaleSection />
         </section>
       )}
 
@@ -226,7 +226,7 @@ export const MainContent = () => {
       {/* Products Section (disabled by default) */}
       {isEnabled("products") && (
         <section data-section="products" id="products">
-          <ProductSection products={products} site={site} />
+          <ProductSection />
         </section>
       )}
 

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { InstagramSVG, FacebookSVG } from "../common/icons";
 import type { SiteConfig, LegalConfig } from "../common/types";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 const DEFAULT_SITE: SiteConfig = {
   brandName: "SODFA",
@@ -40,26 +41,27 @@ interface FooterProps {
 }
 
 const HOME_LINKS = [
-  { href: "#home", label: "الرئيسية" },
-  { href: "#products", label: "منتجاتنا" },
-  { href: "#order", label: "كيفاش نخدمو" },
-  { href: "#about", label: "قصتنا" },
-  { href: "#faq", label: "الأسئلة الشائعة" },
+  { href: "#home", ar: "الرئيسية", fr: "Accueil", en: "Home" },
+  { href: "#products", ar: "منتجاتنا", fr: "Produits", en: "Products" },
+  { href: "#order", ar: "كيفاش نخدمو", fr: "Comment ça marche", en: "How it Works" },
+  { href: "#about", ar: "قصتنا", fr: "Notre histoire", en: "Our Story" },
+  { href: "#faq", ar: "الأسئلة الشائعة", fr: "FAQ", en: "FAQ" },
 ];
 
 const STORE_LINKS = [
-  { href: "/", label: "الرئيسية" },
-  { href: "/store", label: "المتجر" },
-  { href: "/track-order", label: "تتبع الطلب" },
-  { href: "/contact", label: "اتصل بنا" },
-  { href: "/#faq", label: "الأسئلة الشائعة" },
+  { href: "/", ar: "الرئيسية", fr: "Accueil", en: "Home" },
+  { href: "/store", ar: "المتجر", fr: "Boutique", en: "Store" },
+  { href: "/favorites", ar: "المفضلة", fr: "Favoris", en: "Favorites" },
+  { href: "/track-order", ar: "تتبع الطلب", fr: "Suivre la commande", en: "Track Order" },
+  { href: "/contact", ar: "اتصل بنا", fr: "Contactez-nous", en: "Contact" },
+  { href: "/#faq", ar: "الأسئلة الشائعة", fr: "FAQ", en: "FAQ" },
 ];
 
 function resolveVariant(pathname: string, explicit?: FooterVariant): FooterVariant {
   if (explicit) return explicit;
   if (pathname === "/") return "home";
   if (pathname.startsWith("/store")) return "store";
-  if (pathname.startsWith("/checkout") || pathname.startsWith("/order-confirmation")) return "minimal";
+  if (pathname.startsWith("/checkout") || pathname.startsWith("/order-confirmation")) return "store";
   if (pathname.startsWith("/contact") || pathname.startsWith("/track-order")) return "store";
   return "store";
 }
@@ -74,11 +76,19 @@ export function Footer({
 }: FooterProps) {
   const pathname = usePathname() || "/";
   const router = useRouter();
+  const { locale } = useLanguage();
+  const isAr = locale === "ar";
+  const isFr = locale === "fr";
+  const t = (ar: string, fr: string, en: string) => isAr ? ar : isFr ? fr : en;
   const activeVariant = resolveVariant(pathname, variant);
-  const [btnLabel, setBtnLabel] = useState("اشتركي الآن");
+  const [btnLabel, setBtnLabel] = useState(t("اشتركي الآن", "S'abonner", "Subscribe Now"));
   const [localLegal, setLocalLegal] = useState<string | null>(null);
   const [site, setSite] = useState<SiteConfig>(siteProp);
   const [legal, setLegal] = useState<LegalConfig>(legalProp);
+
+  useEffect(() => {
+    setBtnLabel(t("اشتركي الآن", "S'abonner", "Subscribe Now"));
+  }, [locale]);
 
   // Keep in sync if parent passes real config (e.g. MainContent)
   useEffect(() => {
@@ -148,7 +158,6 @@ export function Footer({
       onOpenLegal(key);
       return;
     }
-    // Fallback: show inline modal if no external handler (store pages)
     setLocalLegal(key);
   };
 
@@ -156,10 +165,10 @@ export function Footer({
     e.preventDefault();
     const input = (e.target as HTMLFormElement).querySelector("input") as HTMLInputElement;
     if (input?.value) {
-      setBtnLabel("✓ تم الاشتراك");
-      showToast("تم اشتراكك في النشرة البريدية بنجاح 🌿");
+      setBtnLabel(t("✓ تم الاشتراك", "✓ Abonné", "✓ Subscribed"));
+      showToast(t("تم اشتراكك في النشرة البريدية بنجاح 🌿", "Abonné avec succès à la newsletter 🌿", "Successfully subscribed to our newsletter 🌿"));
       setTimeout(() => {
-        setBtnLabel("اشتركي الآن");
+        setBtnLabel(t("اشتركي الآن", "S'abonner", "Subscribe Now"));
         input.value = "";
       }, 3000);
     }
@@ -188,7 +197,7 @@ export function Footer({
                   <span className="tg">{site.tagline}</span>
                 </span>
               </Link>
-              <p>تركيبة طبيعية متكاملة من أربعة زيوت نادرة، صُنعت بعناية لتعيد لشعرك كثافته ولمعانه — من الجذور حتى الأطراف.</p>
+              <p>{t("تركيبة ط自然ية متكاملة من أربعة زيوت نادرة، صُنعت بعناية لتعيد لشعرك كثافته ولمعانه — من الجذور حتى الأطراف.", "Une formule naturelle complète de quatre huiles rares, soigneusement élaborée pour restaurer le volume et l'éclat de vos cheveux — des racines aux pointes.", "A complete natural formula of four rare oils, carefully crafted to restore your hair's volume and shine — from roots to ends.")}</p>
               <div className="social-row" data-page="socialIcons">
                 <a href={site.instagram} target="_blank" rel="noopener" aria-label="Instagram">
                   <InstagramSVG />
@@ -201,29 +210,29 @@ export function Footer({
 
             {/* Quick Links — dynamic per page */}
             <div className="ft-col rv" data-d="80">
-              <h4>روابط سريعة</h4>
+              <h4>{t("روابط سريعة", "Liens rapides", "Quick Links")}</h4>
               <ul className="ft-links">
                 {quickLinks.map((l) => (
                   <li key={l.href}>
                     <Link href={l.href} onClick={(e) => handleNavClick(e as unknown as React.MouseEvent<HTMLAnchorElement>, l.href)}>
-                      {l.label}
+                      {isAr ? l.ar : isFr ? l.fr : l.en}
                     </Link>
                   </li>
                 ))}
                 <li>
-                  <button onClick={handleContact}>تواصلي معنا</button>
+                  <button onClick={handleContact}>{t("تواصلي معنا", "Contactez-nous", "Contact Us")}</button>
                 </li>
               </ul>
             </div>
 
             {/* Contact */}
             <div className="ft-col ft-contact rv" data-d="160" data-page="contact">
-              <h4>تواصلي معنا</h4>
+              <h4>{t("تواصلي معنا", "Contactez-nous", "Contact Us")}</h4>
               <ul>
                 <li>
                   <em>📱</em>
                   <span>
-                    واتساب:{" "}
+                    {t("واتساب:", "WhatsApp:", "WhatsApp:")}{" "}
                     <a href={`https://wa.me/${site.whatsappStore}`} target="_blank" rel="noopener" dir="ltr">
                       {site.phoneDisplay}
                     </a>
@@ -232,7 +241,7 @@ export function Footer({
                 <li>
                   <em>📞</em>
                   <span>
-                    الهاتف:{" "}
+                    {t("الهاتف:", "Téléphone:", "Phone:")}{" "}
                     <a href={`tel:${site.phoneTel}`} dir="ltr">
                       {site.phoneDisplay}
                     </a>
@@ -241,21 +250,21 @@ export function Footer({
                 <li>
                   <em>📍</em>
                   <span>
-                    العنوان: <span className="addr">{site.address}</span>
+                    {t("العنوان:", "Adresse:", "Address:")} <span className="addr">{isAr ? site.address : site.addressShort}</span>
                   </span>
                 </li>
               </ul>
               <button className="msg-btn" onClick={handleContact}>
-                ✉ أو أرسلي رسالة مباشرة
+                {t("✉ أو أرسلي رسالة مباشرة", "✉ Ou envoyez-nous un message", "✉ Or send us a message")}
               </button>
             </div>
 
             {/* Newsletter */}
             <div className="ft-col rv" data-d="240" data-page="newsletter">
-              <h4>نشرة البريد</h4>
-              <p className="nl-txt">اشتركي لتصلك أحدث العروض والمنتجات الجديدة</p>
+              <h4>{t("نشرة البريد", "Newsletter", "Newsletter")}</h4>
+              <p className="nl-txt">{t("اشتركي لتصلك أحدث العروض والمنتجات الجديدة", "Abonnez-vous pour recevoir les dernières offres et produits", "Subscribe to get the latest deals and new products")}</p>
               <form className="nl-form" onSubmit={handleNewsletter}>
-                <input type="email" placeholder="بريدك الإلكتروني" required />
+                <input type="email" placeholder={t("بريدك الإلكتروني", "Votre email", "Your email")} required />
                 <button type="submit" className="nl-btn">
                   {btnLabel}
                 </button>
@@ -263,15 +272,15 @@ export function Footer({
               <div className="trust-badges">
                 <span>
                   <i />
-                  توصيل آمن
+                  {t("توصيل آمن", "Livraison sécurisée", "Safe Delivery")}
                 </span>
                 <span>
                   <i />
-                  منتجات طبيعية
+                  {t("منتجات طبيعية", "Produits naturels", "Natural Products")}
                 </span>
                 <span>
                   <i />
-                  دعم على واتساب
+                  {t("دعم على واتساب", "Support WhatsApp", "WhatsApp Support")}
                 </span>
               </div>
             </div>
@@ -280,10 +289,11 @@ export function Footer({
           {/* Bottom Bar */}
           <div className="ft-bottom">
             <p className="cpy">
-              © 2026 <b>SODFA</b>. جميع الحقوق محفوظة <span style={{ display: "inline-block" }}> 🇲🇦 صنع بحب في المغرب</span>
+              © 2026 <b>SODFA</b>. {t("جميع الحقوق محفوظة", "Tous droits réservés", "All rights reserved")} <span style={{ display: "inline-block" }}> 🇲🇦 {t("صنع بحب في المغرب", "Fait avec amour au Maroc", "Made with love in Morocco")}</span>
             </p>
+
             <div className="pay-wrap">
-              <span>دفع آمن</span>
+              <span>{t("دفع آمن", "Paiement sécurisé", "Secure Payment")}</span>
               <div className="pay-chips">
                 <span>VISA</span>
                 <span>MC</span>
@@ -292,15 +302,15 @@ export function Footer({
             </div>
             <div className="legal-links" data-page="legal">
               <button data-legal="privacy" onClick={() => handleLegal("privacy")}>
-                الخصوصية
+                {t("الخصوصية", "Confidentialité", "Privacy")}
               </button>
               <i />
               <button data-legal="terms" onClick={() => handleLegal("terms")}>
-                الشروط
+                {t("الشروط", "Conditions", "Terms")}
               </button>
               <i />
               <button data-legal="cookies" onClick={() => handleLegal("cookies")}>
-                الكوكيز
+                {t("الكوكيز", "Cookies", "Cookies")}
               </button>
             </div>
           </div>

@@ -66,6 +66,7 @@ CREATE TABLE products (
   track_inventory BOOLEAN DEFAULT TRUE,
   ADS BOOLEAN DEFAULT FALSE,
   ShowInStor BOOLEAN DEFAULT FALSE,
+  IsOffer BOOLEAN DEFAULT FALSE,
   images JSONB DEFAULT '[]'::jsonb,
   status product_status DEFAULT 'draft',
   featured BOOLEAN DEFAULT FALSE,
@@ -77,7 +78,8 @@ CREATE TABLE products (
   rating DECIMAL(3,2) DEFAULT 0,
   review_count INTEGER DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  OfferTime TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- -------------------- PRODUCT VARIANTS --------------------

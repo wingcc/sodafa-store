@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import type { Product } from '../../../types/product';
@@ -37,10 +37,7 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (initialProducts && initialProducts.length > 0) {
-      setProducts(initialProducts);
-      return;
-    }
+    if (initialProducts && initialProducts.length > 0) return;
     setIsLoading(true);
     fetch('/api/products?showInStore=true&ads=true&status=active')
       .then((res) => res.json())
@@ -79,6 +76,8 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
               description: String(row.short_description ?? row.full_description ?? ''),
               tags: Array.isArray(row.tags) ? row.tags : [],
               images: imageSrcs.map((src) => ({ src })),
+              isOffer: Boolean(row.IsOffer ?? row.isOffer ?? false),
+              offerTime: row.OfferTime ? String(row.OfferTime) : row.offerTime ? String(row.offerTime) : undefined,
             } as Product;
           });
           setProducts(mapped);
@@ -194,10 +193,14 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
       ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
+  const prevFilters = useRef({ activeCategory, search, sortBy });
   useEffect(() => {
-    if (isLoading) return;
-    setCurrentPage(1);
-  }, [activeCategory, search, sortBy, isLoading]);
+    const prev = prevFilters.current;
+    if (prev.activeCategory !== activeCategory || prev.search !== search || prev.sortBy !== sortBy) {
+      prevFilters.current = { activeCategory, search, sortBy };
+      setCurrentPage(1);
+    }
+  }, [activeCategory, search, sortBy]);
 
   return (
     <div
@@ -435,6 +438,8 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
                     href={`/store/${product.id}`}
                     onAddToCart={handleAddToCart}
                     added={addedIds.includes(product.id)}
+                    showFavorite
+                    showCountdown
                   />
                 </div>
               ))}
@@ -449,6 +454,12 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
                   totalItems={filtered.length}
                   pageSize={PRODUCTS_PER_PAGE}
                   onPageChange={handlePageChange}
+                  variant="default"
+                  showFirstLast
+                  showPageSize
+                  showTotal
+                  autoScroll
+                  className="mt-8"
                 />
               </div>
             )}

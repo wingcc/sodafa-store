@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 
-type Locale = "ar" | "en";
+type Locale = "ar" | "fr" | "en";
 
 type LanguageContextType = {
   locale: Locale;
@@ -12,10 +12,22 @@ type LanguageContextType = {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
+const LOCALE_KEY = "sodfa_locale";
+
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocale] = useState<Locale>("ar");
+  const [locale, setLocaleState] = useState<Locale>("ar");
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    try {
+      const saved = localStorage.getItem(LOCALE_KEY) as Locale | null;
+      if (saved === "ar" || saved === "fr" || saved === "en") setLocaleState(saved);
+    } catch {}
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
     const html = document.documentElement;
     const body = document.body;
     const dir = locale === "ar" ? "rtl" : "ltr";
@@ -25,10 +37,17 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       body.setAttribute("lang", locale);
       body.setAttribute("dir", dir);
     }
-  }, [locale]);
+    try { localStorage.setItem(LOCALE_KEY, locale); } catch {}
+  }, [locale, mounted]);
+
+  const setLocale = (l: Locale) => setLocaleState(l);
 
   const toggleLanguage = () => {
-    setLocale((prev) => (prev === "ar" ? "en" : "ar"));
+    setLocaleState((prev) => {
+      if (prev === "ar") return "fr";
+      if (prev === "fr") return "en";
+      return "ar";
+    });
   };
 
   return (
@@ -41,7 +60,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 export function useLanguage() {
   const context = useContext(LanguageContext);
   if (!context) {
-    throw new Error("useLanguage must be used within a LanguageProvider");
+    return { locale: "ar" as Locale, toggleLanguage: () => {}, setLocale: () => {} };
   }
   return context;
 }

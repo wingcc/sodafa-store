@@ -1,12 +1,46 @@
-// components/ProductCard.tsx — 2026 Quiet Luxury refresh
 "use client";
 
 import type { StaticImageData } from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 
 import type { Product } from "../types/product";
 import { useLanguage } from "../contexts/LanguageContext";
+import { useFavorites } from "../contexts/FavoritesContext";
+import { useUI } from "../contexts/UIContext";
+import styles from "./ProductCard.module.css";
+
+function useCountdown(targetDate: string | undefined) {
+  const target = useMemo(() => (targetDate ? new Date(targetDate).getTime() : 0), [targetDate]);
+  const [time, setTime] = useState(() => {
+    if (!target) return { days: 0, hours: 0, minutes: 0, seconds: 0, expired: true };
+    const diff = Math.max(0, target - Date.now());
+    return {
+      days: Math.floor(diff / 86400000),
+      hours: Math.floor((diff % 86400000) / 3600000),
+      minutes: Math.floor((diff % 3600000) / 60000),
+      seconds: Math.floor((diff % 60000) / 1000),
+      expired: diff <= 0,
+    };
+  });
+
+  useEffect(() => {
+    if (!target || time.expired) return;
+    const id = setInterval(() => {
+      const diff = Math.max(0, target - Date.now());
+      setTime({
+        days: Math.floor(diff / 86400000),
+        hours: Math.floor((diff % 86400000) / 3600000),
+        minutes: Math.floor((diff % 3600000) / 60000),
+        seconds: Math.floor((diff % 60000) / 1000),
+        expired: diff <= 0,
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [target, time.expired]);
+
+  return time;
+}
 
 export type ProductCardProps = {
   product: Product;
@@ -14,7 +48,11 @@ export type ProductCardProps = {
   onAddToCart?: (id: string | number) => void;
   added?: boolean;
   variant?: "default" | "compact";
+  showFavorite?: boolean;
+  showCountdown?: boolean;
 };
+
+const SLIDE_INTERVAL = 4000;
 
 export const ProductCard = ({
   product,
@@ -22,9 +60,14 @@ export const ProductCard = ({
   onAddToCart,
   added = false,
   variant = "default",
+  showFavorite = false,
+  showCountdown = false,
 }: ProductCardProps) => {
   const { locale } = useLanguage();
   const isAr = locale === "ar";
+  const { toggleFavorite, isFavorite } = useFavorites();
+  const { openCart } = useUI();
+  const favorited = isFavorite(String(product.id));
 
   const isCompact = variant === "compact";
 
@@ -32,158 +75,276 @@ export const ProductCard = ({
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : null;
 
-  const initialImageSrc: string | StaticImageData =
-    typeof product.image === "string"
-      ? product.image.trim() || "/assets/images/no_image.png"
-      : product.image ?? "/assets/images/no_image.png";
+  // ── Image slideshow ──
+  const allImages: string[] = [];
+  if (Array.isArray(product.images)) {
+    for (const img of product.images) {
+      const src = typeof img.src === "string" ? img.src : "";
+      if (src) allImages.push(src);
+    }
+  }
+  if (allImages.length === 0) {
+    const main =
+      typeof product.image === "string"
+        ? product.image.trim()
+        : typeof product.image === "object" && product.image !== null && "src" in product.image
+        ? String((product.image as { src: string }).src ?? "")
+        : "";
+    allImages.push(main || "/assets/images/no_image.png");
+  }
 
-  const [imageSrc, setImageSrc] = useState<string | StaticImageData>(initialImageSrc);
+  const [activeSlide, setActiveSlide] = useState(0);
+  const [isHovering, setIsHovering] = useState(false);
+  const [loadedImages, setLoadedImages] = useState<Set<number>>(new Set([0]));
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const handleClick = (e: React.MouseEvent) => {
+  const countdown = useCountdown(product.isOffer ? product.offerTime : undefined);
+  const showCountdownTimer = showCountdown && product.isOffer && product.offerTime && !countdown.expired;
+
+  const hasMultiple = allImages.length > 1;
+
+  // Preload next image
+  const preloadImage = useCallback(
+    (index: number) => {
+      if (loadedImages.has(index)) return;
+      const src = allImages[index];
+      if (!src) return;
+      const img = new Image();
+      img.onload = () => {
+        setLoadedImages((prev) => new Set(prev).add(index));
+      };
+      img.src = src;
+    },
+    [allImages, loadedImages]
+  );
+
+  // Auto-cycle when hovering
+  useEffect(() => {
+    if (!hasMultiple || !isHovering) {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      return;
+    }
+    intervalRef.current = setInterval(() => {
+      setActiveSlide((prev) => {
+        const next = (prev + 1) % allImages.length;
+        preloadImage(next);
+        return next;
+      });
+    }, SLIDE_INTERVAL);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [hasMultiple, isHovering, allImages.length, preloadImage]);
+
+  // Preload next image on slide change
+  useEffect(() => {
+    if (hasMultiple) {
+      preloadImage((activeSlide + 1) % allImages.length);
+    }
+  }, [activeSlide, hasMultiple, preloadImage, allImages.length]);
+
+  // ── Handlers ──
+  const handleOrderNow = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     if (product.inStock !== false) {
       onAddToCart?.(product.id);
+      setTimeout(() => openCart(), 300);
     }
   };
 
   const imageAlt = product.imageAlt ?? product.name ?? "Product image";
   const currency = isAr ? "د.م" : "MAD";
 
-  // Unified brand image container — no orange double border
-  const imageContent = (
-    <div className={`relative w-full h-full overflow-hidden bg-[#EAF4EE] ${isCompact ? "rounded-t-[18px]" : "rounded-t-[20px]"}`}>
-      <img
-        src={typeof imageSrc === 'string' ? imageSrc : imageSrc.src}
-        alt={imageAlt}
-        onError={() => setImageSrc("/assets/images/no_image.png")}
-        className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.06]"
-        loading="lazy"
-      />
-      {/* subtle inner vignette on hover */}
-      <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-t from-black/10 via-transparent to-transparent" />
+  // ── Classes ──
+  const rootClass = [styles.card, isCompact ? styles.compact : ""].filter(Boolean).join(" ");
+  const titleClass = [styles.title, isCompact ? styles.titleCompact : styles.titleNormal].join(" ");
+
+  // ── Image slideshow content ──
+  const slideshowContent = (
+    <div className={styles.imageInner}>
+      {allImages.map((src, i) => (
+        <div
+          key={i}
+          className={`${styles.slide} ${i === activeSlide ? styles.slideActive : ""}`}
+        >
+          <img
+            src={src}
+            alt={imageAlt}
+            loading={i === 0 ? "eager" : "lazy"}
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = "/assets/images/no_image.png";
+            }}
+          />
+        </div>
+      ))}
+      <div className={styles.imageOverlay} />
+
+      {/* Slideshow dots */}
+      {hasMultiple && (
+        <div className={styles.dots}>
+          {allImages.map((_, i) => (
+            <button
+              key={i}
+              className={`${styles.dot} ${i === activeSlide ? styles.dotActive : ""}`}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setActiveSlide(i);
+              }}
+              aria-label={`Image ${i + 1}`}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 
   return (
     <div
-      className={`group h-full flex flex-col bg-[#FFFDF8] overflow-hidden border transition-all duration-300 ${
-        isCompact ? "rounded-[18px]" : "rounded-[22px]"
-      } border-[var(--line)] shadow-[0_10px_30px_rgba(17,64,47,.06)] hover:shadow-[0_22px_55px_rgba(17,64,47,.13)] hover:border-[var(--brand)] hover:-translate-y-1.5`}
+      className={rootClass}
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
     >
-      {/* Image */}
-      <div className="overflow-hidden bg-[var(--brand-tint)] border-b border-[var(--line)] flex justify-center text-center">
-        <div className={`relative w-full ${isCompact ? "aspect-square" : "aspect-[4/5]"}`}>
-          {/* Top badges — minimal pill, brand aligned */}
-          <div className="absolute z-10 flex flex-col items-end gap-1.5 right-2.5 top-2.5">
+      {/* Image Area */}
+      <div className={styles.imageArea}>
+        <div className={styles.imageWrap}>
+          {/* Badges - top left */}
+          <div className={styles.badges}>
             {product.badge && (
-              <span className="bg-[#C6A15B] text-white px-2.5 py-1 rounded-full text-[10px] font-extrabold tracking-wide shadow-sm">
-                {product.badge}
-              </span>
+              <span className={styles.badgeFeatured}>{product.badge}</span>
             )}
             {discount !== null && (
-              <span className="bg-[#07231A] text-[#E8CE93] px-2.5 py-1 rounded-full text-[10px] font-bold shadow-sm">
-                -{discount}%
-              </span>
+              <span className={styles.badgeDiscount}>-{discount}%</span>
             )}
           </div>
 
-          {/* Bottom meta — glass pill */}
-          <div className={`absolute z-10 flex items-center gap-1.5 bottom-2.5 ${isAr ? "right-2.5" : "left-2.5"}`}>
-            {product.rating !== undefined && (
-              <div className="inline-flex items-center gap-1 rounded-full bg-white/90 backdrop-blur px-2.5 py-1 text-xs font-bold text-[#07231A] shadow-sm border border-black/5">
-                <span className="text-[#C6A15B]">★</span>
-                <span>{product.rating.toFixed(1)}</span>
-              </div>
-            )}
-            {product.reviews !== undefined && (
-              <div className="inline-flex items-center gap-1 rounded-full bg-white/90 backdrop-blur px-2.5 py-1 text-xs font-medium text-stone-600 shadow-sm border border-black/5">
-                <span>{product.reviews}</span>
-                <span className="text-stone-400 hidden sm:inline">{isAr ? "تقييم" : "reviews"}</span>
-              </div>
-            )}
-          </div>
+          {/* Rating - top right */}
+          {product.rating !== undefined && product.rating > 0 && (
+            <div className={styles.ratingBadge}>
+              <span className={styles.ratingStar}>★</span>
+              <span>{product.rating.toFixed(1)}</span>
+            </div>
+          )}
 
+          {/* Offer countdown - centered at bottom */}
+          {showCountdownTimer && (
+            <div className={styles.countdown}>
+              <div className={styles.countdownUnits}>
+                {countdown.days > 0 && (
+                  <span className={styles.countdownUnit}>
+                    <span className={styles.countdownNum}>{countdown.days}</span>
+                    <span className={styles.countdownLabel}>{isAr ? "أيام" : "Days"}</span>
+                  </span>
+                )}
+                <span className={styles.countdownUnit}>
+                  <span className={styles.countdownNum}>{String(countdown.hours).padStart(2, "0")}</span>
+                  <span className={styles.countdownLabel}>{isAr ? "ساعات" : "Hrs"}</span>
+                </span>
+                <span className={styles.countdownSep}>:</span>
+                <span className={styles.countdownUnit}>
+                  <span className={styles.countdownNum}>{String(countdown.minutes).padStart(2, "0")}</span>
+                  <span className={styles.countdownLabel}>{isAr ? "دقائق" : "Min"}</span>
+                </span>
+                <span className={styles.countdownSep}>:</span>
+                <span className={styles.countdownUnit}>
+                  <span className={styles.countdownNum}>{String(countdown.seconds).padStart(2, "0")}</span>
+                  <span className={styles.countdownLabel}>{isAr ? "ثواني" : "Sec"}</span>
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Image link or plain image */}
           {href ? (
-            <Link href={href} className="block w-full h-full">
-              {imageContent}
+            <Link href={href} style={{ display: "block", width: "100%", height: "100%" }}>
+              {slideshowContent}
             </Link>
           ) : (
-            imageContent
+            slideshowContent
           )}
         </div>
       </div>
 
       {/* Content */}
-      <div className={`flex flex-1 flex-col justify-between ${isCompact ? "p-3.5" : "p-5"}`}>
+      <div className={styles.content}>
         <div>
+          {/* Title */}
           {href ? (
-            <Link href={href} className="block">
-              <h3
-                className={`text-[#07231A] font-bold leading-snug break-words group-hover:text-[#1E7A57] transition-colors ${
-                  isCompact ? "text-[15px] line-clamp-1" : "text-[17px] leading-6 line-clamp-2"
-                }`}
-                style={{ fontFamily: "var(--disp)" }}
-              >
-                {product.name}
-              </h3>
+            <Link href={href}>
+              <h3 className={titleClass} title={product.name}>{product.name}</h3>
             </Link>
           ) : (
-            <h3
-              className={`text-[#07231A] font-bold leading-snug break-words ${
-                isCompact ? "text-[15px] line-clamp-1" : "text-[17px] leading-6 line-clamp-2"
-              }`}
-              style={{ fontFamily: "var(--disp)" }}
-            >
-              {product.name}
-            </h3>
+            <h3 className={titleClass} title={product.name}>{product.name}</h3>
           )}
 
-          {(product.brand || product.category) && (
-            <p className={`font-tajawal text-stone-500 font-medium ${isCompact ? "text-[11px] mt-1 truncate" : "text-xs mt-1.5"}`}>
-              {product.brand ?? ""}
-              {product.brand && product.category ? " · " : ""}
-              {product.category ?? ""}
-            </p>
+          {/* Brand */}
+          {product.brand && (
+            <p className={styles.brand}>{product.brand}</p>
           )}
 
-          <div className={`flex items-baseline gap-2 ${isCompact ? "mt-2.5 mb-2.5" : "mt-3.5 mb-4"}`}>
-            <span className={`text-[#1E7A57] font-extrabold text-nowrap ${isCompact ? "text-[16px]" : "text-[19px]"}`}>
+          {/* Price row */}
+          <div className={styles.priceRow}>
+            <span className={styles.price}>
               {(product.price ?? 0).toFixed(2)} {currency}
             </span>
-            {discount !== null && (
-              <span className="text-stone-400 line-through text-xs">
-                {product.originalPrice?.toFixed(2)} {currency}
-              </span>
+            {discount !== null && product.originalPrice && (
+              <>
+                <span className={styles.originalPrice}>
+                  {product.originalPrice.toFixed(2)} {currency}
+                </span>
+                <span className={styles.discountTag}>-{discount}%</span>
+              </>
             )}
           </div>
         </div>
 
-        <button
-          onClick={handleClick}
-          disabled={product.inStock === false}
-          className={`w-full inline-flex items-center justify-center gap-2 rounded-full font-bold transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#C6A15B]/40 ${
-            isCompact ? "py-2.5 px-4 text-xs" : "py-3.5 px-6 text-sm"
-          } ${
-            product.inStock === false
-              ? "bg-stone-200 text-stone-500 cursor-not-allowed"
-              : added
-              ? "bg-emerald-700 text-white"
-              : "bg-[#07231A] text-[#E8CE93] hover:bg-[#1E7A57] hover:text-white hover:shadow-lg active:scale-[0.98]"
-          }`}
-        >
-          {product.inStock === false ? (
-            <span className="flex items-center gap-1.5">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-              {isAr ? "غير متوفر" : "Out of stock"}
+        {/* Buttons row - Order Now + Favorite side by side */}
+        <div className={styles.buttonsRow}>
+          <button
+            onClick={handleOrderNow}
+            disabled={product.inStock === false}
+            className={`${styles.orderBtn} ${product.inStock === false ? styles.orderBtnDisabled : ""}`}
+          >
+            <svg className={styles.orderBtnIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0110 0v4" />
+            </svg>
+            <span>
+              {product.inStock === false
+                ? (isAr ? "غير متوفر" : "Out of stock")
+                : added
+                ? (isAr ? "تمت الإضافة ✓" : "Added ✓")
+                : (isAr ? "اطلبي الآن" : "Order Now")
+              }
             </span>
-          ) : added ? (
-            <span>✓ {isAr ? "تمت الإضافة" : "Added"}</span>
-          ) : (
-            <span>{isAr ? "أضيفي للسلة" : "Add to bag"}</span>
+          </button>
+
+          {showFavorite && (
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleFavorite(String(product.id));
+              }}
+              className={`${styles.favoriteBtn} ${favorited ? styles.favoriteBtnActive : ""}`}
+              aria-label={favorited ? "Remove from favorites" : "Add to favorites"}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill={favorited ? "currentColor" : "none"}
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"
+                />
+              </svg>
+            </button>
           )}
-        </button>
+        </div>
       </div>
     </div>
   );
