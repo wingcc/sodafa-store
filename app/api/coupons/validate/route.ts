@@ -20,6 +20,8 @@ export async function POST(request: Request) {
       code: z.string().min(1, 'Coupon code is required'),
       subtotal: z.number().nonnegative('Subtotal must be a number'),
       productIds: z.array(z.string()).optional(),
+      customerPhone: z.string().optional(),
+      customerEmail: z.string().optional(),
     });
 
     const parsed = ValidateSchema.safeParse(body);
@@ -31,6 +33,8 @@ export async function POST(request: Request) {
     const result = await validateCoupon(admin, parsed.data.code, {
       subtotal: parsed.data.subtotal,
       productIds: parsed.data.productIds,
+      customerPhone: parsed.data.customerPhone,
+      customerEmail: parsed.data.customerEmail,
     });
 
     return successResponse(result);

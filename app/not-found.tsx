@@ -32,15 +32,19 @@ const translations = {
   },
 };
 
+function getInitialLocale(): Locale {
+  try {
+    const saved = localStorage.getItem("sodfa_locale") as Locale | null;
+    if (saved === "ar" || saved === "fr" || saved === "en") return saved;
+  } catch {}
+  return "ar";
+}
+
 export default function GlobalNotFound() {
-  const [locale, setLocale] = useState<Locale>("ar");
+  const [locale, setLocale] = useState<Locale>(getInitialLocale);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("sodfa_locale") as Locale | null;
-      if (saved === "ar" || saved === "fr" || saved === "en") setLocale(saved);
-    } catch {}
     const timer = setTimeout(() => setVisible(true), 100);
     return () => clearTimeout(timer);
   }, []);

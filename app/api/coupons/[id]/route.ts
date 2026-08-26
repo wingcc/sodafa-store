@@ -6,6 +6,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin';
 import { CouponRepository } from '@/lib/db';
+import { notificationService } from '@/lib/services/notificationService';
 import { successResponse, internalServerError } from '@/lib/api';
 
 export async function PUT(
@@ -20,6 +21,20 @@ export async function PUT(
 
     const { data, error } = await repo.update(id, body);
     if (error) throw error;
+
+    // Send notification
+    try {
+      await notificationService.create({
+        type: 'promotion',
+        title: 'Coupon updated',
+        message: `Coupon has been updated.`,
+        priority: 'low',
+        metadata: { couponId: id, code: data?.code },
+      });
+    } catch (e) {
+      console.error('Failed to send coupon update notification:', e);
+    }
+
     return successResponse(data);
   } catch (err: any) {
     console.error('PUT /api/coupons/[id] error:', err);
@@ -38,6 +53,20 @@ export async function DELETE(
 
     const { error } = await repo.delete(id);
     if (error) throw error;
+
+    // Send notification
+    try {
+      await notificationService.create({
+        type: 'promotion',
+        title: 'Coupon deleted',
+        message: `A coupon has been deleted.`,
+        priority: 'low',
+        metadata: { couponId: id },
+      });
+    } catch (e) {
+      console.error('Failed to send coupon delete notification:', e);
+    }
+
     return successResponse({ deleted: true });
   } catch (err: any) {
     console.error('DELETE /api/coupons/[id] error:', err);

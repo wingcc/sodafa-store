@@ -80,8 +80,25 @@ export async function DELETE(
     const admin = createAdminClient();
     const repo = new OrderRepository(admin);
 
+    // Fetch order before deleting to get order number
+    const { data: orderData } = await admin.from('orders').select('order_number').eq('id', id).single();
+
     const { error } = await repo.delete(id);
     if (error) throw error;
+
+    // Send notification
+    try {
+      await notificationService.create({
+        type: 'order',
+        title: 'Order deleted',
+        message: `Order ${orderData?.order_number ? `#${orderData.order_number}` : ''} has been deleted.`,
+        priority: 'medium',
+        metadata: { orderId: id, orderNumber: orderData?.order_number },
+      });
+    } catch (e) {
+      console.error('Failed to send order delete notification:', e);
+    }
+
     return successResponse({ deleted: true });
   } catch (err: any) {
     console.error('DELETE /api/orders/[id] error:', err);

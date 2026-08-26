@@ -97,6 +97,7 @@ class NotificationService {
       title: `New Order #${orderNumber}`,
       message: `Order from ${customerName} for ${total.toLocaleString()} MAD`,
       actionUrl: `/dashboard/orders/${orderId}`,
+      metadata: { orderId, orderNumber, customerName, total },
     });
   }
 
@@ -106,6 +107,7 @@ class NotificationService {
       title: `Order #${orderNumber} Updated`,
       message: `Order status changed to ${newStatus}`,
       actionUrl: `/dashboard/orders/${orderId}`,
+      metadata: { orderId, orderNumber, status: newStatus },
     });
   }
 
@@ -116,6 +118,7 @@ class NotificationService {
       title: 'Low Stock Alert',
       message: `${productName} has only ${currentStock} units left (threshold: ${threshold})`,
       actionUrl: `/dashboard/products/${productId}`,
+      metadata: { productId, productName, currentStock, threshold },
     });
   }
 
@@ -126,6 +129,7 @@ class NotificationService {
       title: 'Out of Stock',
       message: `${productName} is now out of stock`,
       actionUrl: `/dashboard/products/${productId}`,
+      metadata: { productId, productName },
     });
   }
 
@@ -135,6 +139,7 @@ class NotificationService {
       title: 'New Customer Registered',
       message: `${customerName} (${email}) created an account`,
       actionUrl: `/dashboard/customers/${customerId}`,
+      metadata: { customerId, customerName, email },
     });
   }
 
@@ -145,6 +150,7 @@ class NotificationService {
       title: 'New Review Received',
       message: `${customerName} left a ${rating}-star review for ${productName}`,
       actionUrl: `/dashboard/reviews`,
+      metadata: { reviewId, productName, customerName, rating },
     });
   }
 
@@ -155,6 +161,7 @@ class NotificationService {
       title: 'Payment Received',
       message: `Payment of ${amount.toLocaleString()} MAD received for order #${orderNumber} via ${method}`,
       actionUrl: `/dashboard/orders/${orderId}`,
+      metadata: { orderId, orderNumber, amount, method },
     });
   }
 
@@ -165,6 +172,7 @@ class NotificationService {
       title: 'Payment Failed',
       message: `Payment for order #${orderNumber} failed: ${reason}`,
       actionUrl: `/dashboard/orders/${orderId}`,
+      metadata: { orderId, orderNumber, reason },
     });
   }
 
@@ -174,6 +182,25 @@ class NotificationService {
       title: 'Refund Processed',
       message: `Refund of ${amount.toLocaleString()} MAD processed for order #${orderNumber}`,
       actionUrl: `/dashboard/orders/${orderId}`,
+      metadata: { orderId, orderNumber, amount },
+    });
+  }
+
+  async notifyCouponUsed(
+    couponId: string,
+    couponCode: string,
+    orderNumber: string,
+    customerName: string,
+    discount: number,
+    discountType: string,
+  ): Promise<void> {
+    await this.create({
+      type: 'promotion',
+      priority: 'medium',
+      title: `Coupon #${couponCode} Used`,
+      message: `${customerName} used coupon "${couponCode}" on order #${orderNumber} — ${discountType === 'percentage' ? `${discount}% discount` : `${discount} MAD off`}`,
+      actionUrl: `/dashboard/coupons`,
+      metadata: { couponId, code: couponCode, orderNumber, customerName, discount, discountType },
     });
   }
 

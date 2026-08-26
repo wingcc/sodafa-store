@@ -367,24 +367,30 @@ export function Navbar({ site: siteProp = DEFAULT_SITE, onOpenContact = () => {}
                 </svg>
                 {cartCount > 0 && (
                   <span
+                    className="absolute flex items-center justify-center"
                     style={{
-                      position: "absolute",
-                      top: -6,
-                      right: -6,
-                      background: "var(--brand)",
+                      top: -5,
+                      right: -5,
+                      minWidth: 20,
+                      height: 20,
+                      borderRadius: "50%",
+                      background: "#ef4444",
                       color: "#fff",
                       fontSize: 11,
                       fontWeight: 800,
-                      minWidth: 18,
-                      height: 18,
-                      borderRadius: 9,
-                      display: "grid",
-                      placeItems: "center",
-                      padding: "0 4px",
+                      padding: "0 5px",
                       lineHeight: 1,
+                      border: "2px solid var(--card)",
                     }}
                   >
-                    {cartCount}
+                    <span
+                      className="absolute inset-0 rounded-full animate-ping"
+                      style={{
+                        background: "#ef4444",
+                        opacity: 0.5,
+                      }}
+                    />
+                    <span className="relative z-10">{cartCount}</span>
                   </span>
                 )}
               </button>

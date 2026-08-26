@@ -113,6 +113,10 @@
   color-scheme: dark;
   background-color: var(--dashboard-bg-dark) !important;
 }
+.dashboard-root.dark .fixed.inset-0.z-50 {
+  /* Modal backdrop — slightly lighter in dark mode for contrast */
+  background-color: rgba(0, 0, 0, 0.6) !important;
+}
 
 .dashboard-root.dark ::-webkit-scrollbar-track {
   background: #121a16;
@@ -268,3 +272,50 @@
 
 /* Shipping modal helpers — ensures modal overlay stays above dashboard chrome */
 .dashboard-root .dashboard-modal { animation: zoomIn 0.18s ease-out; }
+
+/* ── Modal & form focus rings — palette-aware ── */
+.dashboard-root input:focus,
+.dashboard-root textarea:focus,
+.dashboard-root select:focus {
+  outline: none;
+  border-color: var(--color-darkGreen, #047857);
+  box-shadow: 0 0 0 2px rgba(var(--color-darkGreen-rgb, 4,120,87), 0.15);
+}
+.dashboard-root.dark input:focus,
+.dashboard-root.dark textarea:focus,
+.dashboard-root.dark select:focus {
+  box-shadow: 0 0 0 2px rgba(var(--color-darkGreen-rgb, 4,120,87), 0.25);
+}
+
+/* ── Primary button utility — reuse across modals ── */
+.dashboard-root .btn-primary {
+  background-color: var(--color-darkGreen, #047857);
+  color: #fff;
+  transition: all 0.15s ease;
+}
+.dashboard-root .btn-primary:hover {
+  filter: brightness(0.9);
+}
+.dashboard-root .btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Toggle switch — palette-aware ── */
+.dashboard-root .toggle-switch {
+  background-color: #d1d5db;
+  transition: background-color 0.2s ease;
+}
+.dashboard-root .toggle-switch.active {
+  background-color: var(--color-darkGreen, #047857);
+}
+
+/* ── Modal animations ── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}

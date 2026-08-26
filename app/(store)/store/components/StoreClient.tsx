@@ -8,16 +8,7 @@ import { ProductHeroCarousel } from './ProductHeroCarousel';
 import { Pagination } from './Pagination';
 import { useUI } from '../../../contexts/UIContext';
 import { useLanguage } from '../../../contexts/LanguageContext';
-import { Search, Sparkles, Filter, Grid, List, X, ArrowUpDown } from 'lucide-react';
-
-const CATEGORIES_DATA = [
-  { value: 'All', ar: 'الكل', en: 'All', icon: '✨' },
-  { value: 'Skincare', ar: 'عناية بالبشرة', en: 'Skincare', icon: '🧴' },
-  { value: 'Supplements', ar: 'مكملات غذائية', en: 'Supplements', icon: '💊' },
-  { value: 'Body Care', ar: 'عناية بالجسم', en: 'Body Care', icon: '<ctrl42>' },
-  { value: 'Devices', ar: 'أجهزة التجميل', en: 'Devices', icon: '⚡' },
-  { value: 'Nutrition', ar: 'تغذية صحية', en: 'Nutrition', icon: '🥗' },
-];
+import { Search, Sparkles, Grid, List, X, ArrowUpDown } from 'lucide-react';
 
 const SORT_OPTIONS_DATA = [
   { value: 'featured', ar: 'المميزة أولاً', en: 'Featured', icon: '⭐' },
@@ -34,11 +25,11 @@ interface StoreClientProps {
 
 export default function StoreClient({ initialProducts }: StoreClientProps) {
   const [products, setProducts] = useState<Product[]>(initialProducts ?? []);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(!initialProducts || initialProducts.length === 0);
 
   useEffect(() => {
     if (initialProducts && initialProducts.length > 0) return;
-    setIsLoading(true);
+    let cancelled = false;
     fetch('/api/products?showInStore=true&ads=true&status=active')
       .then((res) => res.json())
       .then((json) => {
@@ -80,11 +71,12 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
               offerTime: row.OfferTime ? String(row.OfferTime) : row.offerTime ? String(row.offerTime) : undefined,
             } as Product;
           });
-          setProducts(mapped);
+          if (!cancelled) setProducts(mapped);
         }
       })
       .catch(() => {})
-      .finally(() => setIsLoading(false));
+      .finally(() => { if (!cancelled) setIsLoading(false); });
+    return () => { cancelled = true; };
   }, [initialProducts]);
 
   const allProducts = products;
@@ -93,7 +85,6 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
   const { locale } = useLanguage();
   const isAr = locale === 'ar';
 
-  const [activeCategory, setActiveCategory] = useState('All');
   const [sortBy, setSortBy] = useState('featured');
   const [search, setSearch] = useState('');
   const [addedIds, setAddedIds] = useState<(string | number)[]>([]);
@@ -116,13 +107,11 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
       ?.querySelectorAll('.reveal, .reveal-scale, .stagger-item')
       .forEach((el) => observer.observe(el));
     return () => observer.disconnect();
-  }, [activeCategory, currentPage]);
+  }, [currentPage]);
 
   // Filter and sort products
   const filtered = useMemo(() => {
-    return allProducts.filter(
-      (p) => activeCategory === 'All' || p.category === activeCategory
-    )
+    return allProducts
       .filter((p) => {
         const lowerSearch = search.toLowerCase();
         return (
@@ -138,7 +127,7 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
         if (sortBy === 'rating') return (b.rating ?? 0) - (a.rating ?? 0);
         return 0;
       });
-  }, [allProducts, activeCategory, search, sortBy]);
+  }, [allProducts, search, sortBy]);
 
   // Paginate
   const totalPages = Math.ceil(filtered.length / PRODUCTS_PER_PAGE);
@@ -172,18 +161,7 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
 
   const clearFilters = () => {
     setSearch('');
-    setActiveCategory('All');
     setCurrentPage(1);
-  };
-
-  const getCategoryLabel = (catValue: string) => {
-    const found = CATEGORIES_DATA.find((c) => c.value === catValue);
-    return isAr ? found?.ar : found?.en;
-  };
-
-  const getCategoryIcon = (catValue: string) => {
-    const found = CATEGORIES_DATA.find((c) => c.value === catValue);
-    return found?.icon || '✨';
   };
 
   const handlePageChange = (page: number) => {
@@ -193,14 +171,14 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
       ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  const prevFilters = useRef({ activeCategory, search, sortBy });
+  const prevFilters = useRef({ search, sortBy });
   useEffect(() => {
     const prev = prevFilters.current;
-    if (prev.activeCategory !== activeCategory || prev.search !== search || prev.sortBy !== sortBy) {
-      prevFilters.current = { activeCategory, search, sortBy };
+    if (prev.search !== search || prev.sortBy !== sortBy) {
+      prevFilters.current = { search, sortBy };
       setCurrentPage(1);
     }
-  }, [activeCategory, search, sortBy]);
+  }, [search, sortBy]);
 
   return (
     <div
@@ -319,29 +297,8 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
                 </button>
               </div>
             </div>
-          </div>
-
-          {/* Category Pills — segmented pill */}
-          <div className="flex gap-2 mt-3.5 overflow-x-auto pb-1 scrollbar-none">
-            {CATEGORIES_DATA.map((cat) => (
-              <button
-                key={cat.value}
-                onClick={() => {
-                  setActiveCategory(cat.value);
-                  setCurrentPage(1);
-                }}
-                className={`flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold border transition-all duration-200 ${
-                  activeCategory === cat.value
-                    ? 'bg-[#07231A] text-[#E8CE93] border-[#07231A] shadow-sm'
-                    : 'bg-white text-stone-600 border-[var(--line)] hover:border-[#1E7A57]/30 hover:text-[#07231A]'
-                }`}
-              >
-                <span>{cat.icon}</span>
-                <span>{isAr ? cat.ar : cat.en}</span>
-              </button>
-            ))}
-          </div>
         </div>
+      </div>
       </div>
 
       {/* ===== PRODUCT GRID SECTION ===== */}
@@ -353,11 +310,6 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
               {isAr ? (
                 <>
                   عرض <strong className="text-stone-900 font-bold">{filtered.length}</strong> منتج
-                  {activeCategory !== 'All' && (
-                    <span className="inline-flex items-center gap-1 mx-1 text-emerald-800 font-bold">
-                      في قسم {getCategoryLabel(activeCategory)} {getCategoryIcon(activeCategory)}
-                    </span>
-                  )}
                   {search && (
                     <span className="inline-flex items-center gap-1 mx-1 text-[#cda552] font-bold">
                       · تطابق &quot;{search}&quot;
@@ -367,11 +319,6 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
               ) : (
                 <>
                   Showing <strong className="text-stone-900 font-bold">{filtered.length}</strong> products
-                  {activeCategory !== 'All' && (
-                    <span className="inline-flex items-center gap-1 mx-1 text-emerald-800 font-bold">
-                      in {getCategoryLabel(activeCategory)} {getCategoryIcon(activeCategory)}
-                    </span>
-                  )}
                   {search && (
                     <span className="inline-flex items-center gap-1 mx-1 text-[#cda552] font-bold">
                       · matching &quot;{search}&quot;
@@ -381,7 +328,7 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
               )}
             </p>
 
-            {(search || activeCategory !== 'All') && (
+            {search && (
               <button
                 onClick={clearFilters}
                 className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 transition-colors"

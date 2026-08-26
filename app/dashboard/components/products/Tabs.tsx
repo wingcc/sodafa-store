@@ -33,8 +33,8 @@ export const ProductTabs: React.FC<ProductTabsProps> = ({ activeTab, onTabChange
             onClick={() => onTabChange(tab.id)}
             className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap ${
               activeTab === tab.id
-                ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-b-2 border-purple-500'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                ? 'bg-[var(--color-darkGreen)]/10 text-[var(--color-darkGreen)] border-b-2 border-[var(--color-darkGreen)]'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
             }`}
           >
             {tab.label}

@@ -21,7 +21,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Badge from '../components/ui/Badge';
 import RefreshButton from '../components/ui/RefreshButton';
 import { useStore } from '../store/useStore';
-import { orders } from '../data/mockData';
 import { useTranslation } from '../i18n/useTranslation';
 
 const container = {
@@ -35,6 +34,7 @@ const Customers: React.FC = () => {
   const { t } = useTranslation();
   const {
     customers,
+    orders,
     isLoadingCustomers,
     customersError,
     fetchCustomers,
@@ -42,6 +42,19 @@ const Customers: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
+
+  // ── Auto-open customer from notification navigation ────────────────
+  const pendingNavigation = useStore((s) => s.pendingNavigation);
+  const clearPendingNavigation = useStore((s) => s.clearPendingNavigation);
+
+  useEffect(() => {
+    if (pendingNavigation?.page === 'customers') {
+      if (pendingNavigation.searchQuery) {
+        setSearchQuery(pendingNavigation.searchQuery);
+      }
+      clearPendingNavigation();
+    }
+  }, [pendingNavigation, clearPendingNavigation]);
 
   // Fetch customers on mount
   useEffect(() => {
@@ -124,7 +137,7 @@ const Customers: React.FC = () => {
   };
 
   const getCustomerOrders = (customerId: string) =>
-    orders.filter((o) => o.customerId === customerId);
+    orders.filter((o: any) => o.customerId === customerId);
 
   const topCustomers = [...customers]
     .sort((a, b) => b.totalSpent - a.totalSpent)

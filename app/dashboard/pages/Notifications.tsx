@@ -1,91 +1,185 @@
-// SODFA MARKETPLACE - Notifications Page
-// A beautiful, modern notifications center with real-time updates
-
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Bell,
   Check,
   X,
   Clock,
-  Package,
   Star,
-  MessageSquare,
   ShoppingBag,
-  Tag,
-  Truck,
+  Package,
   CreditCard,
-  User,
-  Heart,
-  TrendingUp,
-  Award,
+  Truck,
   Gift,
-  AlertCircle,
-  CheckCircle,
-  XCircle,
   Info,
-  Mail,
+  User,
+  TrendingUp,
+  ShieldAlert,
+  MessageSquare,
+  Award,
   Calendar,
-  MoreVertical,
-  Search,
-  Filter,
-  Settings,
+  Headphones,
+  BarChart3,
+  UsersRound,
+  Megaphone,
+  Plus,
+  AlertCircle,
   BellRing,
   BellOff,
   Loader2,
   Sparkles,
-  Zap,
   ChevronDown,
   ChevronRight,
   Eye,
-  EyeOff,
-  RefreshCw,
   Trash2,
   CheckCheck,
+  Search,
+  Settings,
+  AlertTriangle,
+  ShoppingCart,
+  Tag,
 } from 'lucide-react';
 import Badge from '../components/ui/Badge';
 import RefreshButton from '../components/ui/RefreshButton';
+import NotificationDetailModal from '../components/notifications/NotificationDetailModal';
 import { useToast } from '@/lib/toast';
 import { useTranslation } from '../i18n/useTranslation';
 import { useStore } from '../store/useStore';
+import type { Notification, NotificationType, NotificationPriority, PageSection } from '../types';
 
-type NotificationType = 
-  | 'order'
-  | 'review'
-  | 'product'
-  | 'payment'
-  | 'shipping'
-  | 'promotion'
-  | 'system'
-  | 'social'
-  | 'inventory'
-  | 'security';
-
-type NotificationPriority = 'low' | 'medium' | 'high' | 'urgent';
-
-type Notification = {
-  id: string;
-  type: NotificationType;
-  title: string;
-  message: string;
-  timestamp: Date;
-  read: boolean;
-  priority: NotificationPriority;
-  actionUrl?: string;
-  image?: string;
-  metadata?: Record<string, any>;
-  category?: string;
+// ── Canonical type mapping (legacy aliases) ───────────────────────────
+const CANONICAL_TYPE: Record<string, NotificationType> = {
+  stock: 'inventory',
+  customer: 'social',
 };
 
+function canonical(t: string): NotificationType {
+  return (CANONICAL_TYPE[t] ?? t) as NotificationType;
+}
+
+// ── Visual helpers (single source of truth) ───────────────────────────
+function getTypeIcon(type: string, size = 18) {
+  const c = canonical(type);
+  const map: Record<string, React.ReactNode> = {
+    order: <ShoppingBag size={size} />,
+    review: <Star size={size} />,
+    product: <Package size={size} />,
+    payment: <CreditCard size={size} />,
+    shipping: <Truck size={size} />,
+    promotion: <Gift size={size} />,
+    system: <Info size={size} />,
+    social: <User size={size} />,
+    inventory: <TrendingUp size={size} />,
+    security: <ShieldAlert size={size} />,
+    account: <Settings size={size} />,
+    message: <MessageSquare size={size} />,
+    achievement: <Award size={size} />,
+    reminder: <Calendar size={size} />,
+    subscription: <Bell size={size} />,
+    support: <Headphones size={size} />,
+    analytics: <BarChart3 size={size} />,
+    team: <UsersRound size={size} />,
+    event: <Megaphone size={size} />,
+    custom: <Plus size={size} />,
+    stock: <TrendingUp size={size} />,
+    customer: <User size={size} />,
+  };
+  return map[c] ?? map[type] ?? <Bell size={size} />;
+}
+
+function getTypeClasses(type: string) {
+  const c = canonical(type);
+  const map: Record<string, string> = {
+    order: 'bg-indigo-50 text-indigo-600 border-indigo-200',
+    review: 'bg-yellow-50 text-yellow-600 border-yellow-200',
+    product: 'bg-blue-50 text-blue-600 border-blue-200',
+    payment: 'bg-green-50 text-green-600 border-green-200',
+    shipping: 'bg-cyan-50 text-cyan-600 border-cyan-200',
+    promotion: 'bg-pink-50 text-pink-600 border-pink-200',
+    system: 'bg-gray-50 text-gray-600 border-gray-200',
+    social: 'bg-purple-50 text-purple-600 border-purple-200',
+    inventory: 'bg-orange-50 text-orange-600 border-orange-200',
+    security: 'bg-red-50 text-red-600 border-red-200',
+    account: 'bg-violet-50 text-violet-600 border-violet-200',
+    message: 'bg-sky-50 text-sky-600 border-sky-200',
+    achievement: 'bg-amber-50 text-amber-600 border-amber-200',
+    reminder: 'bg-violet-50 text-violet-600 border-violet-200',
+    subscription: 'bg-emerald-50 text-emerald-600 border-emerald-200',
+    support: 'bg-blue-50 text-blue-600 border-blue-200',
+    analytics: 'bg-violet-50 text-violet-600 border-violet-200',
+    team: 'bg-teal-50 text-teal-600 border-teal-200',
+    event: 'bg-rose-50 text-rose-600 border-rose-200',
+    custom: 'bg-gray-50 text-gray-600 border-gray-200',
+    stock: 'bg-orange-50 text-orange-600 border-orange-200',
+    customer: 'bg-purple-50 text-purple-600 border-purple-200',
+  };
+  return map[c] ?? map[type] ?? 'bg-gray-50 text-gray-600 border-gray-200';
+}
+
+function getPriorityClasses(priority: string) {
+  const map: Record<string, string> = {
+    low: 'bg-blue-50 text-blue-600 border-blue-200',
+    medium: 'bg-amber-50 text-amber-600 border-amber-200',
+    high: 'bg-orange-50 text-orange-600 border-orange-200',
+    urgent: 'bg-red-50 text-red-600 border-red-200',
+  };
+  return map[priority] ?? map.medium;
+}
+
+function getCategoryLabel(type: string) {
+  const c = canonical(type);
+  const labels: Record<string, string> = {
+    order: 'Orders', review: 'Reviews', product: 'Products', payment: 'Payments',
+    shipping: 'Shipping', promotion: 'Promotions', system: 'System', social: 'Social',
+    inventory: 'Inventory', security: 'Security', account: 'Account', message: 'Messages',
+    achievement: 'Achievements', reminder: 'Reminders', subscription: 'Subscription',
+    support: 'Support', analytics: 'Analytics', team: 'Team', event: 'Events', custom: 'Custom',
+    stock: 'Inventory', customer: 'Social',
+  };
+  return labels[c] ?? labels[type] ?? type;
+}
+
+function getTimeAgo(dateInput: string | Date) {
+  const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+  if (isNaN(date.getTime())) return '';
+  const diff = Date.now() - date.getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
 type NotificationFilter = 'all' | 'unread' | 'read' | 'bookmarked';
+const ALL_TYPES: NotificationType[] = [
+  'order', 'review', 'product', 'payment', 'shipping', 'promotion',
+  'system', 'social', 'inventory', 'security',
+];
 
 const Notifications: React.FC = () => {
   const { t } = useTranslation();
   const { addToast } = useToast();
-  
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+
+  // ── Zustand store ──────────────────────────────────────────────────
+  const notifications = useStore((s) => s.notifications);
+  const unreadCount = useStore((s) => s.unreadNotifications);
+  const starredCount = useStore((s) => s.starredNotifications);
+  const isLoading = useStore((s) => s.isLoadingNotifications);
+  const hasMore = useStore((s) => s.hasMoreNotifications);
+  const fetchNotifications = useStore((s) => s.fetchNotifications);
+  const markNotificationsRead = useStore((s) => s.markNotificationsRead);
+  const markNotificationAsRead = useStore((s) => s.markNotificationAsRead);
+  const toggleStarNotification = useStore((s) => s.toggleStarNotification);
+  const deleteNotification = useStore((s) => s.deleteNotification);
+  const bulkDeleteNotifications = useStore((s) => s.bulkDeleteNotifications);
+  const bulkMarkNotifications = useStore((s) => s.bulkMarkNotifications);
+  const loadMoreNotifications = useStore((s) => s.loadMoreNotifications);
+
+  // ── Local UI state ─────────────────────────────────────────────────
   const [filter, setFilter] = useState<NotificationFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<NotificationType | 'all'>('all');
@@ -94,300 +188,268 @@ const Notifications: React.FC = () => {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set());
+  const [detailNotification, setDetailNotification] = useState<Notification | null>(null);
 
-  // Simulated notifications data
-  const generateMockNotifications = (): Notification[] => {
-    const types: NotificationType[] = ['order', 'review', 'product', 'payment', 'shipping', 'promotion', 'system', 'social', 'inventory', 'security'];
-    const priorities: NotificationPriority[] = ['low', 'medium', 'high', 'urgent'];
-    const titles = [
-      'New order received',
-      'Product review submitted',
-      'Payment confirmed',
-      'Shipping update',
-      'Special promotion available',
-      'System maintenance notice',
-      'New follower alert',
-      'Inventory alert',
-      'Security alert',
-      'Account update',
-      'Review approved',
-      'Order shipped',
-      'Refund processed',
-      'Product restocked',
-      'Welcome offer',
-      'Subscription renewal'
-    ];
-    const messages = [
-      'Customer #12345 placed an order for 3 items.',
-      'A customer has submitted a 5-star review for "Premium Headphones".',
-      'Payment of $249.99 has been confirmed for order #ORD-2024-001.',
-      'Your package has been shipped and is on its way to the delivery address.',
-      'Flash sale: Get 20% off on all accessories for the next 24 hours!',
-      'Scheduled maintenance on Dec 15, 2024 from 2AM to 4AM UTC.',
-      'Sarah J. started following your store.',
-      'Low stock alert: Product "Wireless Charger" has only 5 units remaining.',
-      'New login detected from an unrecognized device in Paris, France.',
-      'Your seller profile has been updated successfully.',
-      'Customer review for "Smart Watch" has been approved by the moderation team.',
-      'Order #ORD-2024-002 has been shipped. Tracking: TRK-7890-1234.',
-      'Refund of $89.99 for order #ORD-2024-003 has been processed.',
-      'Product "Noise-Canceling Headphones" is back in stock!',
-      'Welcome to the platform! Use code WELCOME20 for 20% off your first order.',
-      'Your subscription for the Pro plan will renew in 7 days.'
-    ];
-
-    const notificationData: Notification[] = [];
-    for (let i = 0; i < 30; i++) {
-      const type = types[Math.floor(Math.random() * types.length)];
-      const priority = priorities[Math.floor(Math.random() * priorities.length)];
-      const read = Math.random() > 0.4;
-      const bookmarked = Math.random() > 0.8;
-      const hoursAgo = Math.floor(Math.random() * 168); // 7 days
-      
-      notificationData.push({
-        id: `notif-${i + 1}`,
-        type,
-        title: titles[Math.floor(Math.random() * titles.length)],
-        message: messages[Math.floor(Math.random() * messages.length)],
-        timestamp: new Date(Date.now() - hoursAgo * 60 * 60 * 1000),
-        read,
-        priority,
-        metadata: {
-          orderId: i < 5 ? `ORD-2024-${String(i + 1).padStart(3, '0')}` : undefined,
-          customerId: `cust-${1000 + i}`,
-          productId: `prod-${2000 + i}`,
-        },
-        actionUrl: i % 3 === 0 ? '/dashboard' : undefined,
-      });
-    }
-    
-    // Ensure some unread
-    notificationData[0].read = false;
-    notificationData[0].priority = 'urgent';
-    notificationData[1].read = false;
-    notificationData[2].read = false;
-    notificationData[2].priority = 'high';
-    
-    return notificationData;
-  };
-
-  useEffect(() => {
-    const loadNotifications = async () => {
-      setIsLoading(true);
-      try {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1200));
-        const data = generateMockNotifications();
-        setNotifications(data);
-      } catch (error) {
-        addToast('error', 'Failed to load notifications');
-      } finally {
-        setIsLoading(false);
-      }
+  // ── Notification type → dashboard page mapping ─────────────────────
+  const getPageForType = useCallback((type: NotificationType): PageSection | null => {
+    const map: Record<string, PageSection> = {
+      order: 'orders',
+      product: 'products',
+      inventory: 'products',
+      review: 'reviews',
+      customer: 'customers',
+      payment: 'payments',
+      coupon: 'coupons',
+      promotion: 'coupons',
+      shipping: 'shipping',
+      security: 'notifications',
+      system: 'notifications',
+      social: 'notifications',
+      message: 'notifications',
+      account: 'notifications',
+      achievement: 'notifications',
+      reminder: 'notifications',
+      subscription: 'notifications',
+      support: 'notifications',
+      analytics: 'analytics',
+      team: 'notifications',
+      event: 'notifications',
+      custom: 'notifications',
     };
-    loadNotifications();
+    return map[type] ?? null;
   }, []);
 
-  const getTypeIcon = (type: NotificationType) => {
-    const icons = {
-      order: <ShoppingBag size={18} />,
-      review: <Star size={18} />,
-      product: <Package size={18} />,
-      payment: <CreditCard size={18} />,
-      shipping: <Truck size={18} />,
-      promotion: <Gift size={18} />,
-      system: <Info size={18} />,
-      social: <User size={18} />,
-      inventory: <TrendingUp size={18} />,
-      security: <AlertCircle size={18} />,
+  const getViewDetailsTarget = useCallback((notification: Notification): { page: PageSection; label: string; searchQuery: string } | null => {
+    const type = canonical(notification.type);
+
+    // Parse metadata — handle both object and JSON string cases
+    let m: Record<string, any> | undefined;
+    if (notification.metadata && typeof notification.metadata === 'object') {
+      m = notification.metadata as Record<string, any>;
+    } else if (typeof notification.metadata === 'string') {
+      try { m = JSON.parse(notification.metadata); } catch { m = undefined; }
+    }
+
+    // Build search query from metadata — this is what the target page will search for
+    const buildSearch = (): string => {
+      // Type-aware: prefer the field that matches the target page's search
+      const pickByType = (): string | null => {
+        switch (type) {
+          case 'order':      return m?.orderNumber ? String(m.orderNumber) : null;
+          case 'product':
+          case 'inventory':  return m?.productName ? String(m.productName) : m?.sku ? String(m.sku) : null;
+          case 'review':     return m?.customerName ? String(m.customerName) : null;
+          case 'customer':
+          case 'social':     return m?.customerName ? String(m.customerName) : m?.email ? String(m.email) : null;
+          case 'payment':    return m?.orderNumber ? String(m.orderNumber) : null;
+          case 'promotion':  return m?.code ? String(m.code) : m?.couponCode ? String(m.couponCode) : null;
+          case 'shipping':   return m?.name ? String(m.name) : null;
+          default:           return null;
+        }
+      };
+      const typed = pickByType();
+      if (typed) return typed;
+      // Fallback: any human-readable field
+      if (m?.orderNumber) return String(m.orderNumber);
+      if (m?.productName) return String(m.productName);
+      if (m?.customerName) return String(m.customerName);
+      if (m?.couponCode) return String(m.code ?? m.couponCode);
+      if (m?.sku) return String(m.sku);
+      if (m?.email) return String(m.email);
+      if (m?.phone) return String(m.phone);
+      if (m?.name) return String(m.name);
+      if (m?.code) return String(m.code);
+      // Fallback: try to extract from title (e.g. "New Order #SDF-20260826-BBE0FF")
+      const titleMatch = notification.title.match(/#([A-Z0-9-]+)/i);
+      if (titleMatch) return titleMatch[1];
+      // Last resort: ID fields (UUIDs — unlikely to match search, but try)
+      if (m?.orderId) return String(m.orderId);
+      if (m?.productId) return String(m.productId);
+      if (m?.customerId) return String(m.customerId);
+      if (m?.couponId) return String(m.couponId);
+      if (m?.id) return String(m.id);
+      return '';
     };
-    return icons[type] || <Bell size={18} />;
-  };
 
-  const getPriorityColor = (priority: NotificationPriority) => {
-    const colors = {
-      low: 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 border-blue-200 dark:border-blue-500/20',
-      medium: 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 border-amber-200 dark:border-amber-500/20',
-      high: 'bg-orange-50 text-orange-600 border-orange-200',
-      urgent: 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/20',
+    const search = buildSearch();
+
+    switch (type) {
+      case 'order':      return { page: 'orders',     label: 'Orders',     searchQuery: search };
+      case 'product':    return { page: 'products',   label: 'Products',   searchQuery: search };
+      case 'inventory':  return { page: 'products',   label: 'Products',   searchQuery: search };
+      case 'review':     return { page: 'reviews',    label: 'Reviews',    searchQuery: search };
+      case 'customer':
+      case 'social':     return { page: 'customers',  label: 'Customers',  searchQuery: search };
+      case 'payment':    return { page: 'orders',     label: 'Orders',     searchQuery: search };
+      case 'promotion':  return { page: 'coupons',    label: 'Coupons',    searchQuery: search };
+      case 'shipping':   return { page: 'shipping',   label: 'Shipping',   searchQuery: search };
+      case 'analytics':  return { page: 'analytics',  label: 'Analytics',  searchQuery: search };
+      case 'account':    return { page: 'settings',   label: 'Settings',   searchQuery: search };
+      // Everything else → Notifications page (system, security, message, achievement, reminder, subscription, support, team, event, custom)
+      default:           return { page: 'notifications', label: 'Notifications', searchQuery: search };
+    }
+  }, []);
+
+  // ── Fetch on mount & filter changes ────────────────────────────────
+  useEffect(() => {
+    const statusMap: Record<NotificationFilter, string> = {
+      all: 'all', unread: 'unread', read: 'read', bookmarked: 'bookmarked',
     };
-    return colors[priority];
-  };
+    fetchNotifications({
+      status: statusMap[filter],
+      type: selectedType === 'all' ? undefined : selectedType,
+      priority: selectedPriority === 'all' ? undefined : selectedPriority,
+      search: searchQuery || undefined,
+      limit: 20,
+      offset: 0,
+    });
+  }, [filter, selectedType, selectedPriority, searchQuery, fetchNotifications]);
 
-  const getTypeColor = (type: NotificationType) => {
-    const colors: Record<NotificationType, string> = {
-      order: 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 border-indigo-200 dark:border-indigo-500/20',
-      review: 'bg-yellow-50 dark:bg-yellow-500/10 text-yellow-600 border-yellow-200 dark:border-yellow-500/20',
-      product: 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 border-blue-200 dark:border-blue-500/20',
-      payment: 'bg-green-50 text-green-600 border-green-200',
-      shipping: 'bg-cyan-50 text-cyan-600 border-cyan-200',
-      promotion: 'bg-pink-50 text-pink-600 border-pink-200',
-      system: 'bg-gray-50 dark:bg-white/5 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-white/10',
-      social: 'bg-purple-50 dark:bg-purple-500/10 text-purple-600 border-purple-200 dark:border-purple-500/20',
-      inventory: 'bg-orange-50 text-orange-600 border-orange-200',
-      security: 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/20',
-    };
-    return colors[type] || 'bg-gray-50 dark:bg-white/5 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-white/10';
-  };
+  // ── Client-side sort: unread first, then by timestamp ──────────────
+  const filteredNotifications = useMemo(() => {
+    return [...notifications].sort((a, b) => {
+      if (a.read && !b.read) return 1;
+      if (!a.read && b.read) return -1;
+      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+    });
+  }, [notifications]);
 
-  const getTimeAgo = (date: Date) => {
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
+  // ── Handlers ───────────────────────────────────────────────────────
+  const handleRefresh = useCallback(() => {
+    fetchNotifications({
+      status: filter === 'all' ? 'all' : filter,
+      type: selectedType === 'all' ? undefined : selectedType,
+      priority: selectedPriority === 'all' ? undefined : selectedPriority,
+      search: searchQuery || undefined,
+      limit: 20,
+      offset: 0,
+    });
+  }, [filter, selectedType, selectedPriority, searchQuery, fetchNotifications]);
 
-    if (diffMins < 1) return 'just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
-
-  const handleMarkAsRead = async (id: string) => {
+  const handleMarkAsRead = useCallback(async (id: string) => {
     setActionLoading(id);
     try {
-      await new Promise(resolve => setTimeout(resolve, 400));
-      setNotifications(prev => prev.map(n => 
-        n.id === id ? { ...n, read: true } : n
-      ));
+      await markNotificationAsRead(id);
       addToast('success', 'Notification marked as read');
-    } catch (error) {
+    } catch {
       addToast('error', 'Failed to update notification');
     } finally {
       setActionLoading(null);
     }
-  };
+  }, [markNotificationAsRead, addToast]);
 
-  const handleMarkAllAsRead = async () => {
+  const handleMarkAllAsRead = useCallback(async () => {
     try {
-      await new Promise(resolve => setTimeout(resolve, 600));
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      await markNotificationsRead();
       addToast('success', 'All notifications marked as read');
-    } catch (error) {
+    } catch {
       addToast('error', 'Failed to mark all as read');
     }
-  };
+  }, [markNotificationsRead, addToast]);
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = useCallback(async (id: string) => {
     if (!confirm('Delete this notification?')) return;
     setActionLoading(id);
     try {
-      await new Promise(resolve => setTimeout(resolve, 400));
-      setNotifications(prev => prev.filter(n => n.id !== id));
+      await deleteNotification(id);
       addToast('success', 'Notification deleted');
-    } catch (error) {
+    } catch {
       addToast('error', 'Failed to delete notification');
     } finally {
       setActionLoading(null);
     }
-  };
+  }, [deleteNotification, addToast]);
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = useCallback(async () => {
     if (selectedIds.size === 0) return;
     if (!confirm(`Delete ${selectedIds.size} notifications?`)) return;
-    setNotifications(prev => prev.filter(n => !selectedIds.has(n.id)));
-    setSelectedIds(new Set());
-    setSelectMode(false);
-    addToast('success', `${selectedIds.size} notifications deleted`);
-  };
-
-  const toggleBookmark = (id: string) => {
-    setBookmarkedIds(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-        addToast('info', 'Removed from bookmarks');
-      } else {
-        newSet.add(id);
-        addToast('success', 'Bookmarked');
-      }
-      return newSet;
-    });
-  };
-
-  const toggleSelect = (id: string) => {
-    setSelectedIds(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-      } else {
-        newSet.add(id);
-      }
-      return newSet;
-    });
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedIds.size === filteredNotifications.length) {
+    try {
+      await bulkDeleteNotifications(Array.from(selectedIds));
       setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(filteredNotifications.map(n => n.id)));
+      setSelectMode(false);
+      addToast('success', `${selectedIds.size} notifications deleted`);
+    } catch {
+      addToast('error', 'Failed to delete notifications');
     }
-  };
+  }, [selectedIds, bulkDeleteNotifications, addToast]);
 
-  const getCategoryLabel = (type: NotificationType) => {
-    const labels: Record<NotificationType, string> = {
-      order: 'Orders',
-      review: 'Reviews',
-      product: 'Products',
-      payment: 'Payments',
-      shipping: 'Shipping',
-      promotion: 'Promotions',
-      system: 'System',
-      social: 'Social',
-      inventory: 'Inventory',
-      security: 'Security',
-    };
-    return labels[type] || type;
-  };
+  const handleBulkMarkRead = useCallback(async () => {
+    if (selectedIds.size === 0) return;
+    try {
+      await bulkMarkNotifications(Array.from(selectedIds), true);
+      setSelectedIds(new Set());
+      addToast('success', 'Selected notifications marked as read');
+    } catch {
+      addToast('error', 'Failed to mark notifications');
+    }
+  }, [selectedIds, bulkMarkNotifications, addToast]);
 
-  const filteredNotifications = notifications
-    .filter(n => {
-      if (filter === 'unread') return !n.read;
-      if (filter === 'read') return n.read;
-      if (filter === 'bookmarked') return bookmarkedIds.has(n.id);
-      return true;
-    })
-    .filter(n => {
-      if (selectedType === 'all') return true;
-      return n.type === selectedType;
-    })
-    .filter(n => {
-      if (selectedPriority === 'all') return true;
-      return n.priority === selectedPriority;
-    })
-    .filter(n => {
-      if (!searchQuery) return true;
-      const query = searchQuery.toLowerCase();
-      return n.title.toLowerCase().includes(query) || 
-             n.message.toLowerCase().includes(query);
-    })
-    .sort((a, b) => {
-      // Unread first, then by timestamp
-      if (a.read && !b.read) return 1;
-      if (!a.read && b.read) return -1;
-      return b.timestamp.getTime() - a.timestamp.getTime();
+  const handleToggleBookmark = useCallback(async (id: string) => {
+    try {
+      await toggleStarNotification(id);
+    } catch {
+      addToast('error', 'Failed to update bookmark');
+    }
+  }, [toggleStarNotification, addToast]);
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
     });
+  }, []);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const toggleSelectAll = useCallback(() => {
+    setSelectedIds((prev) => {
+      if (prev.size === filteredNotifications.length) return new Set();
+      return new Set(filteredNotifications.map((n) => n.id));
+    });
+  }, [filteredNotifications]);
 
-  // Loading state
-  if (isLoading) {
+  const handleLoadMore = useCallback(() => {
+    if (hasMore && !isLoading) loadMoreNotifications();
+  }, [hasMore, isLoading, loadMoreNotifications]);
+
+  const handleViewDetails = useCallback((notification: Notification) => {
+    // Mark as read if unread
+    if (!notification.read) {
+      markNotificationAsRead(notification.id).catch(() => {});
+    }
+    // Open detail modal
+    setDetailNotification(notification);
+  }, [markNotificationAsRead]);
+
+  const handleNavigateFromDetail = useCallback(() => {
+    if (!detailNotification) return;
+    const target = getViewDetailsTarget(detailNotification);
+    if (target) {
+      useStore.getState().setPendingNavigation({
+        page: target.page,
+        searchQuery: target.searchQuery || undefined,
+        action: 'open',
+      });
+      useStore.getState().setCurrentPage(target.page);
+    }
+    setDetailNotification(null);
+  }, [detailNotification, getViewDetailsTarget]);
+
+  // ── Loading skeleton ───────────────────────────────────────────────
+  if (isLoading && notifications.length === 0) {
     return <NotificationsLoadingPage />;
   }
 
+  // ── Render ─────────────────────────────────────────────────────────
   return (
     <div className="space-y-6 p-4 md:p-6 bg-gradient-to-br from-slate-50 via-white to-blue-50/30 dark:from-[var(--dashboard-bg-dark,#0f1411)] dark:via-[var(--dashboard-bg-dark,#0f1411)] dark:to-[var(--dashboard-bg-dark,#0f1411)] min-h-screen">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent flex items-center gap-2">
+          <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 dark:from-slate-100 dark:to-slate-300 bg-clip-text text-transparent flex items-center gap-2">
             <span className="bg-gradient-to-r from-blue-500 to-indigo-600 p-2 rounded-xl text-white relative">
               <Bell size={20} />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-50 dark:bg-red-500/100 rounded-full text-white text-[10px] font-bold flex items-center justify-center animate-pulse">
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-[10px] font-bold flex items-center justify-center animate-pulse">
                   {unreadCount}
                 </span>
               )}
@@ -400,21 +462,9 @@ const Notifications: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <RefreshButton 
-            onRefresh={() => {
-              setIsLoading(true);
-              setTimeout(() => {
-                setNotifications(generateMockNotifications());
-                setIsLoading(false);
-                addToast('info', 'Notifications refreshed');
-              }, 800);
-            }} 
-            isLoading={isLoading} 
-            size="md" 
-            variant="default" 
-          />
+          <RefreshButton onRefresh={handleRefresh} isLoading={isLoading} size="md" variant="default" />
           <button
-            onClick={() => setSelectMode(!selectMode)}
+            onClick={() => { setSelectMode(!selectMode); setSelectedIds(new Set()); }}
             className="px-4 py-2 rounded-xl text-sm font-medium border border-slate-200 dark:border-white/10 bg-white dark:bg-[var(--dashboard-card-dark,#161d2b)] text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition flex items-center gap-2"
           >
             <CheckCheck size={16} />
@@ -423,7 +473,7 @@ const Notifications: React.FC = () => {
           {unreadCount > 0 && (
             <button
               onClick={handleMarkAllAsRead}
-              className="px-4 py-2 rounded-xl text-sm font-medium bg-blue-50 dark:bg-blue-500/100 text-white hover:bg-blue-600 transition flex items-center gap-2 shadow-sm shadow-blue-200"
+              className="px-4 py-2 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 transition flex items-center gap-2 shadow-sm"
             >
               <Check size={16} />
               Mark all read
@@ -446,14 +496,14 @@ const Notifications: React.FC = () => {
             <span className="text-sm text-slate-500 dark:text-slate-400">Unread</span>
             <BellRing size={16} className="text-blue-500" />
           </div>
-          <p className="text-2xl font-bold text-blue-600 mt-1">{unreadCount}</p>
+          <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">{unreadCount}</p>
         </div>
         <div className="bg-white dark:bg-[var(--dashboard-card-dark,#161d2b)] rounded-xl p-4 border border-slate-200/60 dark:border-[var(--dashboard-card-border-dark,rgba(255,255,255,0.1))] shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-sm text-slate-500 dark:text-slate-400">Bookmarks</span>
             <Star size={16} className="text-amber-500" />
           </div>
-          <p className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-1">{bookmarkedIds.size}</p>
+          <p className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-1">{starredCount}</p>
         </div>
         <div className="bg-white dark:bg-[var(--dashboard-card-dark,#161d2b)] rounded-xl p-4 border border-slate-200/60 dark:border-[var(--dashboard-card-border-dark,rgba(255,255,255,0.1))] shadow-sm">
           <div className="flex items-center justify-between">
@@ -461,7 +511,7 @@ const Notifications: React.FC = () => {
             <AlertCircle size={16} className="text-red-500 dark:text-red-400" />
           </div>
           <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">
-            {notifications.filter(n => n.priority === 'urgent' || n.priority === 'high').length}
+            {notifications.filter((n) => n.priority === 'urgent' || n.priority === 'high').length}
           </p>
         </div>
       </div>
@@ -487,13 +537,13 @@ const Notifications: React.FC = () => {
                   onClick={() => setFilter(f)}
                   className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-all border ${
                     filter === f
-                      ? 'bg-blue-50 dark:bg-blue-500/100 text-white border-blue-500 shadow-sm shadow-blue-200'
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                       : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10'
                   }`}
                 >
                   {f.charAt(0).toUpperCase() + f.slice(1)}
                   {f === 'unread' && unreadCount > 0 && (
-                    <span className="ml-1 text-xs bg-blue-50 dark:bg-blue-500/100 text-white px-1.5 py-0.5 rounded-full">
+                    <span className="ml-1 text-xs bg-white/20 text-white px-1.5 py-0.5 rounded-full">
                       {unreadCount}
                     </span>
                   )}
@@ -506,8 +556,8 @@ const Notifications: React.FC = () => {
               className="px-3 py-1.5 rounded-xl text-sm border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-600 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             >
               <option value="all">All Types</option>
-              {['order', 'review', 'product', 'payment', 'shipping', 'promotion', 'system', 'social', 'inventory', 'security'].map((type) => (
-                <option key={type} value={type}>{getCategoryLabel(type as NotificationType)}</option>
+              {ALL_TYPES.map((type) => (
+                <option key={type} value={type}>{getCategoryLabel(type)}</option>
               ))}
             </select>
             <select
@@ -523,7 +573,7 @@ const Notifications: React.FC = () => {
             </select>
           </div>
         </div>
-        
+
         {/* Bulk actions */}
         {selectMode && (
           <div className="flex items-center gap-3 mt-3 pt-3 border-t border-slate-100 dark:border-white/10">
@@ -531,11 +581,10 @@ const Notifications: React.FC = () => {
               onClick={toggleSelectAll}
               className="text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 transition flex items-center gap-1"
             >
-              {selectedIds.size === filteredNotifications.length ? (
-                <>Deselect all</>
-              ) : (
-                <>Select all ({filteredNotifications.length})</>
-              )}
+              {selectedIds.size === filteredNotifications.length
+                ? <>Deselect all</>
+                : <>Select all ({filteredNotifications.length})</>
+              }
             </button>
             {selectedIds.size > 0 && (
               <>
@@ -543,19 +592,13 @@ const Notifications: React.FC = () => {
                 <span className="text-sm text-slate-600 dark:text-slate-300">{selectedIds.size} selected</span>
                 <button
                   onClick={handleBulkDelete}
-                  className="text-sm text-red-500 dark:text-red-400 hover:text-red-600 transition flex items-center gap-1"
+                  className="text-sm text-red-500 hover:text-red-600 transition flex items-center gap-1"
                 >
                   <Trash2 size={14} /> Delete
                 </button>
                 <button
-                  onClick={() => {
-                    setNotifications(prev => prev.map(n => 
-                      selectedIds.has(n.id) ? { ...n, read: true } : n
-                    ));
-                    setSelectedIds(new Set());
-                    addToast('success', 'Selected notifications marked as read');
-                  }}
-                  className="text-sm text-blue-500 hover:text-blue-600 transition flex items-center gap-1"
+                  onClick={handleBulkMarkRead}
+                  className="text-sm text-blue-600 hover:text-blue-700 transition flex items-center gap-1"
                 >
                   <Check size={14} /> Mark read
                 </button>
@@ -574,7 +617,7 @@ const Notifications: React.FC = () => {
             </div>
             <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-200">No notifications found</h3>
             <p className="text-sm text-slate-400 mt-1">
-              {searchQuery || filter !== 'all' ? 'Try adjusting your filters' : 'You\'re all caught up!'}
+              {searchQuery || filter !== 'all' ? 'Try adjusting your filters' : "You're all caught up!"}
             </p>
             {!searchQuery && filter === 'all' && (
               <button
@@ -583,14 +626,13 @@ const Notifications: React.FC = () => {
                     const res = await fetch('/api/admin/notifications/seed', { method: 'POST' });
                     const json = await res.json();
                     if (!json.success) throw new Error(json.error?.message || 'Seed failed');
-                    await useStore.getState().fetchNotifications();
-                    setNotifications(useStore.getState().notifications.slice(0, 20) as unknown as Notification[]);
+                    await fetchNotifications({ limit: 20, offset: 0 });
                     addToast('success', 'Sample notifications loaded');
                   } catch (e: any) {
                     addToast('error', e?.message || 'Failed to load sample notifications');
                   }
                 }}
-                className="mt-4 px-4 py-2 rounded-xl text-sm font-medium text-white bg-blue-50 dark:bg-blue-500/100 hover:bg-blue-600 transition-colors"
+                className="mt-4 px-4 py-2 rounded-xl text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
               >
                 Load Sample Notifications
               </button>
@@ -599,16 +641,17 @@ const Notifications: React.FC = () => {
         ) : (
           filteredNotifications.map((notification) => {
             const isExpanded = expandedId === notification.id;
-            const isBookmarked = bookmarkedIds.has(notification.id);
             const isSelected = selectedIds.has(notification.id);
-            const priorityColor = getPriorityColor(notification.priority);
-            const typeColor = getTypeColor(notification.type);
+            const priorityColor = getPriorityClasses(notification.priority);
+            const typeColor = getTypeClasses(notification.type);
 
             return (
               <div
                 key={notification.id}
                 className={`bg-white dark:bg-[var(--dashboard-card-dark,#161d2b)] rounded-2xl border shadow-sm transition-all hover:shadow-md ${
-                  !notification.read ? 'border-blue-200 dark:border-blue-500/20 bg-blue-50/30 dark:bg-blue-500/[0.08]' : 'border-slate-200/60 dark:border-[var(--dashboard-card-border-dark,rgba(255,255,255,0.1))]'
+                  !notification.read
+                    ? 'border-blue-200 dark:border-blue-500/20 bg-blue-50/50 dark:bg-blue-500/[0.08]'
+                    : 'border-slate-200/60 dark:border-[var(--dashboard-card-border-dark,rgba(255,255,255,0.1))]'
                 } ${isSelected ? 'ring-2 ring-blue-500 border-blue-500' : ''}`}
               >
                 <div className="p-4 flex items-start gap-3">
@@ -618,13 +661,13 @@ const Notifications: React.FC = () => {
                       className="mt-2 w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition"
                       style={{
                         borderColor: isSelected ? 'transparent' : '#94a3b8',
-                        background: isSelected ? '#3b82f6' : 'white'
+                        background: isSelected ? '#3b82f6' : 'white',
                       }}
                     >
                       {isSelected && <Check size={14} className="text-white" />}
                     </button>
                   )}
-                  
+
                   <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 border ${typeColor}`}>
                     {getTypeIcon(notification.type)}
                   </div>
@@ -640,9 +683,9 @@ const Notifications: React.FC = () => {
                             {notification.priority}
                           </Badge>
                           {!notification.read && (
-                            <span className="w-2 h-2 rounded-full bg-blue-50 dark:bg-blue-500/100 animate-pulse"></span>
+                            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
                           )}
-                          {isBookmarked && (
+                          {notification.starred && (
                             <Star size={14} className="text-amber-500 fill-amber-500" />
                           )}
                         </div>
@@ -668,8 +711,8 @@ const Notifications: React.FC = () => {
                         {!notification.read && (
                           <button
                             onClick={() => handleMarkAsRead(notification.id)}
-                            disabled={!!actionLoading}
-                            className="p-1.5 rounded-lg hover:bg-blue-100 transition text-blue-500 disabled:opacity-50"
+                            disabled={actionLoading === notification.id}
+                            className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-500/10 transition text-blue-500 disabled:opacity-50"
                             title="Mark as read"
                           >
                             {actionLoading === notification.id ? (
@@ -680,13 +723,15 @@ const Notifications: React.FC = () => {
                           </button>
                         )}
                         <button
-                          onClick={() => toggleBookmark(notification.id)}
+                          onClick={() => handleToggleBookmark(notification.id)}
                           className={`p-1.5 rounded-lg transition ${
-                            isBookmarked ? 'text-amber-500 hover:bg-amber-50' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10'
+                            notification.starred
+                              ? 'text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10'
+                              : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10'
                           }`}
-                          title={isBookmarked ? 'Remove bookmark' : 'Bookmark'}
+                          title={notification.starred ? 'Remove bookmark' : 'Bookmark'}
                         >
-                          <Star size={16} className={isBookmarked ? 'fill-amber-500' : ''} />
+                          <Star size={16} className={notification.starred ? 'fill-amber-500' : ''} />
                         </button>
                         <button
                           onClick={() => setExpandedId(isExpanded ? null : notification.id)}
@@ -696,8 +741,9 @@ const Notifications: React.FC = () => {
                         </button>
                         <button
                           onClick={() => handleDelete(notification.id)}
-                          disabled={!!actionLoading}
-                          className="p-1.5 rounded-lg hover:bg-red-50 transition text-slate-400 hover:text-red-500 disabled:opacity-50"
+                          disabled={actionLoading === notification.id}
+                          className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition text-slate-400 hover:text-red-500 disabled:opacity-50"
+                          title="Delete"
                         >
                           <X size={16} />
                         </button>
@@ -723,11 +769,12 @@ const Notifications: React.FC = () => {
                           </pre>
                         </div>
                       )}
-                      {notification.actionUrl && (
-                        <button className="mt-2 text-sm font-medium text-blue-500 hover:text-blue-600 transition flex items-center gap-1">
-                          View details <ChevronRight size={14} />
-                        </button>
-                      )}
+                      <button
+                        onClick={() => handleViewDetails(notification)}
+                        className="mt-2 text-sm font-medium text-blue-600 hover:text-blue-700 transition flex items-center gap-1"
+                      >
+                        View details <ChevronRight size={14} />
+                      </button>
                     </div>
                   </div>
                 )}
@@ -738,12 +785,25 @@ const Notifications: React.FC = () => {
       </div>
 
       {/* Load more */}
-      {filteredNotifications.length > 0 && (
+      {hasMore && filteredNotifications.length > 0 && (
         <div className="text-center pt-4">
-          <button className="px-6 py-2 rounded-xl text-sm font-medium border border-slate-200 dark:border-white/10 bg-white dark:bg-[var(--dashboard-card-dark,#161d2b)] text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition">
-            Load more
+          <button
+            onClick={handleLoadMore}
+            disabled={isLoading}
+            className="px-6 py-2 rounded-xl text-sm font-medium border border-slate-200 dark:border-white/10 bg-white dark:bg-[var(--dashboard-card-dark,#161d2b)] text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition disabled:opacity-50"
+          >
+            {isLoading ? 'Loading...' : 'Load more'}
           </button>
         </div>
+      )}
+
+      {/* Notification detail modal */}
+      {detailNotification && (
+        <NotificationDetailModal
+          notification={detailNotification}
+          onClose={() => setDetailNotification(null)}
+          onNavigate={handleNavigateFromDetail}
+        />
       )}
     </div>
   );
@@ -755,15 +815,15 @@ const NotificationsLoadingPage: React.FC = () => {
     <div className="space-y-6 p-4 md:p-6 bg-gradient-to-br from-slate-50 via-white to-blue-50/30 dark:from-[var(--dashboard-bg-dark,#0f1411)] dark:via-[var(--dashboard-bg-dark,#0f1411)] dark:to-[var(--dashboard-bg-dark,#0f1411)] min-h-screen">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-2">
-          <div className="w-12 h-12 rounded-xl bg-slate-200 animate-pulse"></div>
+          <div className="w-12 h-12 rounded-xl bg-slate-200 dark:bg-white/10 animate-pulse" />
           <div>
-            <div className="h-8 w-48 bg-slate-200 rounded-lg animate-pulse"></div>
-            <div className="h-4 w-32 bg-slate-200 rounded-lg mt-1 animate-pulse"></div>
+            <div className="h-8 w-48 bg-slate-200 dark:bg-white/10 rounded-lg animate-pulse" />
+            <div className="h-4 w-32 bg-slate-200 dark:bg-white/10 rounded-lg mt-1 animate-pulse" />
           </div>
         </div>
         <div className="flex gap-3">
-          <div className="h-10 w-28 bg-slate-200 rounded-full animate-pulse"></div>
-          <div className="h-10 w-32 bg-slate-200 rounded-full animate-pulse"></div>
+          <div className="h-10 w-28 bg-slate-200 dark:bg-white/10 rounded-full animate-pulse" />
+          <div className="h-10 w-32 bg-slate-200 dark:bg-white/10 rounded-full animate-pulse" />
         </div>
       </div>
 
@@ -771,21 +831,21 @@ const NotificationsLoadingPage: React.FC = () => {
         {[1, 2, 3, 4].map((i) => (
           <div key={i} className="bg-white dark:bg-[var(--dashboard-card-dark,#161d2b)] rounded-xl p-4 border border-slate-200/60 dark:border-[var(--dashboard-card-border-dark,rgba(255,255,255,0.1))]">
             <div className="flex items-center justify-between">
-              <div className="h-4 w-12 bg-slate-200 rounded animate-pulse"></div>
-              <div className="h-4 w-4 bg-slate-200 rounded animate-pulse"></div>
+              <div className="h-4 w-12 bg-slate-200 dark:bg-white/10 rounded animate-pulse" />
+              <div className="h-4 w-4 bg-slate-200 dark:bg-white/10 rounded animate-pulse" />
             </div>
-            <div className="h-8 w-16 bg-slate-200 rounded mt-1 animate-pulse"></div>
+            <div className="h-8 w-16 bg-slate-200 dark:bg-white/10 rounded mt-1 animate-pulse" />
           </div>
         ))}
       </div>
 
       <div className="bg-white dark:bg-[var(--dashboard-card-dark,#161d2b)] rounded-2xl p-4 border border-slate-200/60 dark:border-[var(--dashboard-card-border-dark,rgba(255,255,255,0.1))]">
         <div className="flex flex-col lg:flex-row gap-3">
-          <div className="flex-1 h-10 bg-slate-200 rounded-xl animate-pulse"></div>
+          <div className="flex-1 h-10 bg-slate-200 dark:bg-white/10 rounded-xl animate-pulse" />
           <div className="flex gap-2">
-            <div className="h-10 w-20 bg-slate-200 rounded-xl animate-pulse"></div>
-            <div className="h-10 w-24 bg-slate-200 rounded-xl animate-pulse"></div>
-            <div className="h-10 w-24 bg-slate-200 rounded-xl animate-pulse"></div>
+            <div className="h-10 w-20 bg-slate-200 dark:bg-white/10 rounded-xl animate-pulse" />
+            <div className="h-10 w-24 bg-slate-200 dark:bg-white/10 rounded-xl animate-pulse" />
+            <div className="h-10 w-24 bg-slate-200 dark:bg-white/10 rounded-xl animate-pulse" />
           </div>
         </div>
       </div>
@@ -794,23 +854,23 @@ const NotificationsLoadingPage: React.FC = () => {
         {[1, 2, 3, 4, 5].map((i) => (
           <div key={i} className="bg-white dark:bg-[var(--dashboard-card-dark,#161d2b)] rounded-2xl border border-slate-200/60 dark:border-[var(--dashboard-card-border-dark,rgba(255,255,255,0.1))] p-4">
             <div className="flex items-start gap-3">
-              <div className="w-11 h-11 rounded-xl bg-slate-200 animate-pulse"></div>
+              <div className="w-11 h-11 rounded-xl bg-slate-200 dark:bg-white/10 animate-pulse" />
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <div className="h-5 w-40 bg-slate-200 rounded animate-pulse"></div>
-                  <div className="h-5 w-16 bg-slate-200 rounded-full animate-pulse"></div>
+                  <div className="h-5 w-40 bg-slate-200 dark:bg-white/10 rounded animate-pulse" />
+                  <div className="h-5 w-16 bg-slate-200 dark:bg-white/10 rounded-full animate-pulse" />
                 </div>
-                <div className="h-4 w-full bg-slate-200 rounded mt-1 animate-pulse"></div>
-                <div className="h-4 w-48 bg-slate-200 rounded mt-0.5 animate-pulse"></div>
+                <div className="h-4 w-full bg-slate-200 dark:bg-white/10 rounded mt-1 animate-pulse" />
+                <div className="h-4 w-48 bg-slate-200 dark:bg-white/10 rounded mt-0.5 animate-pulse" />
                 <div className="flex items-center gap-3 mt-1.5">
-                  <div className="h-3 w-16 bg-slate-200 rounded animate-pulse"></div>
-                  <div className="h-5 w-16 bg-slate-200 rounded-full animate-pulse"></div>
+                  <div className="h-3 w-16 bg-slate-200 dark:bg-white/10 rounded animate-pulse" />
+                  <div className="h-5 w-16 bg-slate-200 dark:bg-white/10 rounded-full animate-pulse" />
                 </div>
               </div>
               <div className="flex gap-1">
-                <div className="w-8 h-8 bg-slate-200 rounded-lg animate-pulse"></div>
-                <div className="w-8 h-8 bg-slate-200 rounded-lg animate-pulse"></div>
-                <div className="w-8 h-8 bg-slate-200 rounded-lg animate-pulse"></div>
+                <div className="w-8 h-8 bg-slate-200 dark:bg-white/10 rounded-lg animate-pulse" />
+                <div className="w-8 h-8 bg-slate-200 dark:bg-white/10 rounded-lg animate-pulse" />
+                <div className="w-8 h-8 bg-slate-200 dark:bg-white/10 rounded-lg animate-pulse" />
               </div>
             </div>
           </div>

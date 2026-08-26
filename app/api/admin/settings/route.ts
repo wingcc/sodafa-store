@@ -6,6 +6,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin';
 import { SettingsRepository } from '@/lib/db';
+import { notificationService } from '@/lib/services/notificationService';
 import { successResponse, internalServerError } from '@/lib/api';
 
 export async function GET() {
@@ -37,6 +38,19 @@ export async function PUT(request: Request) {
 
     const { data, error } = await repo.upsert(body);
     if (error) throw error;
+
+    // Send notification
+    try {
+      await notificationService.create({
+        type: 'system',
+        title: 'Store settings updated',
+        message: 'Store settings have been updated.',
+        priority: 'low',
+      });
+    } catch (e) {
+      console.error('Failed to send settings notification:', e);
+    }
+
     return successResponse(data);
   } catch (err: any) {
     console.error('PUT /api/admin/settings error:', err);

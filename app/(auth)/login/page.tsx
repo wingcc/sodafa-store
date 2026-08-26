@@ -72,6 +72,18 @@ function LoginContent() {
       if (signInError) {
         console.error('❌ Sign in error:', signInError)
 
+        // Send security notification for failed login
+        fetch('/api/notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'security',
+            title: 'Failed login attempt',
+            message: `Failed login attempt for ${email.trim()}: ${signInError.message}`,
+            priority: 'urgent',
+          }),
+        }).catch(() => {})
+
         const errorMessages: Record<string, string> = {
           'Invalid login credentials': 'Invalid email or password. Please try again.',
           'Email not confirmed': 'Please confirm your email address before signing in.',
@@ -86,6 +98,19 @@ function LoginContent() {
       }
 
       console.log('✅ Login successful', data)
+
+      // Send security notification for successful login
+      fetch('/api/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'security',
+          title: 'Successful login',
+          message: `User ${email.trim()} signed in successfully.`,
+          priority: 'medium',
+        }),
+      }).catch(() => {})
+
       router.push(returnUrl)
       router.refresh()
     } catch (err) {

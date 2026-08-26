@@ -1,0 +1,219 @@
+/* OrderSteps.module.css — Animated order progress stepper */
+
+.stepper {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  position: relative;
+  padding: 16px 0 8px;
+}
+
+/* ── Connecting line track ── */
+.lineTrack {
+  position: absolute;
+  top: 32px;
+  left: 40px;
+  right: 40px;
+  height: 3px;
+  background: #e5e7eb;
+  border-radius: 2px;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.lineFill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #0b2e22, #16BF78);
+  border-radius: 2px;
+  transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Step item ── */
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Step circle ── */
+.circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 800;
+  position: relative;
+  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  flex-shrink: 0;
+}
+
+/* Completed state */
+.stepDone .circle {
+  background: #0b2e22;
+  border: 2.5px solid #0b2e22;
+  color: #f7ebd0;
+  box-shadow: 0 2px 12px rgba(11, 46, 34, 0.3);
+}
+
+/* Active/current state */
+.stepActive .circle {
+  background: #fff;
+  border: 2.5px solid #0b2e22;
+  color: #0b2e22;
+  box-shadow: 0 2px 16px rgba(11, 46, 34, 0.2);
+}
+
+/* Pending state */
+.stepPending .circle {
+  background: #f5f5f4;
+  border: 2px solid #d6d3d1;
+  color: #a8a29e;
+}
+
+/* ── Pulse ring on active step ── */
+.pulseRing {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid #16BF78;
+  opacity: 0;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.stepPending .pulseRing {
+  display: none;
+}
+
+/* ── Checkmark icon inside circle ── */
+.checkIcon {
+  opacity: 0;
+  transform: scale(0);
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.stepDone .checkIcon {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.stepDone .stepNumber {
+  display: none;
+}
+
+/* ── Step label ── */
+.label {
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.3;
+  transition: color 0.4s ease;
+  max-width: 80px;
+}
+
+.stepDone .label {
+  color: #0b2e22;
+}
+
+.stepActive .label {
+  color: #0b2e22;
+  font-weight: 800;
+}
+
+.stepPending .label {
+  color: #a8a29e;
+}
+
+/* ── Sub-label (time estimate) ── */
+.subLabel {
+  font-size: 10px;
+  font-weight: 500;
+  text-align: center;
+  color: #a8a29e;
+  transition: color 0.4s ease;
+}
+
+.stepDone .subLabel {
+  color: #16BF78;
+}
+
+.stepActive .subLabel {
+  color: #cda552;
+  font-weight: 600;
+}
+
+/* ── Entrance animations ── */
+.step {
+  opacity: 0;
+  transform: translateY(12px);
+  animation: stepIn 0.5s ease forwards;
+}
+
+.step:nth-child(1) { animation-delay: 0.1s; }
+.step:nth-child(2) { animation-delay: 0.25s; }
+.step:nth-child(3) { animation-delay: 0.4s; }
+.step:nth-child(4) { animation-delay: 0.55s; }
+
+/* ── Checkmark draw animation ── */
+.stepDone .checkSvg {
+  stroke-dasharray: 20;
+  stroke-dashoffset: 20;
+  animation: drawCheck 0.5s ease 0.3s forwards;
+}
+
+/* ═══════════════════════════════════════════
+   KEYFRAMES
+   ═══════════════════════════════════════════ */
+
+@keyframes stepIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.15);
+  }
+}
+
+@keyframes drawCheck {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* ── Mobile responsive ── */
+@media (max-width: 480px) {
+  .circle {
+    width: 34px;
+    height: 34px;
+    font-size: 12px;
+  }
+  .label {
+    font-size: 10px;
+    max-width: 64px;
+  }
+  .subLabel {
+    font-size: 9px;
+  }
+  .lineTrack {
+    top: 28px;
+    left: 32px;
+    right: 32px;
+  }
+}

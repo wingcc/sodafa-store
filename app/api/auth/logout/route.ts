@@ -2,6 +2,8 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createServerClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { notificationService } from '@/lib/services/notificationService'
 
 export async function POST() {
   try {
@@ -34,6 +36,17 @@ export async function POST() {
     // (covers cases where cookies are httpOnly and not visible)
     response.cookies.set('sb-access-token', '', { path: '/', maxAge: 0 })
     response.cookies.set('sb-refresh-token', '', { path: '/', maxAge: 0 })
+
+    // Send security notification
+    try {
+      const admin = createAdminClient()
+      await notificationService.create({
+        type: 'security',
+        title: 'User signed out',
+        message: 'A user has signed out of the dashboard.',
+        priority: 'low',
+      })
+    } catch {}
 
     return response
   } catch (error) {

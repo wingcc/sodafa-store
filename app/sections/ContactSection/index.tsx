@@ -20,6 +20,19 @@ export const ContactSection = ({ site }: ContactSectionProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Send notification to admin
+    fetch('/api/notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'message',
+        title: 'New contact message',
+        message: `From ${formData.name} (${formData.phone}${formData.email ? ', ' + formData.email : ''}): ${formData.message.slice(0, 100)}${formData.message.length > 100 ? '...' : ''}`,
+        priority: 'medium',
+      }),
+    }).catch(() => {});
+
     setSubmitted(true);
     setTimeout(() => setSubmitted(false), 3000);
     setFormData({ name: "", phone: "", email: "", message: "" });

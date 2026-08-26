@@ -48,13 +48,13 @@ export const TagInput: React.FC<TagInputProps> = ({
 
   return (
     <div
-      className={`flex flex-wrap items-center gap-2 p-2 border border-gray-300 dark:border-gray-700 rounded-lg min-h-[42px] focus-within:ring-2 focus-within:ring-purple-500 focus-within:border-transparent ${className}`}
+      className={`flex flex-wrap items-center gap-2 p-2 border border-gray-300 rounded-lg min-h-[42px] focus-within:ring-2 focus-within:ring-[var(--color-darkGreen)] focus-within:border-transparent ${className}`}
       onClick={() => inputRef.current?.focus()}
     >
       {tags.map((tag) => (
         <span
           key={tag}
-          className="flex items-center gap-1 px-2.5 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full text-sm"
+          className="flex items-center gap-1 px-2.5 py-1 bg-[var(--color-darkGreen)]/10 text-[var(--color-darkGreen)] rounded-full text-sm"
         >
           {tag}
           <button

@@ -89,6 +89,32 @@ export async function PUT(
       }
     }
 
+    // Notify on price or status changes
+    if (data) {
+      try {
+        if (body.regularPrice !== undefined && currentProduct && body.regularPrice !== currentProduct.regular_price) {
+          await notificationService.create({
+            type: 'product',
+            title: 'Product price changed',
+            message: `"${data.name}" price updated to ${body.regularPrice} MAD.`,
+            priority: 'low',
+            metadata: { productId: data.id, productName: data.name, sku: data.sku },
+          });
+        }
+        if (body.status !== undefined && currentProduct && body.status !== currentProduct.status) {
+          await notificationService.create({
+            type: 'product',
+            title: 'Product status changed',
+            message: `"${data.name}" status changed to ${body.status}.`,
+            priority: 'low',
+            metadata: { productId: data.id, productName: data.name, sku: data.sku },
+          });
+        }
+      } catch (e) {
+        console.error('Failed to send product change notification:', e);
+      }
+    }
+
     return successResponse(data);
   } catch (err: any) {
     console.error('PUT /api/products/[id] error:', err);
@@ -107,6 +133,20 @@ export async function DELETE(
 
     const { error } = await repo.delete(id);
     if (error) throw error;
+
+    // Send notification
+    try {
+      await notificationService.create({
+        type: 'product',
+        title: 'Product deleted',
+        message: `A product has been deleted.`,
+        priority: 'low',
+        metadata: { productId: id },
+      });
+    } catch (e) {
+      console.error('Failed to send product delete notification:', e);
+    }
+
     return successResponse({ deleted: true });
   } catch (err: any) {
     console.error('DELETE /api/products/[id] error:', err);

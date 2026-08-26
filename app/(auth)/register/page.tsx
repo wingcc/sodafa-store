@@ -116,6 +116,18 @@ function RegisterContent() {
         return
       }
 
+      // Send notification for new registration
+      fetch('/api/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'customer',
+          title: 'New customer registered',
+          message: `${name.trim()} (${email.trim()}) has created a new account.`,
+          priority: 'medium',
+        }),
+      }).catch(() => {})
+
       router.push(returnUrl)
       router.refresh()
     } catch (err) {

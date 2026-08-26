@@ -40,7 +40,7 @@ const ToastSettings: React.FC = () => {
           <select
             value={settings.position}
             onChange={(e) => updateSettings({ position: e.target.value as any })}
-            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-300"
+            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-darkGreen)]/20 focus:border-[var(--color-darkGreen)]/50 transition-all"
           >
             {POSITION_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -62,7 +62,7 @@ const ToastSettings: React.FC = () => {
             step="500"
             value={settings.duration}
             onChange={(e) => updateSettings({ duration: Number(e.target.value) })}
-            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[var(--color-darkGreen)]"
           />
           <div className="flex justify-between text-xs text-gray-400 mt-1">
             <span>1s</span>
@@ -79,8 +79,8 @@ const ToastSettings: React.FC = () => {
           </div>
           <button
             onClick={() => updateSettings({ autoDismiss: !settings.autoDismiss })}
-            className={`w-11 h-6 rounded-full transition-colors ${
-              settings.autoDismiss ? 'bg-purple-500' : 'bg-gray-200'
+            className={`relative w-11 h-6 rounded-full transition-colors ${
+              settings.autoDismiss ? 'bg-[var(--color-darkGreen)]' : 'bg-gray-200'
             }`}
           >
             <div
@@ -99,8 +99,8 @@ const ToastSettings: React.FC = () => {
           </div>
           <button
             onClick={() => updateSettings({ showProgress: !settings.showProgress })}
-            className={`w-11 h-6 rounded-full transition-colors ${
-              settings.showProgress ? 'bg-purple-500' : 'bg-gray-200'
+            className={`relative w-11 h-6 rounded-full transition-colors ${
+              settings.showProgress ? 'bg-[var(--color-darkGreen)]' : 'bg-gray-200'
             }`}
           >
             <div
@@ -123,7 +123,7 @@ const ToastSettings: React.FC = () => {
             step="1"
             value={settings.maxToasts}
             onChange={(e) => updateSettings({ maxToasts: Number(e.target.value) })}
-            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[var(--color-darkGreen)]"
           />
           <div className="flex justify-between text-xs text-gray-400 mt-1">
             <span>1</span>

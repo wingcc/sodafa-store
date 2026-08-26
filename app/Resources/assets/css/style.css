@@ -550,7 +550,8 @@ animation: float 5s ease-in-out infinite
   .website-root .spin-badge {
 position: absolute;
 bottom: -6%;
-right: 10%;
+left: 50%;
+transform: translateX(-50%);
 width: 128px;
 height: 128px;
 display: grid;

@@ -12,7 +12,7 @@ export interface PricedItem {
 }
 
 export interface CouponDef {
-  discount_type: 'percentage' | 'fixed';
+  discount_type: 'percentage' | 'fixed' | 'free_shipping';
   discount_value: number;
   minimum_order: number;
   maximum_discount: number | null;
@@ -38,6 +38,8 @@ export const calcSubtotal = (items: PricedItem[]): number =>
 export const calcDiscount = (subtotal: number, coupon: CouponDef | null | undefined): number => {
   if (!coupon) return 0;
   if (subtotal < (coupon.minimum_order ?? 0)) return 0;
+
+  if (coupon.discount_type === 'free_shipping') return 0;
 
   let discount =
     coupon.discount_type === 'percentage'

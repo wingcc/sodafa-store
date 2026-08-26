@@ -3,9 +3,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import OrderConfirmButton from './OrderConfirmButton';
 import { useUI } from '../../../contexts/UIContext';
 import { useLanguage } from '../../../contexts/LanguageContext';
-import { useToast } from '@/lib/toast';
+import { useStoreToast } from '../../components/StoreToastContext';
 import {
   calcSubtotal,
   calcFinalTotal,
@@ -33,6 +34,8 @@ import {
   X,
   AlertCircle,
   Loader,
+  Home,
+  LayoutGrid,
 } from 'lucide-react';
 import { WHATSAPP_LINK } from '../../../constants';
 
@@ -118,7 +121,7 @@ export default function CheckoutClient() {
   const { cartItems, cartTotal, clearCart } = useUI();
   const { locale } = useLanguage();
   const isAr = locale === 'ar';
-  const { addToast } = useToast();
+  const { addToast } = useStoreToast();
 
   const [form, setForm] = useState<FormData>(INITIAL_FORM);
   const [errors, setErrors] = useState<Partial<FormData>>({});
@@ -263,6 +266,8 @@ export default function CheckoutClient() {
           code: form.couponCode.trim(),
           subtotal,
           productIds: cartItems.map((i) => String(i.id)),
+          customerPhone: form.phone.trim() || undefined,
+          customerEmail: form.email.trim() || undefined,
         }),
       });
       const json = await res.json();
@@ -285,9 +290,14 @@ export default function CheckoutClient() {
   };
 
   // ─── Confirm Order ───────────────────────────────────────────────
+  const ANIMATION_DURATION = 8000; // must match OrderConfirmButton animation length
+
   const handleConfirmOrder = async () => {
     if (!validate()) return;
     setPlacing(true);
+
+    // Wait for truck animation to finish first
+    await new Promise((resolve) => setTimeout(resolve, ANIMATION_DURATION));
 
     // Map cart items to CheckoutPayload items
     const items = cartItems.map((item) => ({
@@ -361,15 +371,31 @@ export default function CheckoutClient() {
       <main className="pt-8 pb-20">
         {/* Page Header & Breadcrumb */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-          <div className="flex items-center gap-2 text-xs sm:text-sm text-stone-500 mb-3">
-            <Link href="/store" className="hover:text-emerald-800 transition-colors">
-              {isAr ? 'المتجر' : 'Store'}
-            </Link>
-            {isAr ? <ChevronLeft className="w-3.5 h-3.5 text-stone-400" /> : <ChevronRight className="w-3.5 h-3.5 text-stone-400" />}
-            <span className="text-stone-900 font-bold">
-              {isAr ? 'إتمام الطلب (الدفع عند الاستلام)' : 'Checkout (Cash on Delivery)'}
-            </span>
-          </div>
+          <ol className="flex items-center whitespace-nowrap mb-3">
+            <li className="inline-flex items-center">
+              <Link
+                href="/"
+                className="flex items-center text-sm text-stone-500 hover:text-emerald-800 transition-colors focus:outline-none focus:text-emerald-800"
+              >
+                <Home className="shrink-0 me-2 w-4 h-4" />
+                {isAr ? 'الرئيسية' : 'Home'}
+              </Link>
+              <ChevronRight className="shrink-0 mx-2 w-4 h-4 text-stone-400" />
+            </li>
+            <li className="inline-flex items-center">
+              <Link
+                href="/store"
+                className="flex items-center text-sm text-stone-500 hover:text-emerald-800 transition-colors focus:outline-none focus:text-emerald-800"
+              >
+                <LayoutGrid className="shrink-0 me-2 w-4 h-4" />
+                {isAr ? 'المتجر' : 'Store'}
+              </Link>
+              <ChevronRight className="shrink-0 mx-2 w-4 h-4 text-stone-400" />
+            </li>
+            <li className="inline-flex items-center text-sm font-semibold text-stone-900 truncate max-w-[200px]" aria-current="page">
+              {isAr ? 'إتمام الطلب' : 'Checkout'}
+            </li>
+          </ol>
 
           <h1 className="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight" style={{ color: '#0b2e22' }}>
             {isAr ? 'تأكيد طلبكِ والدفع عند الاستلام' : 'Complete Your Order — Cash on Delivery'}
@@ -795,36 +821,11 @@ export default function CheckoutClient() {
                 </div>
 
                 {/* Confirm Order CTA Button */}
-                <button
+                <OrderConfirmButton
                   onClick={handleConfirmOrder}
                   disabled={placing || !selectedMethod || hasCityError}
-                  className="w-full py-4 px-6 rounded-2xl font-extrabold text-base text-white flex items-center justify-center gap-2 shadow-xl transition-all duration-300 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{
-                    background: 'linear-gradient(135deg, #061c16 0%, #0b2e22 50%, #0d3428 100%)',
-                    boxShadow: '0 6px 20px rgba(6, 28, 22, 0.4)',
-                    border: '1px solid rgba(205, 165, 82, 0.4)',
-                    color: '#f7ebd0',
-                  }}
-                >
-                  {placing ? (
-                    <span className="flex items-center gap-2">
-                      <svg className="animate-spin w-5 h-5 text-amber-300" viewBox="0 0 24 24" fill="none">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                      </svg>
-                      <span>{isAr ? 'جاري تأكيد الطلب...' : 'Placing Order...'}</span>
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-2">
-                      <CheckCircle2 className="w-5 h-5 text-amber-300" />
-                      <span>
-                        {isAr
-                          ? `تأكيد الطلب الآن — ${grandTotal.toFixed(2)} د.م`
-                          : `Confirm Order — ${grandTotal.toFixed(2)} MAD`}
-                      </span>
-                    </span>
-                  )}
-                </button>
+                  total={`${grandTotal.toFixed(2)} ${isAr ? 'د.م' : 'MAD'}`}
+                />
 
                 {/* Direct WhatsApp Quick Order Backup */}
                 <a

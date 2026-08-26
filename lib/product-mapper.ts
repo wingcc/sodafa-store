@@ -47,6 +47,9 @@ export function mapProductRow(row: SupabaseRow, categoryName?: string): Product 
   const ads = row.ADS !== undefined ? Boolean(row.ADS) : Boolean(row.ads);
   const showInStore = row.ShowInStor !== undefined ? Boolean(row.ShowInStor) : Boolean(row.showinstor ?? row.showInStore);
 
+  const isOffer = row.IsOffer !== undefined ? Boolean(row.IsOffer) : Boolean(row.isOffer);
+  const offerTime = row.OfferTime ? String(row.OfferTime) : row.offerTime ? String(row.offerTime) : undefined;
+
   return {
     id: String(row.id ?? ''),
     name: String(row.name ?? ''),
@@ -60,6 +63,7 @@ export function mapProductRow(row: SupabaseRow, categoryName?: string): Product 
     ShowInStor: showInStore,
     showInStore,
     inStock: stock > 0,
+    stock,
     tags,
     brand: row.brand ? String(row.brand) : undefined,
     category: categoryName ?? (row.subcategory ? String(row.subcategory) : undefined),
@@ -72,5 +76,7 @@ export function mapProductRow(row: SupabaseRow, categoryName?: string): Product 
     bannerText: String(row.name ?? ''),
     highlights: tags.length > 0 ? tags : undefined,
     images: images.map((src) => ({ src, alt: String(row.name ?? '') })),
+    isOffer,
+    offerTime,
   };
 }

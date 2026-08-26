@@ -7,6 +7,7 @@
 import { createServerClient } from '@/lib/supabase';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { ShippingRepository } from '@/lib/db';
+import { notificationService } from '@/lib/services/notificationService';
 import { successResponse, internalServerError, badRequest } from '@/lib/api';
 
 interface CreateZoneBody {
@@ -99,6 +100,18 @@ export async function POST(request: Request) {
           return { ...city, methods: methods ?? [] };
         })
       );
+      // Send notification
+      try {
+        await notificationService.create({
+          type: 'shipping',
+          title: 'New shipping zone created',
+          message: `Shipping zone "${body.name}" has been created.`,
+          priority: 'low',
+          metadata: { zoneId: zone?.id, name: body.name },
+        });
+      } catch (e) {
+        console.error('Failed to send shipping notification:', e);
+      }
       return successResponse({ ...zone, cities: citiesWithMethods }, 201);
     }
 

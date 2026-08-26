@@ -113,6 +113,19 @@ const Reviews: React.FC = () => {
   });
   const [reviewFormLoading, setReviewFormLoading] = useState(false);
 
+  // ── Auto-select review from notification navigation ────────────────
+  const pendingNavigation = useStore((s) => s.pendingNavigation);
+  const clearPendingNavigation = useStore((s) => s.clearPendingNavigation);
+
+  useEffect(() => {
+    if (pendingNavigation?.page === 'reviews') {
+      if (pendingNavigation.searchQuery) {
+        setSearchQuery(pendingNavigation.searchQuery);
+      }
+      clearPendingNavigation();
+    }
+  }, [pendingNavigation, clearPendingNavigation]);
+
   // Fetch products
   useEffect(() => {
     fetchProducts();
@@ -582,11 +595,11 @@ const Reviews: React.FC = () => {
             <div className="p-3 border-t border-slate-100 dark:border-white/10 bg-slate-50/50 flex items-center justify-between">
               <button
                 onClick={() => setSelectedProductId(null)}
-                className={`text-xs font-medium px-3 py-1.5 rounded-full border transition ${
-                  !selectedProductId
-                    ? 'bg-blue-50 dark:bg-blue-500/100 text-white border-blue-500'
-                    : 'bg-white dark:bg-[var(--dashboard-card-dark,#161d2b)] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5'
-                }`}
+                  className={`text-xs font-medium px-3 py-1.5 rounded-full border transition ${
+                    !selectedProductId
+                      ? 'bg-blue-500 dark:bg-blue-500/100 text-white border-blue-500'
+                      : 'bg-white dark:bg-[var(--dashboard-card-dark,#161d2b)] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5'
+                  }`}
               >
                 All products
               </button>
@@ -704,8 +717,8 @@ const Reviews: React.FC = () => {
                   onClick={() => setFilter(f)}
                   className={`px-4 py-2 rounded-xl text-sm font-medium transition-all border ${
                     filter === f
-                      ? 'bg-blue-50 dark:bg-blue-500/100 text-white border-blue-500 shadow-sm shadow-blue-200'
-                      : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10'
+                      ? 'bg-blue-500 dark:bg-blue-500/100 text-white border-blue-500 shadow-sm shadow-blue-200'
+                      : 'bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10'
                   }`}
                 >
                   {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -721,7 +734,7 @@ const Reviews: React.FC = () => {
               {selectedProductId && (
                 <button
                   onClick={openAddReviewModal}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-blue-50 dark:bg-blue-500/100 hover:bg-blue-600 border border-blue-500 shadow-sm shadow-blue-200 transition-all"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-blue-500 dark:bg-blue-500/100 hover:bg-blue-600 border border-blue-500 shadow-sm shadow-blue-200 transition-all"
                 >
                   <Plus size={14} />
                   Add Review
@@ -817,14 +830,14 @@ const Reviews: React.FC = () => {
                             <div className="flex gap-2 justify-end">
                               <button
                                 onClick={() => setExpandedReplyId(null)}
-                                className="px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-white/10 bg-white dark:bg-[var(--dashboard-card-dark,#161d2b)] text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition"
+                                className="px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[var(--dashboard-card-dark,#161d2b)] text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition"
                               >
                                 Cancel
                               </button>
                               <button
                                 onClick={() => handleReply(review)}
                                 disabled={!!actionLoading}
-                                className="px-3 py-1.5 rounded-lg text-xs font-medium text-white bg-blue-50 dark:bg-blue-500/100 hover:bg-blue-600 transition flex items-center gap-1 disabled:opacity-50"
+                                className="px-3 py-1.5 rounded-lg text-xs font-medium text-white bg-blue-500 dark:bg-blue-500/100 hover:bg-blue-600 transition flex items-center gap-1 disabled:opacity-50"
                               >
                                 {actionLoading === review.id ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
                                 Save reply {isPending ? '& approve' : ''}
@@ -841,7 +854,7 @@ const Reviews: React.FC = () => {
                           <button
                             onClick={() => handleModerate(review.id, 'approved', draft || review.adminReply || undefined)}
                             disabled={!!actionLoading}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white bg-emerald-50 dark:bg-emerald-500/100 hover:bg-emerald-600 transition disabled:opacity-50"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white bg-emerald-500 dark:bg-emerald-500/100 hover:bg-emerald-600 transition disabled:opacity-50"
                           >
                             {actionLoading === review.id ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
                             Approve
@@ -849,7 +862,7 @@ const Reviews: React.FC = () => {
                           <button
                             onClick={() => handleModerate(review.id, 'rejected', draft || review.adminReply || undefined)}
                             disabled={!!actionLoading}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white bg-red-50 dark:bg-red-500/100 hover:bg-red-600 transition disabled:opacity-50"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white bg-red-500 dark:bg-red-500/100 hover:bg-red-600 transition disabled:opacity-50"
                           >
                             {actionLoading === review.id ? <Loader2 size={12} className="animate-spin" /> : <X size={12} />}
                             Reject
@@ -860,7 +873,7 @@ const Reviews: React.FC = () => {
                         <button
                           onClick={() => handleModerate(review.id, 'rejected')}
                           disabled={!!actionLoading}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-white/10 bg-white dark:bg-[var(--dashboard-card-dark,#161d2b)] text-red-500 dark:text-red-400 hover:bg-red-50 transition disabled:opacity-50"
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[var(--dashboard-card-dark,#161d2b)] text-red-500 dark:text-red-400 hover:bg-red-50 transition disabled:opacity-50"
                         >
                           <X size={12} /> Reject
                         </button>
@@ -869,7 +882,7 @@ const Reviews: React.FC = () => {
                         <button
                           onClick={() => handleModerate(review.id, 'approved')}
                           disabled={!!actionLoading}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white bg-emerald-50 dark:bg-emerald-500/100 hover:bg-emerald-600 transition disabled:opacity-50"
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white bg-emerald-500 dark:bg-emerald-500/100 hover:bg-emerald-600 transition disabled:opacity-50"
                         >
                           <Check size={12} /> Approve
                         </button>
@@ -881,15 +894,15 @@ const Reviews: React.FC = () => {
                         }}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition ${
                           isReplyOpen
-                            ? 'bg-blue-50 dark:bg-blue-500/100 text-white border-blue-500'
-                            : 'bg-slate-50 dark:bg-white/5 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10'
+                            ? 'bg-blue-500 dark:bg-blue-500/100 text-white border-blue-500'
+                            : 'bg-white dark:bg-white/5 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10'
                         }`}
                       >
                         <Reply size={12} /> {review.adminReply ? 'Edit reply' : 'Reply'}
                       </button>
                       <button
                         onClick={() => openEditReviewModal(review)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-white/10 bg-white dark:bg-[var(--dashboard-card-dark,#161d2b)] text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[var(--dashboard-card-dark,#161d2b)] text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition"
                       >
                         <Edit2 size={12} /> Edit
                       </button>
@@ -993,14 +1006,14 @@ const Reviews: React.FC = () => {
             <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-100 dark:border-white/10">
               <button
                 onClick={() => setShowReviewModal(false)}
-                className="px-5 py-2.5 rounded-xl text-sm font-medium border border-slate-200 dark:border-white/10 bg-white dark:bg-[var(--dashboard-card-dark,#161d2b)] text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition"
+                className="px-5 py-2.5 rounded-xl text-sm font-medium border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[var(--dashboard-card-dark,#161d2b)] text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition"
               >
                 Cancel
               </button>
               <button
                 onClick={handleReviewFormSubmit}
                 disabled={reviewFormLoading}
-                className="px-5 py-2.5 rounded-xl text-sm font-medium text-white bg-blue-50 dark:bg-blue-500/100 hover:bg-blue-600 transition flex items-center gap-2 disabled:opacity-50"
+                className="px-5 py-2.5 rounded-xl text-sm font-medium text-white bg-blue-500 dark:bg-blue-500/100 hover:bg-blue-600 transition flex items-center gap-2 disabled:opacity-50"
               >
                 {reviewFormLoading ? <Loader2 size={14} className="animate-spin" /> : editingReview ? <Check size={14} /> : <Plus size={14} />}
                 {editingReview ? 'Update Review' : 'Add Review'}

@@ -28,17 +28,13 @@ export default function FavoritesPage() {
     prevFavorites.current = favorites;
 
     if (favorites.length === 0) {
-      if (changed && prev.length > 0) {
-        setProducts([]);
-        setCurrentPage(1);
-      }
-      setLoading(false);
+      if (changed && prev.length > 0) setCurrentPage(1);
       return;
     }
 
     let cancelled = false;
+    setLoading(true);
     async function loadProducts() {
-      setLoading(true);
       try {
         const res = await fetch('/api/products');
         const json = await res.json();
@@ -89,11 +85,14 @@ export default function FavoritesPage() {
     return () => { cancelled = true; };
   }, [favorites]);
 
-  const totalPages = Math.ceil(products.length / FAVORITES_PER_PAGE);
+  const totalPages = Math.ceil((favorites.length === 0 ? 0 : products.length) / FAVORITES_PER_PAGE);
   const paginatedProducts = useMemo(() => {
+    if (favorites.length === 0) return [];
     const start = (currentPage - 1) * FAVORITES_PER_PAGE;
     return products.slice(start, start + FAVORITES_PER_PAGE);
-  }, [products, currentPage]);
+  }, [products, currentPage, favorites.length]);
+
+  const isInitialLoading = loading && favorites.length > 0 && products.length === 0;
 
   return (
     <div
@@ -120,14 +119,14 @@ export default function FavoritesPage() {
         </div>
 
         {/* Loading */}
-        {loading && (
+        {isInitialLoading && (
           <div className="flex items-center justify-center py-20">
             <div className="w-10 h-10 border-4 border-[var(--brand)] border-t-transparent rounded-full animate-spin" />
           </div>
         )}
 
         {/* Empty State */}
-        {!loading && favorites.length === 0 && (
+        {!isInitialLoading && favorites.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 text-center bg-[var(--card)] rounded-3xl border border-[var(--line)] shadow-[var(--store-shadow)]">
             <div className="w-20 h-20 rounded-full bg-[var(--bg2)] flex items-center justify-center text-4xl mb-4">
               🤍
@@ -155,7 +154,7 @@ export default function FavoritesPage() {
         )}
 
         {/* Products Grid */}
-        {!loading && paginatedProducts.length > 0 && (
+        {!isInitialLoading && paginatedProducts.length > 0 && (
           <>
             <div data-pagination-scroll className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {paginatedProducts.map((product) => (

@@ -6,6 +6,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin';
 import { ReviewRepository } from '@/lib/db';
+import { notificationService } from '@/lib/services/notificationService';
 import { successResponse, internalServerError } from '@/lib/api';
 
 export async function PUT(
@@ -37,6 +38,42 @@ export async function PUT(
     );
 
     if (error) throw error;
+
+    // Send notification for moderation actions
+    if (data && body.status) {
+      try {
+        const review = data as any;
+        if (body.status === 'approved') {
+          await notificationService.create({
+            type: 'review',
+            title: 'Review approved',
+            message: `Review for "${review.product_name ?? 'product'}" has been approved.`,
+            priority: 'medium',
+            metadata: { reviewId: id, productName: review.product_name, customerName: review.customer_name },
+          });
+        } else if (body.status === 'rejected') {
+          await notificationService.create({
+            type: 'review',
+            title: 'Review rejected',
+            message: `Review for "${review.product_name ?? 'product'}" has been rejected.`,
+            priority: 'medium',
+            metadata: { reviewId: id, productName: review.product_name, customerName: review.customer_name },
+          });
+        }
+        if (body.adminReply) {
+          await notificationService.create({
+            type: 'review',
+            title: 'Admin reply sent',
+            message: `Admin replied to review by "${review.customer_name ?? 'customer'}".`,
+            priority: 'low',
+            metadata: { reviewId: id, productName: review.product_name, customerName: review.customer_name },
+          });
+        }
+      } catch (e) {
+        console.error('Failed to send review notification:', e);
+      }
+    }
+
     return successResponse(data);
   } catch (err: any) {
     console.error('PUT /api/reviews/[id] error:', err);

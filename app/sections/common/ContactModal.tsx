@@ -20,6 +20,26 @@ export default function ContactModal({ site, onClose, showToast }: ContactModalP
     const form = formRef.current;
     if (!form?.checkValidity()) { form?.reportValidity(); return; }
     setSending(true);
+
+    // Get form data
+    const formData = new FormData(form);
+    const name = formData.get('name') as string || '';
+    const phone = formData.get('phone') as string || '';
+    const email = formData.get('email') as string || '';
+    const message = formData.get('message') as string || '';
+
+    // Send notification to admin
+    fetch('/api/notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'message',
+        title: 'New contact message',
+        message: `From ${name} (${phone}${email ? ', ' + email : ''}): ${message.slice(0, 100)}${message.length > 100 ? '...' : ''}`,
+        priority: 'medium',
+      }),
+    }).catch(() => {});
+
     setTimeout(() => {
       setSent(true);
       showToast("تم إرسال رسالتك بنجاح! سنتواصل معك قريباً.");

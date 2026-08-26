@@ -29,6 +29,8 @@ interface ProductFormData {
   trackInventory: boolean;
   ads: boolean;
   showInStore: boolean;
+  isOffer: boolean;
+  offerTime: string;
   images: string[];
   status: ProductStatus;
   featured: boolean;
@@ -70,6 +72,8 @@ const emptyForm: ProductFormData = {
   trackInventory: true,
   ads: false,
   showInStore: true,
+  isOffer: false,
+  offerTime: '',
   images: [],
   status: 'draft',
   featured: false,
@@ -138,6 +142,8 @@ export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: Prod
             trackInventory: Boolean(p.track_inventory ?? true),
             ads: Boolean(p.ADS ?? p.ads ?? false),
             showInStore: Boolean(p.ShowInStor ?? p.showInStore ?? false),
+            isOffer: Boolean(p.IsOffer ?? p.isOffer ?? false),
+            offerTime: p.OfferTime ? String(p.OfferTime).slice(0, 16) : p.offerTime ? String(p.offerTime).slice(0, 16) : '',
             images: Array.isArray(p.images)
               ? p.images
                   .map((img: unknown) => {
@@ -299,6 +305,8 @@ export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: Prod
         trackInventory: form.trackInventory,
         ADS: form.ads,
         ShowInStor: form.showInStore,
+        IsOffer: form.isOffer,
+        OfferTime: form.offerTime || null,
         images: form.images,
         status: form.status,
         featured: form.featured,
@@ -386,7 +394,7 @@ export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: Prod
         {/* Loading State */}
         {isLoading ? (
           <div className="flex-1 flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+            <Loader2 className="w-8 h-8 animate-spin text-[var(--color-darkGreen)]" />
           </div>
         ) : (
           <>
@@ -411,7 +419,7 @@ export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: Prod
                             type="text"
                             value={form.name}
                             onChange={(e) => handleNameChange(e.target.value)}
-                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white text-gray-900"
+                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-darkGreen)] focus:border-transparent bg-white text-gray-900"
                             placeholder="Product name"
                           />
                         </div>
@@ -423,7 +431,7 @@ export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: Prod
                             type="text"
                             value={form.slug}
                             onChange={(e) => updateField('slug', e.target.value)}
-                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white text-gray-900"
+                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-darkGreen)] focus:border-transparent bg-white text-gray-900"
                             placeholder="product-slug"
                           />
                         </div>
@@ -433,7 +441,7 @@ export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: Prod
                             type="text"
                             value={form.sku}
                             onChange={(e) => updateField('sku', e.target.value)}
-                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white text-gray-900"
+                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-darkGreen)] focus:border-transparent bg-white text-gray-900"
                             placeholder="SKU-001"
                           />
                         </div>
@@ -443,7 +451,7 @@ export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: Prod
                             type="text"
                             value={form.brand}
                             onChange={(e) => updateField('brand', e.target.value)}
-                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white text-gray-900"
+                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-darkGreen)] focus:border-transparent bg-white text-gray-900"
                             placeholder="Brand name"
                           />
                         </div>
@@ -452,7 +460,7 @@ export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: Prod
                           <select
                             value={form.categoryId}
                             onChange={(e) => updateField('categoryId', e.target.value)}
-                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white text-gray-900"
+                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-darkGreen)] focus:border-transparent bg-white text-gray-900"
                           >
                             <option value="">Select category</option>
                             {categories.map((cat) => (
@@ -468,7 +476,7 @@ export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: Prod
                             type="text"
                             value={form.subcategory}
                             onChange={(e) => updateField('subcategory', e.target.value)}
-                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white text-gray-900"
+                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-darkGreen)] focus:border-transparent bg-white text-gray-900"
                             placeholder="Subcategory"
                           />
                         </div>
@@ -480,7 +488,7 @@ export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: Prod
                           type="text"
                           value={form.shortDescription}
                           onChange={(e) => updateField('shortDescription', e.target.value)}
-                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white text-gray-900"
+                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-darkGreen)] focus:border-transparent bg-white text-gray-900"
                           placeholder="Brief description"
                         />
                       </div>
@@ -491,7 +499,7 @@ export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: Prod
                           value={form.fullDescription}
                           onChange={(e) => updateField('fullDescription', e.target.value)}
                           rows={4}
-                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white text-gray-900 resize-none"
+                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-darkGreen)] focus:border-transparent bg-white text-gray-900 resize-none"
                           placeholder="Detailed product description..."
                         />
                       </div>
@@ -523,7 +531,7 @@ export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: Prod
                             step="0.01"
                             value={form.regularPrice}
                             onChange={(e) => updateField('regularPrice', parseFloat(e.target.value) || 0)}
-                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white text-gray-900"
+                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-darkGreen)] focus:border-transparent bg-white text-gray-900"
                             placeholder="0.00"
                           />
                         </div>
@@ -534,7 +542,7 @@ export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: Prod
                             step="0.01"
                             value={form.salePrice}
                             onChange={(e) => updateField('salePrice', parseFloat(e.target.value) || 0)}
-                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white text-gray-900"
+                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-darkGreen)] focus:border-transparent bg-white text-gray-900"
                             placeholder="0.00"
                           />
                         </div>
@@ -545,7 +553,7 @@ export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: Prod
                             step="0.01"
                             value={form.costPrice}
                             onChange={(e) => updateField('costPrice', parseFloat(e.target.value) || 0)}
-                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white text-gray-900"
+                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-darkGreen)] focus:border-transparent bg-white text-gray-900"
                             placeholder="0.00"
                           />
                         </div>
@@ -556,7 +564,7 @@ export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: Prod
                         <select
                           value={form.currency}
                           onChange={(e) => updateField('currency', e.target.value)}
-                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white text-gray-900"
+                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-darkGreen)] focus:border-transparent bg-white text-gray-900"
                         >
                           <option value="MAD">MAD (Moroccan Dirham)</option>
                           <option value="USD">USD</option>
@@ -573,7 +581,7 @@ export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: Prod
                             type="number"
                             value={form.stock}
                             onChange={(e) => updateField('stock', parseInt(e.target.value) || 0)}
-                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white text-gray-900"
+                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-darkGreen)] focus:border-transparent bg-white text-gray-900"
                             placeholder="0"
                           />
                         </div>
@@ -583,7 +591,7 @@ export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: Prod
                             type="number"
                             value={form.lowStockThreshold}
                             onChange={(e) => updateField('lowStockThreshold', parseInt(e.target.value) || 0)}
-                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white text-gray-900"
+                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-darkGreen)] focus:border-transparent bg-white text-gray-900"
                             placeholder="10"
                           />
                         </div>
@@ -595,7 +603,7 @@ export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: Prod
                           type="button"
                           onClick={() => updateField('trackInventory', !form.trackInventory)}
                           className={`w-11 h-6 rounded-full transition-colors ${
-                            form.trackInventory ? 'bg-purple-600' : 'bg-gray-300'
+                            form.trackInventory ? 'bg-[var(--color-darkGreen)]' : 'bg-gray-300'
                           }`}
                         >
                           <div
@@ -616,7 +624,7 @@ export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: Prod
                           Upload Images
                         </label>
                         <div
-                          className="relative border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-purple-400 transition-colors"
+                          className="relative border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-[var(--color-darkGreen)]/40 transition-colors"
                           onDragOver={(e) => e.preventDefault()}
                           onDrop={(e) => {
                             e.preventDefault();
@@ -642,7 +650,7 @@ export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: Prod
                             <button
                               type="button"
                               onClick={() => fileInputRef.current?.click()}
-                              className="px-3 py-1 text-xs bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
+                              className="px-3 py-1 text-xs bg-[var(--color-darkGreen)] text-white rounded-md hover:bg-[var(--color-darkGreen)]/90 transition-colors"
                             >
                               Upload Images
                             </button>
@@ -667,7 +675,7 @@ export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: Prod
                           <button
                             type="button"
                             onClick={handleImageUrlAdd}
-                            className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                            className="px-3 py-2 bg-[var(--color-darkGreen)] text-white rounded-lg hover:bg-[var(--color-darkGreen)]/90 transition-colors"
                           >
                             Add URL
                           </button>
@@ -738,7 +746,7 @@ export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: Prod
                               />
                               <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                                 {index === 0 && (
-                                  <span className="px-2 py-0.5 bg-purple-600 text-white text-xs rounded">Primary</span>
+                                  <span className="px-2 py-0.5 bg-[var(--color-darkGreen)] text-white text-xs rounded">Primary</span>
                                 )}
                                 <button
                                   type="button"
@@ -761,7 +769,7 @@ export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: Prod
                                 <GripVertical className="w-4 h-4 text-white drop-shadow" />
                               </div>
                               {index === 0 && (
-                                <div className="absolute top-1 right-1 px-1.5 py-0.5 bg-purple-600 text-white text-[10px] rounded">Primary</div>
+                                <div className="absolute top-1 right-1 px-1.5 py-0.5 bg-[var(--color-darkGreen)] text-white text-[10px] rounded">Primary</div>
                               )}
                             </div>
                           ))}
@@ -784,7 +792,7 @@ export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: Prod
                           type="text"
                           value={form.seoTitle}
                           onChange={(e) => updateField('seoTitle', e.target.value)}
-                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white text-gray-900"
+                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-darkGreen)] focus:border-transparent bg-white text-gray-900"
                           placeholder="SEO title"
                         />
                         <div className="mt-1 text-xs text-gray-500">
@@ -797,7 +805,7 @@ export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: Prod
                           value={form.seoDescription}
                           onChange={(e) => updateField('seoDescription', e.target.value)}
                           rows={2}
-                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white text-gray-900 resize-none"
+                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-darkGreen)] focus:border-transparent bg-white text-gray-900 resize-none"
                           placeholder="SEO description"
                         />
                         <div className="mt-1 text-xs text-gray-500">
@@ -810,7 +818,7 @@ export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: Prod
                           type="text"
                           value={form.seoSlug}
                           onChange={(e) => updateField('seoSlug', e.target.value)}
-                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white text-gray-900"
+                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-darkGreen)] focus:border-transparent bg-white text-gray-900"
                           placeholder="seo-slug"
                         />
                       </div>
@@ -820,7 +828,7 @@ export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: Prod
                           type="text"
                           value={form.seoKeywords.join(', ')}
                           onChange={(e) => updateField('seoKeywords', e.target.value.split(',').map((s) => s.trim()).filter(Boolean))}
-                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white text-gray-900"
+                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-darkGreen)] focus:border-transparent bg-white text-gray-900"
                           placeholder="keyword1, keyword2, keyword3"
                         />
                       </div>
@@ -870,7 +878,7 @@ export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: Prod
                         <select
                           value={form.status}
                           onChange={(e) => updateField('status', e.target.value as ProductStatus)}
-                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white text-gray-900 text-sm"
+                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-darkGreen)] focus:border-transparent bg-white text-gray-900 text-sm"
                         >
                           <option value="draft">Draft</option>
                           <option value="active">Active</option>
@@ -884,7 +892,7 @@ export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: Prod
                           type="button"
                           onClick={() => updateField('featured', !form.featured)}
                           className={`w-10 h-5 rounded-full transition-colors ${
-                            form.featured ? 'bg-purple-600' : 'bg-gray-300'
+                            form.featured ? 'bg-[var(--color-darkGreen)]' : 'bg-gray-300'
                           }`}
                         >
                           <div
@@ -900,7 +908,7 @@ export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: Prod
                           type="button"
                           onClick={() => updateField('ads', !form.ads)}
                           className={`w-10 h-5 rounded-full transition-colors ${
-                            form.ads ? 'bg-purple-600' : 'bg-gray-300'
+                            form.ads ? 'bg-[var(--color-darkGreen)]' : 'bg-gray-300'
                           }`}
                         >
                           <div
@@ -916,7 +924,7 @@ export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: Prod
                           type="button"
                           onClick={() => updateField('showInStore', !form.showInStore)}
                           className={`w-10 h-5 rounded-full transition-colors ${
-                            form.showInStore ? 'bg-purple-600' : 'bg-gray-300'
+                            form.showInStore ? 'bg-[var(--color-darkGreen)]' : 'bg-gray-300'
                           }`}
                         >
                           <div
@@ -926,6 +934,33 @@ export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: Prod
                           />
                         </button>
                       </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-700">Is Offer</span>
+                        <button
+                          type="button"
+                          onClick={() => updateField('isOffer', !form.isOffer)}
+                          className={`w-10 h-5 rounded-full transition-colors ${
+                            form.isOffer ? 'bg-[var(--color-darkGreen)]' : 'bg-gray-300'
+                          }`}
+                        >
+                          <div
+                            className={`w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                              form.isOffer ? 'translate-x-5' : 'translate-x-0.5'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                      {form.isOffer && (
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500">Offer End Time</label>
+                          <input
+                            type="datetime-local"
+                            value={form.offerTime}
+                            onChange={(e) => updateField('offerTime', e.target.value)}
+                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-darkGreen)] focus:border-transparent bg-white text-gray-900 text-sm"
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -958,7 +993,7 @@ export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: Prod
                   type="button"
                   onClick={handleSave}
                   disabled={isSaving}
-                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 px-4 py-2 bg-[var(--color-darkGreen)] text-white rounded-lg hover:bg-[var(--color-darkGreen)]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSaving ? (
                     <>

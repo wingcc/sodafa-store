@@ -1,0 +1,440 @@
+/* OrderConfirmButton.module.css — Truck delivery animation v2 */
+
+/* ═══════════════════════════════════════════
+   BASE BUTTON
+   ═══════════════════════════════════════════ */
+.btn {
+  appearance: none;
+  border: 0;
+  background: #07231a;
+  position: relative;
+  height: 56px;
+  width: 100%;
+  padding: 0;
+  outline: none;
+  cursor: pointer;
+  border-radius: 14px;
+  overflow: hidden;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    width 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+    margin 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.3s ease;
+  box-shadow: 0 4px 16px rgba(6, 28, 22, 0.35);
+}
+
+.btn:active:not(.animate):not(.done) {
+  transform: scale(0.98);
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+/* ── Animate state: shrink & center ── */
+.btn.animate {
+  width: 240px;
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+  cursor: default;
+}
+
+/* ── Done state: keep compact ── */
+.btn.done {
+  width: 240px;
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+}
+
+/* ═══════════════════════════════════════════
+   TEXT LAYERS
+   ═══════════════════════════════════════════ */
+.text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #f7ebd0;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 5;
+  padding: 0 16px;
+  transition: opacity 0.35s ease;
+}
+
+/* Default label */
+.default {
+  opacity: 1;
+  transition-delay: 0.4s;
+}
+
+.btn.animate .default {
+  opacity: 0;
+  transition-delay: 0s;
+}
+
+/* Success label */
+.success {
+  opacity: 0;
+  gap: 6px;
+}
+
+.btn.animate .success {
+  opacity: 0;
+}
+
+.btn.done .success {
+  opacity: 1;
+  transition-delay: 0.15s;
+}
+
+.success svg {
+  width: 14px;
+  height: 12px;
+  fill: none;
+  stroke: #16BF78;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 20px;
+  stroke-dashoffset: 16px;
+  transition: stroke-dashoffset 0.45s ease 0.1s;
+}
+
+.btn.done .success svg {
+  stroke-dashoffset: 0;
+}
+
+/* ═══════════════════════════════════════════
+   ANIMATION STAGE — centered inside button
+   ═══════════════════════════════════════════ */
+.stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  z-index: 2;
+}
+
+.btn.animate .stage {
+  opacity: 1;
+}
+
+/* ═══════════════════════════════════════════
+   ROAD LINES
+   ═══════════════════════════════════════════ */
+.lines {
+  position: absolute;
+  height: 2px;
+  width: 4px;
+  top: 27px;
+  left: 100%;
+  border-radius: 1px;
+  background: #fff;
+  opacity: 0;
+  box-shadow:
+    12px 0 0 #fff, 24px 0 0 #fff, 36px 0 0 #fff, 48px 0 0 #fff,
+    60px 0 0 #fff, 72px 0 0 #fff, 84px 0 0 #fff, 96px 0 0 #fff,
+    108px 0 0 #fff, 120px 0 0 #fff, 132px 0 0 #fff, 144px 0 0 #fff,
+    156px 0 0 #fff, 168px 0 0 #fff, 180px 0 0 #fff, 192px 0 0 #fff,
+    204px 0 0 #fff, 216px 0 0 #fff, 228px 0 0 #fff, 240px 0 0 #fff,
+    252px 0 0 #fff, 264px 0 0 #fff, 276px 0 0 #fff, 288px 0 0 #fff;
+}
+
+.btn.animate .lines {
+  animation: lines 8s linear forwards;
+}
+
+/* ═══════════════════════════════════════════
+   TRUCK
+   ═══════════════════════════════════════════ */
+.truck {
+  position: absolute;
+  width: 52px;
+  height: 36px;
+  top: 10px;
+  left: 50%;
+  transform: translateX(140px);
+  z-index: 3;
+}
+
+.btn.animate .truck {
+  animation: truckDrive 8s ease forwards;
+}
+
+/* Truck body (cargo area) */
+.truckBack {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 52px;
+  height: 36px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #ffffff 0%, #e8e8e8 100%);
+  z-index: 1;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* Truck cabin */
+.truckFront {
+  position: absolute;
+  left: 52px;
+  top: 0;
+  width: 22px;
+  height: 36px;
+  border-radius: 2px 8px 8px 2px;
+  overflow: hidden;
+}
+
+.truckFrontFace {
+  position: absolute;
+  inset: 0;
+  border-radius: 2px 8px 8px 2px;
+  background: #0b2e22;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.truckFrontSep {
+  position: absolute;
+  left: 0;
+  top: 12px;
+  width: 2px;
+  height: 12px;
+  background: #666;
+  z-index: 2;
+}
+
+/* Cabin window */
+.window {
+  position: absolute;
+  left: 3px;
+  top: 0;
+  width: 17px;
+  height: 36px;
+  border-radius: 2px 6px 6px 2px;
+  background: #1E7A57;
+  overflow: hidden;
+  z-index: 1;
+  transform: perspective(4px) rotateY(2deg);
+  transform-origin: 0 50%;
+}
+
+.windowShine {
+  position: absolute;
+  right: 0;
+  top: 6px;
+  width: 10px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.35);
+  transform: skewY(14deg);
+  box-shadow: 0 6px 0 rgba(255, 255, 255, 0.25);
+}
+
+.windowDark {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  background: #07231a;
+}
+
+/* Headlights */
+.light {
+  position: absolute;
+  left: 72px;
+  width: 3px;
+  height: 7px;
+  border-radius: 2px;
+  background: #FCD34D;
+  transform-origin: 100% 50%;
+  z-index: 4;
+}
+
+.lightTop { top: 5px; }
+.lightBottom { bottom: 5px; }
+
+.lightGlow {
+  position: absolute;
+  left: 3px;
+  top: 50%;
+  margin-top: -2px;
+  width: 8px;
+  height: 4px;
+  opacity: 0;
+  border-radius: 1px;
+  background: linear-gradient(90deg, #FCD34D, rgba(252, 211, 77, 0.6), transparent);
+  transform-origin: 0 50%;
+}
+
+.btn.animate .lightGlow {
+  animation: glowPulse 8s ease forwards;
+}
+
+/* Truck arms (doors) */
+.truckArm {
+  position: absolute;
+  right: 50px;
+  width: 18px;
+  height: 2px;
+  background: #fff;
+  border-radius: 1px;
+  transform-origin: 100% 50%;
+  z-index: 2;
+}
+
+.truckArmTop {
+  top: 4px;
+  transform: rotate(-90deg);
+}
+
+.truckArmBottom {
+  bottom: 4px;
+  transform: rotate(90deg);
+}
+
+.btn.animate .truckArmTop {
+  animation: doorOpen 2.4s ease forwards 0.3s;
+}
+
+.btn.animate .truckArmBottom {
+  animation: doorClose 2.4s ease forwards 0.6s;
+}
+
+/* ═══════════════════════════════════════════
+   BOX
+   ═══════════════════════════════════════════ */
+.box {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  top: 19px;
+  right: 100%;
+  border-radius: 2px;
+  background: linear-gradient(135deg, #E8CE93, #cda552);
+  z-index: 2;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  opacity: 0;
+}
+
+.btn.animate .box {
+  animation: boxCarry 8s ease forwards;
+}
+
+.boxStripe {
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+
+.boxStripeThick {
+  height: 2px;
+  top: 8px;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.boxStripeThin {
+  height: 1px;
+  top: 8px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* ═══════════════════════════════════════════
+   KEYFRAMES
+   ═══════════════════════════════════════════ */
+
+/* Truck drives across, picks up box, drives away */
+@keyframes truckDrive {
+  0% {
+    transform: translateX(140px);
+  }
+  10%, 30% {
+    transform: translateX(-80px);
+  }
+  38%, 42% {
+    transform: translateX(-80px);
+  }
+  55% {
+    transform: translateX(-140px);
+  }
+  70%, 100% {
+    transform: translateX(160px);
+  }
+}
+
+/* Road lines scroll */
+@keyframes lines {
+  0%, 25% {
+    opacity: 0;
+  }
+  30%, 60% {
+    opacity: 0.7;
+  }
+  65% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-350px);
+  }
+}
+
+/* Headlight glow */
+@keyframes glowPulse {
+  0%, 25% {
+    opacity: 0;
+  }
+  35%, 65% {
+    opacity: 1;
+  }
+  75%, 100% {
+    opacity: 0;
+  }
+}
+
+/* Door open / close */
+@keyframes doorOpen {
+  30%, 50% {
+    transform: rotate(28deg);
+  }
+}
+
+@keyframes doorClose {
+  30%, 50% {
+    transform: rotate(-28deg);
+  }
+}
+
+/* Box moves into truck then disappears */
+@keyframes boxCarry {
+  0%, 8% {
+    opacity: 0;
+    transform: translateX(0);
+  }
+  12% {
+    opacity: 1;
+    transform: translateX(30px);
+  }
+  28% {
+    opacity: 1;
+    transform: translateX(100px);
+  }
+  30% {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+  31%, 100% {
+    opacity: 0;
+    transform: translateX(0);
+  }
+}

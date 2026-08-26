@@ -118,7 +118,7 @@ const MyProfileSettings: React.FC<MyProfileSettingsProps> = () => {
     return (
       <div className="bg-white rounded-2xl border border-gray-100 p-6">
         <div className="flex items-center justify-center py-8">
-          <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+          <Loader2 className="w-8 h-8 animate-spin text-[var(--color-darkGreen)]" />
         </div>
       </div>
     );
@@ -156,7 +156,7 @@ const MyProfileSettings: React.FC<MyProfileSettingsProps> = () => {
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               placeholder="Enter your full name"
-              className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-300"
+              className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-darkGreen)]/20 focus:border-[var(--color-darkGreen)]/50 transition-all"
             />
           </div>
         </div>
@@ -179,7 +179,8 @@ const MyProfileSettings: React.FC<MyProfileSettingsProps> = () => {
           <button
             onClick={handleProfileSave}
             disabled={savingProfile}
-            className="flex items-center gap-2 px-4 py-2.5 bg-purple-600 text-white rounded-xl font-medium text-sm hover:bg-purple-700 transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white rounded-xl transition-all hover:shadow-lg disabled:opacity-50"
+            style={{ background: 'linear-gradient(135deg, var(--color-darkGreen), var(--color-mediumGreen))' }}
           >
             {savingProfile ? <Loader2 size={16} className="animate-spin" /> : profileSaved ? <Check size={16} /> : <Save size={16} />}
             {profileSaved ? 'Saved' : 'Save Profile'}
@@ -190,8 +191,8 @@ const MyProfileSettings: React.FC<MyProfileSettingsProps> = () => {
       {/* Security / Password — integrated */}
       <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center">
-            <Shield size={16} className="text-purple-600" />
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(var(--color-darkGreen-rgb, 4,120,87), 0.1)' }}>
+            <Shield size={16} className="text-[var(--color-darkGreen)]" />
           </div>
           <div>
             <h3 className="text-base font-semibold text-gray-900">Password & Security</h3>
@@ -266,7 +267,8 @@ const MyProfileSettings: React.FC<MyProfileSettingsProps> = () => {
           <button
             onClick={handlePasswordChange}
             disabled={savingPassword}
-            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-medium text-sm hover:shadow-lg transition-all disabled:opacity-50"
+            className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white rounded-xl transition-all hover:shadow-lg disabled:opacity-50"
+            style={{ background: 'linear-gradient(135deg, var(--color-darkGreen), var(--color-mediumGreen))' }}
           >
             {savingPassword ? <Loader2 size={16} className="animate-spin" /> : passwordSaved ? <Check size={16} /> : <Shield size={16} />}
             {passwordSaved ? 'Updated' : 'Update Password'}

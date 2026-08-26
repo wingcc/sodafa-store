@@ -8,6 +8,7 @@
 import { createServerClient } from '@/lib/supabase';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { CategoryRepository } from '@/lib/db';
+import { notificationService } from '@/lib/services/notificationService';
 import { successResponse, internalServerError, notFound } from '@/lib/api';
 
 export async function GET(
@@ -49,6 +50,20 @@ export async function PUT(
 
     const { data, error } = await repo.update(id, updates);
     if (error) throw error;
+
+    // Send notification
+    try {
+      await notificationService.create({
+        type: 'product',
+        title: 'Category updated',
+        message: `Category has been updated.`,
+        priority: 'low',
+        metadata: { categoryId: id, name: data?.name },
+      });
+    } catch (e) {
+      console.error('Failed to send category update notification:', e);
+    }
+
     return successResponse(data);
   } catch (err: any) {
     console.error('PUT /api/categories/[id] error:', err);
@@ -67,6 +82,20 @@ export async function DELETE(
 
     const { error } = await repo.delete(id);
     if (error) throw error;
+
+    // Send notification
+    try {
+      await notificationService.create({
+        type: 'product',
+        title: 'Category deleted',
+        message: `A category has been deleted.`,
+        priority: 'low',
+        metadata: { categoryId: id },
+      });
+    } catch (e) {
+      console.error('Failed to send category delete notification:', e);
+    }
+
     return successResponse({ deleted: true });
   } catch (err: any) {
     console.error('DELETE /api/categories/[id] error:', err);

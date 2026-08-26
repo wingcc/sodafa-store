@@ -134,9 +134,8 @@ export default function HeroSection({ hero, site, onOpenVideo }: HeroSectionProp
               بدون بارابين أو سلفات
             </div>
             <div className="spin-badge">
-              <svg className="ring" viewBox="0 0 120 120">
-                <image href="/assets/Image/BRAND.png" />
-              </svg>
+             <img src={"/assets/Image/BRAND.png"} alt="سيروم SODFA الطبيعي للشعر" />
+        
             </div>
           </div>
         </div>

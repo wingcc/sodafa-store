@@ -11,6 +11,7 @@ export type Product = {
   ShowInStor?: boolean;
   showInStore?: boolean;
   inStock?: boolean;
+  stock?: number;
   ADS?: boolean;
   ads?: boolean;
   brand?: string;

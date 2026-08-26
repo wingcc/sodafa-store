@@ -20,6 +20,8 @@ export async function GET(request: Request) {
       paymentStatus: searchParams.get('paymentStatus') ?? undefined,
       search: searchParams.get('search') ?? undefined,
       customerId: searchParams.get('customerId') ?? undefined,
+      dateFrom: searchParams.get('dateFrom') ?? undefined,
+      dateTo: searchParams.get('dateTo') ?? undefined,
       limit: Number(searchParams.get('limit')) || undefined,
       offset: Number(searchParams.get('offset')) || undefined,
     });

@@ -89,6 +89,26 @@ export type Database = {
         Insert: StoreSettingInsert;
         Update: StoreSettingUpdate;
       };
+      visitors: {
+        Row: VisitorRow;
+        Insert: VisitorInsert;
+        Update: VisitorUpdate;
+      };
+      sessions: {
+        Row: SessionRow;
+        Insert: SessionInsert;
+        Update: SessionUpdate;
+      };
+      page_views: {
+        Row: PageViewRow;
+        Insert: PageViewInsert;
+        Update: PageViewUpdate;
+      };
+      visitor_events: {
+        Row: VisitorEventRow;
+        Insert: VisitorEventInsert;
+        Update: VisitorEventUpdate;
+      };
     };
     Enums: {
       product_status: 'active' | 'inactive' | 'draft';
@@ -96,7 +116,7 @@ export type Database = {
       payment_status: 'pending' | 'paid' | 'failed' | 'refunded';
       payment_method: 'cash_on_delivery' | 'credit_card' | 'bank_transfer' | 'mobile_payment';
       review_status: 'pending' | 'approved' | 'rejected';
-      coupon_discount_type: 'percentage' | 'fixed';
+      coupon_discount_type: 'percentage' | 'fixed' | 'free_shipping';
       coupon_applicable_to: 'all' | 'products' | 'categories' | 'customers';
       coupon_status: 'active' | 'inactive' | 'expired';
       notification_type: 'order' | 'customer' | 'stock' | 'review' | 'payment' | 'system' | 'product' | 'shipping' | 'promotion' | 'social' | 'inventory' | 'security' | 'account' | 'message' | 'achievement' | 'reminder' | 'subscription' | 'support' | 'analytics' | 'team' | 'event' | 'custom';
@@ -104,6 +124,9 @@ export type Database = {
       admin_role: 'super_admin' | 'manager' | 'editor' | 'support';
       customer_status: 'active' | 'inactive' | 'blocked';
       category_status: 'active' | 'inactive';
+      device_type: 'desktop' | 'mobile' | 'tablet' | 'other';
+      visitor_type: 'new' | 'returning';
+      event_type: 'page_view' | 'add_to_cart' | 'remove_from_cart' | 'begin_checkout' | 'purchase' | 'search' | 'scroll' | 'click' | 'wishlist_add' | 'wishlist_remove' | 'coupon_apply' | 'product_view' | 'category_view';
     };
   };
 };
@@ -599,3 +622,156 @@ export interface StoreSettingInsert {
   value?: string;
 }
 export type StoreSettingUpdate = Partial<StoreSettingInsert>;
+
+// ──────────────────────────────────────────────────────────────
+// VISITOR ANALYTICS (013_visitor_analytics)
+// ──────────────────────────────────────────────────────────────
+export type DeviceType = 'desktop' | 'mobile' | 'tablet' | 'other';
+export type VisitorType = 'new' | 'returning';
+export type EventType =
+  | 'page_view' | 'add_to_cart' | 'remove_from_cart' | 'begin_checkout'
+  | 'purchase' | 'search' | 'scroll' | 'click' | 'wishlist_add'
+  | 'wishlist_remove' | 'coupon_apply' | 'product_view' | 'category_view';
+
+export interface VisitorRow {
+  id: string;
+  fingerprint: string;
+  visitor_type: VisitorType;
+  country: string | null;
+  city: string | null;
+  region: string | null;
+  language: string | null;
+  consent_analytics: boolean;
+  consent_marketing: boolean;
+  first_seen_at: string;
+  last_seen_at: string;
+  page_views_count: number;
+  sessions_count: number;
+  created_at: string;
+  updated_at: string;
+}
+export interface VisitorInsert {
+  id?: string;
+  fingerprint: string;
+  visitor_type?: VisitorType;
+  country?: string | null;
+  city?: string | null;
+  region?: string | null;
+  language?: string | null;
+  consent_analytics?: boolean;
+  consent_marketing?: boolean;
+  first_seen_at?: string;
+  last_seen_at?: string;
+  page_views_count?: number;
+  sessions_count?: number;
+}
+export type VisitorUpdate = Partial<VisitorInsert>;
+
+export interface SessionRow {
+  id: string;
+  visitor_id: string;
+  session_token: string;
+  device: DeviceType;
+  device_brand: string | null;
+  browser: string | null;
+  browser_version: string | null;
+  os: string | null;
+  os_version: string | null;
+  screen_width: number | null;
+  screen_height: number | null;
+  referrer_url: string | null;
+  referrer_domain: string | null;
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+  landing_page: string | null;
+  exit_page: string | null;
+  page_views: number;
+  events_count: number;
+  started_at: string;
+  ended_at: string | null;
+  duration_seconds: number | null;
+  is_bounce: boolean;
+  created_at: string;
+}
+export interface SessionInsert {
+  id?: string;
+  visitor_id: string;
+  session_token: string;
+  device?: DeviceType;
+  device_brand?: string | null;
+  browser?: string | null;
+  browser_version?: string | null;
+  os?: string | null;
+  os_version?: string | null;
+  screen_width?: number | null;
+  screen_height?: number | null;
+  referrer_url?: string | null;
+  referrer_domain?: string | null;
+  utm_source?: string | null;
+  utm_medium?: string | null;
+  utm_campaign?: string | null;
+  landing_page?: string | null;
+  exit_page?: string | null;
+  page_views?: number;
+  events_count?: number;
+  started_at?: string;
+  ended_at?: string | null;
+  duration_seconds?: number | null;
+  is_bounce?: boolean;
+}
+export type SessionUpdate = Partial<SessionInsert>;
+
+export interface PageViewRow {
+  id: string;
+  session_id: string;
+  visitor_id: string;
+  page_url: string;
+  page_path: string;
+  page_title: string | null;
+  page_type: string;
+  product_id: string | null;
+  category_id: string | null;
+  referrer: string | null;
+  time_on_page: number | null;
+  scroll_depth: number | null;
+  created_at: string;
+}
+export interface PageViewInsert {
+  id?: string;
+  session_id: string;
+  visitor_id: string;
+  page_url: string;
+  page_path: string;
+  page_title?: string | null;
+  page_type?: string;
+  product_id?: string | null;
+  category_id?: string | null;
+  referrer?: string | null;
+  time_on_page?: number | null;
+  scroll_depth?: number | null;
+}
+export type PageViewUpdate = Partial<PageViewInsert>;
+
+export interface VisitorEventRow {
+  id: string;
+  session_id: string;
+  visitor_id: string;
+  page_view_id: string | null;
+  event_type: EventType;
+  event_name: string | null;
+  event_data: Json | null;
+  page_url: string | null;
+  created_at: string;
+}
+export interface VisitorEventInsert {
+  id?: string;
+  session_id: string;
+  visitor_id: string;
+  page_view_id?: string | null;
+  event_type: EventType;
+  event_name?: string | null;
+  event_data?: Json | null;
+  page_url?: string | null;
+}
+export type VisitorEventUpdate = Partial<VisitorEventInsert>;

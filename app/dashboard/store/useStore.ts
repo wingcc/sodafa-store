@@ -2,6 +2,7 @@
 import { create } from 'zustand';
 import type {
   PageSection,
+  PendingNavigation,
   Product,
   Order,
   Customer,
@@ -23,6 +24,9 @@ interface AppState {
   setCurrentPage: (page: PageSection) => void;
   sidebarCollapsed: boolean;
   toggleSidebar: () => void;
+  pendingNavigation: PendingNavigation | null;
+  setPendingNavigation: (nav: PendingNavigation | null) => void;
+  clearPendingNavigation: () => void;
 
   // Products
   products: Product[];
@@ -168,6 +172,7 @@ function mapOrder(row: ApiRow): Order {
     trackingNumber: row.tracking_number ? String(row.tracking_number) : undefined,
     shippingProvider: row.shipping_provider ? String(row.shipping_provider) : undefined,
     notes: row.notes ? String(row.notes) : undefined,
+    couponCode: row.coupon_code ? String(row.coupon_code) : undefined,
     createdAt: String(row.created_at ?? ''),
     updatedAt: String(row.updated_at ?? ''),
     timeline: Array.isArray(row.timeline) ? row.timeline : [],
@@ -193,6 +198,14 @@ function mapCustomer(row: ApiRow): Customer {
 }
 
 function mapNotification(row: ApiRow): Notification {
+  // Parse metadata — handle both object and JSON string cases
+  let metadata: Record<string, any> | undefined;
+  if (row.metadata && typeof row.metadata === 'object') {
+    metadata = row.metadata as Record<string, any>;
+  } else if (typeof row.metadata === 'string') {
+    try { metadata = JSON.parse(row.metadata); } catch { metadata = undefined; }
+  }
+
   return {
     id: String(row.id ?? ''),
     type: (row.type ?? 'system') as Notification['type'],
@@ -203,7 +216,7 @@ function mapNotification(row: ApiRow): Notification {
     priority: (row.priority ?? 'medium') as Notification['priority'],
     timestamp: String(row.timestamp ?? row.created_at ?? new Date().toISOString()),
     actionUrl: row.action_url ? String(row.action_url) : undefined,
-    metadata: row.metadata && typeof row.metadata === 'object' ? row.metadata as Record<string, any> : undefined,
+    metadata,
   };
 }
 
@@ -286,6 +299,9 @@ export const useStore = create<AppState>((set) => ({
   setCurrentPage: (page) => set({ currentPage: page }),
   sidebarCollapsed: false,
   toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
+  pendingNavigation: null,
+  setPendingNavigation: (nav) => set({ pendingNavigation: nav }),
+  clearPendingNavigation: () => set({ pendingNavigation: null }),
 
   // Products
   products: [],

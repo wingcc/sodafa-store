@@ -1,38 +1,79 @@
-// SODFA MARKETPLACE - Categories Management Page
+// SODFA MARKETPLACE - Categories Management Page (Real Data)
 
-import React, { useState } from 'react';
+'use client';
+
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Plus,
   Edit2,
   Trash2,
   FolderTree,
-  ChevronRight,
-  Eye,
-  EyeOff,
-  GripVertical,
+  Loader2,
   X,
   Upload,
 } from 'lucide-react';
 import Badge from '../components/ui/Badge';
 import RefreshButton from '../components/ui/RefreshButton';
-import { categories } from '../data/mockData';
 import { useToast } from '@/lib/toast';
 import { useTranslation } from '../i18n/useTranslation';
+
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  image: string;
+  status: 'active' | 'inactive';
+  productCount?: number;
+  parentId?: string | null;
+  children?: Category[];
+}
 
 const Categories: React.FC = () => {
   const { t } = useTranslation();
   const { addToast } = useToast();
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<unknown>(null);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     status: 'active' as 'active' | 'inactive',
+    image: '',
   });
 
-  const handleRefresh = () => {
-    addToast('info', 'Categories list refreshed', { title: 'Refreshed' });
-  };
+  const fetchCategories = useCallback(async (showRefresh = false) => {
+    if (showRefresh) setRefreshing(true);
+    else setLoading(true);
+    try {
+      const res = await fetch('/api/categories');
+      const data = await res.json();
+      const cats = data.data || data.categories || data || [];
+      const map = new Map<string, Category>();
+      const roots: Category[] = [];
+      for (const cat of cats) {
+        map.set(cat.id, { ...cat, children: [] });
+      }
+      for (const cat of cats) {
+        const node = map.get(cat.id)!;
+        if (cat.parentId && map.has(cat.parentId)) {
+          map.get(cat.parentId)!.children!.push(node);
+        } else {
+          roots.push(node);
+        }
+      }
+      setCategories(roots);
+    } catch {
+      addToast('error', 'Failed to load categories');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [addToast]);
+
+  useEffect(() => { fetchCategories(); }, [fetchCategories]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleEdit = (category: any) => {
@@ -41,21 +82,67 @@ const Categories: React.FC = () => {
       name: String(category.name || ''),
       description: String(category.description || ''),
       status: String(category.status || 'active') as 'active' | 'inactive',
+      image: String(category.image || ''),
     });
     setShowModal(true);
   };
 
-  const handleSave = () => {
+  const handleCreate = () => {
+    setEditingCategory(null);
+    setFormData({ name: '', description: '', status: 'active', image: '' });
+    setShowModal(true);
+  };
+
+  const handleSave = async () => {
     if (!formData.name) {
       addToast('error', 'Please enter a category name.', { title: 'Missing Name' });
       return;
     }
-    addToast('success', `"${formData.name}" has been saved successfully.`, {
-      title: editingCategory ? 'Category Updated' : 'Category Created',
-    });
-    setShowModal(false);
-    setEditingCategory(null);
+    try {
+      const method = editingCategory ? 'PUT' : 'POST';
+      const url = editingCategory ? `/api/categories/${editingCategory.id}` : '/api/categories';
+      await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          slug: formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+          description: formData.description,
+          status: formData.status,
+          image: formData.image || null,
+        }),
+      });
+      addToast('success', `"${formData.name}" has been saved successfully.`, {
+        title: editingCategory ? 'Category Updated' : 'Category Created',
+      });
+      setShowModal(false);
+      setEditingCategory(null);
+      fetchCategories();
+    } catch {
+      addToast('error', 'Failed to save category');
+    }
   };
+
+  const handleDelete = async (category: Category) => {
+    try {
+      await fetch(`/api/categories/${category.id}`, { method: 'DELETE' });
+      addToast('success', 'Category deleted');
+      fetchCategories();
+    } catch {
+      addToast('error', 'Failed to delete category');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <Loader2 size={48} className="animate-spin text-[#1E7A57] mx-auto mb-4" />
+          <p className="text-gray-500">Loading categories...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -63,16 +150,17 @@ const Categories: React.FC = () => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-gray-900">{t('header.page.categories')}</h2>
-          <p className="text-sm text-gray-500 mt-1">Organize your product catalog</p>
+          <p className="text-sm text-gray-500 mt-1">{categories.length} categories</p>
         </div>
         <div className="flex items-center gap-3">
           <RefreshButton
-            onRefresh={handleRefresh}
+            onRefresh={() => fetchCategories(true)}
+            isLoading={refreshing}
             size="md"
             variant="default"
           />
           <button
-            onClick={() => { setEditingCategory(null); setFormData({ name: '', description: '', status: 'active' }); setShowModal(true); }}
+            onClick={handleCreate}
             className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-medium text-sm hover:shadow-lg hover:shadow-purple-500/25 transition-all"
           >
             <Plus size={16} />
@@ -123,7 +211,7 @@ const Categories: React.FC = () => {
                     <Edit2 size={14} />
                   </button>
                   <button className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
-                    onClick={() => addToast('warning', 'The category has been removed.', { title: 'Category Deleted' })}
+                    onClick={() => handleDelete(category)}
                   >
                     <Trash2 size={14} />
                   </button>

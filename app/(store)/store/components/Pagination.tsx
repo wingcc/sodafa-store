@@ -38,13 +38,15 @@ export function Pagination({
   scrollTarget = '[data-pagination-scroll]',
 }: PaginationProps) {
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(max-width: 639px)').matches;
+  });
 
   // Detect mobile viewport
   useEffect(() => {
-    const mq = window.matchMedia('(max-width: 639px)'); // sm breakpoint
+    const mq = window.matchMedia('(max-width: 639px)');
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    setIsMobile(mq.matches);
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
   }, []);

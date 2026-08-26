@@ -8,6 +8,7 @@
 import { createServerClient } from '@/lib/supabase';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { ShippingRepository } from '@/lib/db';
+import { notificationService } from '@/lib/services/notificationService';
 import { successResponse, internalServerError, notFound } from '@/lib/api';
 import type { DeliveryZoneUpdate } from '@/lib/supabase/types';
 
@@ -218,6 +219,19 @@ export async function PUT(
       })
     );
 
+    // Send notification
+    try {
+      await notificationService.create({
+        type: 'shipping',
+        title: 'Shipping zone updated',
+        message: `Shipping zone "${body.name ?? updatedZone.name}" has been updated.`,
+        priority: 'low',
+        metadata: { zoneId: id, name: body.name ?? updatedZone.name },
+      });
+    } catch (e) {
+      console.error('Failed to send shipping update notification:', e);
+    }
+
     return successResponse({ ...updatedZone, cities: citiesWithMethods });
   } catch (err: unknown) {
     console.error('PUT /api/shipping/[id] error:', err);
@@ -236,6 +250,20 @@ export async function DELETE(
 
     const { error } = await repo.deleteZone(id);
     if (error) throw error;
+
+    // Send notification
+    try {
+      await notificationService.create({
+        type: 'shipping',
+        title: 'Shipping zone deleted',
+        message: `A shipping zone has been deleted.`,
+        priority: 'medium',
+        metadata: { zoneId: id },
+      });
+    } catch (e) {
+      console.error('Failed to send shipping delete notification:', e);
+    }
+
     return successResponse({ deleted: true });
   } catch (err: unknown) {
     console.error('DELETE /api/shipping/[id] error:', err);

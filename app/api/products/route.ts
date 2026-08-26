@@ -7,6 +7,7 @@
 import { createServerClient } from '@/lib/supabase';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { ProductRepository } from '@/lib/db';
+import { notificationService } from '@/lib/services/notificationService';
 import { successResponse, errorResponse, internalServerError, badRequest } from '@/lib/api';
 
 export async function GET(request: Request) {
@@ -76,6 +77,20 @@ export async function POST(request: Request) {
     });
 
     if (error) throw error;
+
+    // Send notification
+    try {
+      await notificationService.create({
+        type: 'product',
+        title: 'New product created',
+        message: `Product "${body.name}" has been created.`,
+        priority: 'low',
+        metadata: { productId: data?.id, productName: body.name, sku: body.sku },
+      });
+    } catch (e) {
+      console.error('Failed to send product notification:', e);
+    }
+
     return successResponse(data, 201);
   } catch (err: any) {
     console.error('POST /api/products error:', err);

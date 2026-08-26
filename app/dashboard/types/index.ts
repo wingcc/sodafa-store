@@ -107,6 +107,7 @@ export interface Order {
   trackingNumber?: string;
   shippingProvider?: string;
   notes?: string;
+  couponCode?: string;
   createdAt: string;
   updatedAt: string;
   timeline: OrderTimelineEvent[];
@@ -116,6 +117,22 @@ export interface OrderTimelineEvent {
   status: OrderStatus;
   timestamp: string;
   note?: string;
+}
+
+export interface CouponInfo {
+  id: string;
+  code: string;
+  description: string;
+  discount_type: 'percentage' | 'fixed' | 'free_shipping';
+  discount_value: number;
+  minimum_order: number;
+  maximum_discount: number | null;
+  applicable_to: 'all' | 'products' | 'categories' | 'customers';
+  start_date: string;
+  end_date: string;
+  usage_limit: number;
+  used_count: number;
+  status: 'active' | 'inactive' | 'expired';
 }
 
 export interface Customer {
@@ -302,3 +319,10 @@ export type PageSection =
   | 'store-seo'
   | 'store-content'      // ← إدارة صفحات المحتوى
   | 'settings';
+
+export interface PendingNavigation {
+  page: PageSection;
+  itemId?: string;
+  searchQuery?: string;
+  action?: 'open' | 'select';
+}

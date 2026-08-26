@@ -12,6 +12,8 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({ settings, setSettings
     setSettings({ ...settings, [key]: value });
   };
 
+  const inputClass = 'w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-darkGreen)]/20 focus:border-[var(--color-darkGreen)]/50 transition-all';
+
   return (
     <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
       <h3 className="text-base font-semibold text-gray-900">General Settings</h3>
@@ -22,7 +24,7 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({ settings, setSettings
           type="text"
           value={settings.storeName}
           onChange={(e) => update('storeName', e.target.value)}
-          className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-300"
+          className={inputClass}
         />
       </div>
 
@@ -32,7 +34,7 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({ settings, setSettings
           value={settings.storeDescription}
           onChange={(e) => update('storeDescription', e.target.value)}
           rows={3}
-          className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-300 resize-none"
+          className={`${inputClass} resize-none`}
         />
       </div>
 
@@ -43,7 +45,7 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({ settings, setSettings
             type="email"
             value={settings.contactEmail}
             onChange={(e) => update('contactEmail', e.target.value)}
-            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-300"
+            className={inputClass}
           />
         </div>
         <div>
@@ -52,7 +54,7 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({ settings, setSettings
             type="tel"
             value={settings.contactPhone}
             onChange={(e) => update('contactPhone', e.target.value)}
-            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-300"
+            className={inputClass}
           />
         </div>
       </div>
@@ -63,7 +65,7 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({ settings, setSettings
           <select
             value={settings.currency}
             onChange={(e) => update('currency', e.target.value)}
-            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-300"
+            className={inputClass}
           >
             <option value="MAD">MAD - Moroccan Dirham</option>
             <option value="USD">USD - US Dollar</option>
@@ -75,7 +77,7 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({ settings, setSettings
           <select
             value={settings.language}
             onChange={(e) => update('language', e.target.value)}
-            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-300"
+            className={inputClass}
           >
             <option value="en">English</option>
             <option value="fr">Français</option>
@@ -87,7 +89,10 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({ settings, setSettings
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1.5">Store Logo</label>
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+          <div
+            className="w-16 h-16 rounded-xl flex items-center justify-center"
+            style={{ background: 'linear-gradient(135deg, var(--color-darkGreen), var(--color-mediumGreen))', boxShadow: '0 4px 12px rgba(var(--color-darkGreen-rgb, 4,120,87), 0.3)' }}
+          >
             <span className="text-white font-bold text-xl">S</span>
           </div>
           <button className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-200 transition-colors">

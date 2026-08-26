@@ -13,6 +13,8 @@ export interface ValidateCouponResult {
 export interface ValidateCouponInput {
   subtotal: number;
   productIds?: string[];
+  customerPhone?: string;
+  customerEmail?: string;
 }
 
 export async function validateCoupon(
@@ -33,6 +35,39 @@ export async function validateCoupon(
   if (input.subtotal < (coupon.minimum_order ?? 0)) {
     return { valid: false, discount: 0, reason: `Minimum order ${coupon.minimum_order ?? 0} MAD not reached` };
   }
+
+  // ── Customer-specific coupon check ──────────────────────────────────
+  if (coupon.applicable_to === 'customers') {
+    const allowedIds = (coupon.applicable_ids ?? []).map((s: string) => s.trim()).filter(Boolean);
+    if (allowedIds.length > 0) {
+      let customerId: string | null = null;
+
+      // Look up customer by phone
+      if (input.customerPhone) {
+        const { data: phoneCustomer } = await admin
+          .from('customers')
+          .select('id')
+          .eq('phone', input.customerPhone)
+          .single();
+        if (phoneCustomer) customerId = phoneCustomer.id;
+      }
+
+      // Fallback: look up customer by email
+      if (!customerId && input.customerEmail) {
+        const { data: emailCustomer } = await admin
+          .from('customers')
+          .select('id')
+          .eq('email', input.customerEmail)
+          .single();
+        if (emailCustomer) customerId = emailCustomer.id;
+      }
+
+      if (!customerId || !allowedIds.includes(customerId)) {
+        return { valid: false, discount: 0, reason: 'This coupon is not available for your account' };
+      }
+    }
+  }
+
   // Scope check for product/category coupons.
   if (input.productIds && (coupon.applicable_to === 'products' || coupon.applicable_to === 'categories')) {
     const ids = (coupon.applicable_ids ?? []).map((s: string) => s.trim()).filter(Boolean);

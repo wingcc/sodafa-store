@@ -1,7 +1,7 @@
 // app/dashboard/pages/settings/NotificationSettings.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from '../../i18n/useTranslation';
-import { Bell, Save, Check, Loader2 } from 'lucide-react';
+import { Bell, Save, Check, Loader2, Send } from 'lucide-react';
 import { getTypeIcon, getTypeClasses, getCategoryLabel } from '../../components/notifications/notificationVisuals';
 
 interface NotificationPreference {
@@ -36,12 +36,17 @@ const PREFERENCES: NotificationPreference[] = [
   { key: 'notify_new_customers', type: 'social', label: 'New Customer Notifications', description: 'Get notified when a new customer registers' },
 ];
 
+// Types that have testable API endpoints
+const TESTABLE_TYPES = new Set(['order', 'inventory', 'customer', 'review', 'payment', 'promotion', 'shipping', 'product', 'system', 'security']);
+
 const NotificationSettings: React.FC = () => {
   const { t } = useTranslation();
   const [preferences, setPreferences] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [testingKey, setTestingKey] = useState<string | null>(null);
+  const [testResult, setTestResult] = useState<{ key: string; ok: boolean; message: string } | null>(null);
 
   useEffect(() => {
     loadPreferences();
@@ -91,11 +96,36 @@ const NotificationSettings: React.FC = () => {
     }
   };
 
+  const handleTest = useCallback(async (prefKey: string) => {
+    setTestingKey(prefKey);
+    setTestResult(null);
+    try {
+      const res = await fetch('/api/test-notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ preferenceKey: prefKey }),
+      });
+      const json = await res.json();
+      if (json.success && json.results?.length > 0) {
+        const msg = json.results[0];
+        const ok = msg.startsWith('✅');
+        setTestResult({ key: prefKey, ok, message: ok ? 'Sent!' : msg.replace(/^[⚠️❌]\s*/, '') });
+      } else {
+        setTestResult({ key: prefKey, ok: false, message: json.error ?? 'No test available for this type' });
+      }
+    } catch (e) {
+      setTestResult({ key: prefKey, ok: false, message: 'Network error' });
+    } finally {
+      setTestingKey(null);
+      setTimeout(() => setTestResult(null), 3000);
+    }
+  }, []);
+
   if (isLoading) {
     return (
       <div className="bg-white rounded-2xl border border-gray-100 p-6">
         <div className="flex items-center justify-center py-8">
-          <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+          <Loader2 className="w-8 h-8 animate-spin text-[var(--color-darkGreen)]" />
         </div>
       </div>
     );
@@ -111,7 +141,8 @@ const NotificationSettings: React.FC = () => {
         <button
           onClick={handleSave}
           disabled={isSaving}
-          className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl font-medium text-sm hover:bg-purple-700 transition-colors disabled:opacity-50"
+          className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white rounded-xl transition-all hover:shadow-lg disabled:opacity-50"
+          style={{ background: 'linear-gradient(135deg, var(--color-darkGreen), var(--color-mediumGreen))' }}
         >
           {isSaving ? (
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -129,6 +160,10 @@ const NotificationSettings: React.FC = () => {
       <div className="space-y-4">
         {PREFERENCES.map((pref) => {
           const typeClasses = getTypeClasses(pref.type);
+          const isTestable = TESTABLE_TYPES.has(pref.type);
+          const isTesting = testingKey === pref.key;
+          const result = testResult?.key === pref.key ? testResult : null;
+
           return (
             <div
               key={pref.key}
@@ -143,21 +178,50 @@ const NotificationSettings: React.FC = () => {
                   <p className="text-xs text-gray-500 mt-0.5">{t(`settings.notifications.preferences.${pref.key}`) !== `settings.notifications.preferences.${pref.key}` ? t(`settings.notifications.preferences.${pref.key}`) : pref.label}</p>
                 </div>
               </div>
-            <button
-              onClick={() => handleToggle(pref.key)}
-              className={`relative w-11 h-6 rounded-full transition-colors ${
-                preferences[pref.key] ? 'bg-purple-500' : 'bg-gray-200'
-              }`}
-              aria-pressed={preferences[pref.key]}
-              aria-label={preferences[pref.key] ? 'Enabled' : 'Disabled'}
-            >
-              <div
-                className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                  preferences[pref.key] ? 'translate-x-[22px]' : 'translate-x-[2px]'
-                }`}
-              />
-            </button>
-          </div>
+              <div className="flex items-center gap-2">
+                {/* Test button */}
+                {isTestable && (
+                  <button
+                    onClick={() => handleTest(pref.key)}
+                    disabled={isTesting}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-all disabled:opacity-50"
+                    style={{
+                      borderColor: result ? (result.ok ? '#10B981' : '#EF4444') : 'rgba(var(--color-darkGreen-rgb, 4,120,87), 0.2)',
+                      color: result ? (result.ok ? '#10B981' : '#EF4444') : 'var(--color-darkGreen, #047857)',
+                      background: result ? (result.ok ? 'rgba(16,185,129,0.06)' : 'rgba(239,68,68,0.06)') : 'transparent',
+                    }}
+                    title={`Test ${pref.label}`}
+                  >
+                    {isTesting ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : result ? (
+                      result.ok ? <Check className="w-3 h-3" /> : <span className="w-3 h-3 flex items-center justify-center text-[10px]">!</span>
+                    ) : (
+                      <Send className="w-3 h-3" />
+                    )}
+                    <span className="hidden sm:inline">
+                      {isTesting ? 'Sending...' : result ? result.message : 'Test'}
+                    </span>
+                  </button>
+                )}
+
+                {/* Toggle */}
+                <button
+                  onClick={() => handleToggle(pref.key)}
+                  className={`relative w-11 h-6 rounded-full transition-colors ${
+                    preferences[pref.key] ? 'bg-[var(--color-darkGreen)]' : 'bg-gray-200'
+                  }`}
+                  aria-pressed={preferences[pref.key]}
+                  aria-label={preferences[pref.key] ? 'Enabled' : 'Disabled'}
+                >
+                  <div
+                    className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                      preferences[pref.key] ? 'translate-x-[22px]' : 'translate-x-[2px]'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
           );
         })}
       </div>
@@ -170,7 +234,7 @@ const NotificationSettings: React.FC = () => {
             <label className="flex items-center gap-3 cursor-pointer">
               <input
                 type="checkbox"
-                className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                className="w-4 h-4 rounded border-gray-300 text-[var(--color-darkGreen)] focus:ring-[var(--color-darkGreen)]"
                 defaultChecked
               />
               <span className="text-sm text-gray-700">{t('settings.notifications.emailNotifications')}</span>
@@ -181,7 +245,7 @@ const NotificationSettings: React.FC = () => {
             <label className="flex items-center gap-3 cursor-pointer">
               <input
                 type="checkbox"
-                className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                className="w-4 h-4 rounded border-gray-300 text-[var(--color-darkGreen)] focus:ring-[var(--color-darkGreen)]"
                 defaultChecked
               />
               <span className="text-sm text-gray-700">{t('settings.notifications.pushNotifications')}</span>

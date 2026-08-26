@@ -34,6 +34,7 @@ const Inventory: React.FC = () => {
   const [filter, setFilter] = useState('all');
   const [adjustmentModal, setAdjustmentModal] = useState<any>(null);
   const [adjustmentAmount, setAdjustmentAmount] = useState(0);
+  const [isAdjusting, setIsAdjusting] = useState(false);
 
   // Fetch products on mount
   useEffect(() => {
@@ -214,11 +215,19 @@ const Inventory: React.FC = () => {
               </div>
               <div className="p-3 rounded-xl bg-gray-50 text-center">
                 <p className="text-sm text-gray-500">New Stock</p>
-                <p className="text-xl font-bold text-gray-900 mt-1">
+                <p className={`text-xl font-bold mt-1 ${
+                  (adjustmentModal.type === 'increase'
+                    ? adjustmentModal.stock + adjustmentAmount
+                    : Math.max(0, adjustmentModal.stock - adjustmentAmount)) === 0
+                    ? 'text-red-600' : 'text-gray-900'
+                }`}>
                   {adjustmentModal.type === 'increase'
                     ? adjustmentModal.stock + adjustmentAmount
                     : Math.max(0, adjustmentModal.stock - adjustmentAmount)}
                 </p>
+                {adjustmentModal.type === 'decrease' && adjustmentAmount > adjustmentModal.stock && (
+                  <p className="text-xs text-red-500 mt-1">Cannot remove more than available stock</p>
+                )}
               </div>
             </div>
             <div className="p-6 border-t border-gray-100 flex items-center justify-end gap-3">
@@ -226,21 +235,45 @@ const Inventory: React.FC = () => {
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  const newStock = adjustmentModal.type === 'increase'
-                    ? adjustmentModal.stock + adjustmentAmount
-                    : Math.max(0, adjustmentModal.stock - adjustmentAmount);
-                  if (newStock === 0) {
-                    addToast('warning', `"${adjustmentModal.name}" is now out of stock (0 units).`, { title: 'Out of Stock' });
-                  } else {
-                    addToast('success', `"${adjustmentModal.name}" stock updated to ${newStock} units.`, { title: 'Stock Updated' });
+                onClick={async () => {
+                  if (adjustmentAmount <= 0) return;
+                  const adjustment = adjustmentModal.type === 'increase'
+                    ? adjustmentAmount
+                    : -adjustmentAmount;
+                  setIsAdjusting(true);
+                  try {
+                    const res = await fetch('/api/inventory/stock', {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        productId: adjustmentModal.id,
+                        adjustment,
+                      }),
+                    });
+                    const data = await res.json();
+                    if (!res.ok) {
+                      addToast('error', data.error?.message || 'Failed to adjust stock', { title: 'Error' });
+                      return;
+                    }
+                    const newStock = data.data?.stock ?? (adjustmentModal.stock + adjustment);
+                    if (newStock === 0) {
+                      addToast('warning', `"${adjustmentModal.name}" is now out of stock (0 units).`, { title: 'Out of Stock' });
+                    } else {
+                      addToast('success', `"${adjustmentModal.name}" stock updated to ${newStock} units.`, { title: 'Stock Updated' });
+                    }
+                    fetchProducts();
+                  } catch {
+                    addToast('error', 'Network error. Please try again.', { title: 'Error' });
+                  } finally {
+                    setIsAdjusting(false);
+                    setAdjustmentModal(null);
+                    setAdjustmentAmount(0);
                   }
-                  setAdjustmentModal(null);
-                  setAdjustmentAmount(0);
                 }}
-                className="px-4 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl hover:shadow-lg transition-all"
+                disabled={isAdjusting || adjustmentAmount <= 0}
+                className="px-4 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Apply Adjustment
+                {isAdjusting ? 'Applying...' : 'Apply Adjustment'}
               </button>
             </div>
           </div>

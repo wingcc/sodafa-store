@@ -6,6 +6,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin';
 import { CustomerRepository } from '@/lib/db';
+import { notificationService } from '@/lib/services/notificationService';
 import { successResponse, internalServerError } from '@/lib/api';
 
 export async function GET(request: Request) {
@@ -44,6 +45,14 @@ export async function POST(request: Request) {
     });
 
     if (error) throw error;
+
+    // Send notification
+    try {
+      await notificationService.notifyNewCustomer(data.id, body.name, body.email ?? '');
+    } catch (e) {
+      console.error('Failed to send new customer notification:', e);
+    }
+
     return successResponse(data, 201);
   } catch (err: any) {
     console.error('POST /api/customers error:', err);

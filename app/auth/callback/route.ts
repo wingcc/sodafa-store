@@ -1,5 +1,7 @@
 // app/auth/callback/route.ts
 import { createServerClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { notificationService } from '@/lib/services/notificationService'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
@@ -22,6 +24,15 @@ export async function GET(request: NextRequest) {
       } else {
         // ✅ Success!
         confirmUrl.searchParams.set('status', 'success')
+        // Send email verified notification
+        try {
+          await notificationService.create({
+            type: 'security',
+            title: 'Email verified',
+            message: 'A customer has verified their email address.',
+            priority: 'medium',
+          })
+        } catch {}
       }
     } catch (err) {
       console.error('🔥 Unexpected error:', err)

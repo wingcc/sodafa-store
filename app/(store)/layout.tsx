@@ -16,6 +16,9 @@ import { FloatingWhatsappButton } from '../components/FloatingWhatsappButton';
 import { AnnouncementBar } from '../sections/AnnouncementBar';
 import Navbar from '../sections/Navbar';
 import Footer from '../sections/Footer';
+import { StoreToastProvider } from './components/StoreToastContext';
+import AnalyticsProvider from './components/AnalyticsProvider';
+import CookieConsentBanner from './components/CookieConsentBanner';
 
 
 
@@ -29,16 +32,21 @@ export default function StoreLayout({
       <UIProvider>
         <LanguageProvider>
           <FavoritesProvider>
-            <DirectionWrapper>
-              <AnnouncementBar />
-              <Navbar />
-              <div className="flex-1 flex flex-col">{children}</div>
-              <Footer />
-              <CartDrawer />
-              <SearchDialog />
-              <CheckoutFormModal />
-              <FloatingWhatsappButton />
-            </DirectionWrapper>
+            <StoreToastProvider>
+              <AnalyticsProvider>
+                <DirectionWrapper>
+                  <AnnouncementBar />
+                  <Navbar />
+                  <div className="flex-1 flex flex-col">{children}</div>
+                  <Footer />
+                  <CartDrawer />
+                  <SearchDialog />
+                  <CheckoutFormModal />
+                  <FloatingWhatsappButton />
+                  <CookieConsentBanner />
+                </DirectionWrapper>
+              </AnalyticsProvider>
+            </StoreToastProvider>
           </FavoritesProvider>
         </LanguageProvider>
       </UIProvider>

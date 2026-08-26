@@ -7,6 +7,7 @@
 import { createServerClient } from '@/lib/supabase';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { CategoryRepository } from '@/lib/db';
+import { notificationService } from '@/lib/services/notificationService';
 import { successResponse, internalServerError, badRequest } from '@/lib/api';
 
 export async function GET(request: Request) {
@@ -44,6 +45,20 @@ export async function POST(request: Request) {
     });
 
     if (error) throw error;
+
+    // Send notification
+    try {
+      await notificationService.create({
+        type: 'product',
+        title: 'New category created',
+        message: `Category "${body.name}" has been created.`,
+        priority: 'low',
+        metadata: { categoryId: data?.id, name: body.name },
+      });
+    } catch (e) {
+      console.error('Failed to send category notification:', e);
+    }
+
     return successResponse(data, 201);
   } catch (err: any) {
     console.error('POST /api/categories error:', err);

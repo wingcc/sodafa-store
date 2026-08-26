@@ -99,6 +99,18 @@
   .website-root .fall-zone { display: block !important; }
 }
 
+/* ── Section vertical spacing (homepage only) ──
+   All sections get 64px top/bottom padding for breathing room.
+   Excludes hero (full-viewport), footer (own padding), and announcement bar. */
+.website-root [data-section]:not([data-section="hero"]):not([data-section="footer"]):not([data-section="announcement"]) {
+  padding-block: 64px;
+}
+@media (max-width: 768px) {
+  .website-root [data-section]:not([data-section="hero"]):not([data-section="footer"]):not([data-section="announcement"]) {
+    padding-block: 48px;
+  }
+}
+
 /* ── Premium FAQ refresh ── */
 .website-root .faq-item {
   background: #FFFFFF !important;

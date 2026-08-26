@@ -20,6 +20,7 @@ import {
   Clock,
   ShieldCheck,
 } from 'lucide-react';
+import OrderSteps from './OrderSteps';
 import { WHATSAPP_LINK } from '../../../constants';
 import type { OrderRow } from '@/lib/supabase/types';
 
@@ -128,13 +129,6 @@ export default function OrderConfirmationClient() {
   const hasDiscount = (appliedCoupon?.discount ?? 0) > 0;
   const hasCoupon = order.coupon_code || appliedCoupon?.code;
 
-  const steps = [
-    { label: isAr ? 'تم استقبال الطلب' : 'Order Received', done: true },
-    { label: isAr ? 'جاري التجهيز' : 'Processing', done: true },
-    { label: isAr ? 'مع شركة الشحن' : 'In Transit', done: false },
-    { label: isAr ? 'تم التسليم' : 'Delivered', done: false },
-  ];
-
   const formattedDate = new Date(order.created_at).toLocaleDateString(
     isAr ? 'ar-MA' : 'en-US',
     { year: 'numeric', month: 'long', day: 'numeric' }
@@ -224,31 +218,8 @@ export default function OrderConfirmationClient() {
               </div>
             </div>
 
-            {/* 4 Steps Tracker */}
-            <div className="relative pt-2">
-              <div className="flex justify-between items-center relative z-10">
-                {steps.map((step, i) => (
-                  <div key={i} className="flex flex-col items-center gap-2 text-center w-1/4">
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all ${
-                        step.done
-                          ? 'bg-emerald-900 border-emerald-900 text-amber-300'
-                          : 'bg-stone-100 border-stone-300 text-stone-400'
-                      }`}
-                    >
-                      {step.done ? <CheckCircle2 className="w-4 h-4 text-amber-300" /> : i + 1}
-                    </div>
-                    <span
-                      className={`text-[11px] font-bold ${
-                        step.done ? 'text-stone-900' : 'text-stone-400'
-                      }`}
-                    >
-                      {step.label}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {/* Animated Steps Tracker */}
+            <OrderSteps currentStep={1} />
 
             {/* Shipping Info Card (with delivery method + coupon) */}
             <div className="bg-stone-50 rounded-2xl p-4 border border-stone-200/60 flex items-start gap-3">

@@ -25,8 +25,10 @@ import {
 } from 'lucide-react';
 import Badge from '../components/ui/Badge';
 import RefreshButton from '../components/ui/RefreshButton';
+import EntityPickerModal from '../components/ui/EntityPickerModal';
 import { useToast } from '@/lib/toast';
 import { useTranslation } from '../i18n/useTranslation';
+import { useStore } from '../store/useStore';
 
 interface Coupon {
   id: string;
@@ -60,6 +62,21 @@ const Coupons: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerType, setPickerType] = useState<'products' | 'categories' | 'customers'>('products');
+
+  // ── Auto-open coupon from notification navigation ──────────────────
+  const pendingNavigation = useStore((s) => s.pendingNavigation);
+  const clearPendingNavigation = useStore((s) => s.clearPendingNavigation);
+
+  useEffect(() => {
+    if (pendingNavigation?.page === 'coupons') {
+      if (pendingNavigation.searchQuery) {
+        setSearchQuery(pendingNavigation.searchQuery);
+      }
+      clearPendingNavigation();
+    }
+  }, [pendingNavigation, clearPendingNavigation]);
 
   const fetchCoupons = async () => {
     try {
@@ -208,7 +225,8 @@ const Coupons: React.FC = () => {
       }
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || (editingCoupon ? 'Failed to update coupon' : 'Failed to create coupon'));
+        const msg = errorData.error?.message || errorData.error || (editingCoupon ? 'Failed to update coupon' : 'Failed to create coupon');
+        throw new Error(msg);
       }
       const result = await response.json();
       if (editingCoupon) {
@@ -733,18 +751,61 @@ const Coupons: React.FC = () => {
                   </select>
                 </div>
               </div>
-              {(formData.applicableTo === 'products' || formData.applicableTo === 'categories') && (
+              {(formData.applicableTo === 'products' || formData.applicableTo === 'categories' || formData.applicableTo === 'customers') && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    {formData.applicableTo === 'products' ? 'Product IDs' : 'Category IDs'} (comma-separated)
+                    {formData.applicableTo === 'products'
+                      ? 'Products'
+                      : formData.applicableTo === 'categories'
+                      ? 'Categories'
+                      : 'Customers'}
                   </label>
-                  <input
-                    type="text"
-                    value={formData.applicableIds}
-                    onChange={(e) => setFormData({ ...formData, applicableIds: e.target.value })}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-300"
-                    placeholder="e.g., prod-123, prod-456"
-                  />
+                  {formData.applicableIds ? (
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap gap-1.5">
+                        {formData.applicableIds.split(',').filter(Boolean).map((id) => (
+                          <span
+                            key={id}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-purple-50 border border-purple-200 rounded-lg text-xs font-medium text-purple-700"
+                          >
+                            {id.trim().slice(0, 12)}...
+                            <button
+                              onClick={() => {
+                                const ids = formData.applicableIds
+                                  .split(',')
+                                  .map((s) => s.trim())
+                                  .filter((s) => s && s !== id.trim());
+                                setFormData({ ...formData, applicableIds: ids.join(',') });
+                              }}
+                              className="p-0.5 rounded hover:bg-purple-100"
+                            >
+                              <X size={10} />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => {
+                          setPickerType(formData.applicableTo as 'products' | 'categories' | 'customers');
+                          setPickerOpen(true);
+                        }}
+                        className="text-sm text-purple-600 hover:text-purple-700 font-medium"
+                      >
+                        + Add more
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setPickerType(formData.applicableTo as 'products' | 'categories' | 'customers');
+                        setPickerOpen(true);
+                      }}
+                      className="w-full bg-gray-50 border border-dashed border-gray-300 rounded-xl px-4 py-6 text-sm text-gray-500 hover:border-purple-300 hover:text-purple-600 transition-all flex flex-col items-center gap-2"
+                    >
+                      <Search size={20} />
+                      Click to search and select {formData.applicableTo}
+                    </button>
+                  )}
                 </div>
               )}
               <div className="grid grid-cols-2 gap-4">
@@ -782,6 +843,14 @@ const Coupons: React.FC = () => {
           </div>
         </div>
       )}
+      {/* Entity Picker Modal */}
+      <EntityPickerModal
+        open={pickerOpen}
+        type={pickerType}
+        selectedIds={formData.applicableIds ? formData.applicableIds.split(',').map((s) => s.trim()).filter(Boolean) : []}
+        onConfirm={(ids) => setFormData({ ...formData, applicableIds: ids.join(',') })}
+        onClose={() => setPickerOpen(false)}
+      />
     </div>
   );
 };

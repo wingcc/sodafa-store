@@ -165,6 +165,18 @@ export function Footer({
     e.preventDefault();
     const input = (e.target as HTMLFormElement).querySelector("input") as HTMLInputElement;
     if (input?.value) {
+      // Send notification to admin
+      fetch('/api/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'subscription',
+          title: 'New newsletter subscriber',
+          message: `${input.value} has subscribed to the newsletter.`,
+          priority: 'low',
+        }),
+      }).catch(() => {});
+
       setBtnLabel(t("✓ تم الاشتراك", "✓ Abonné", "✓ Subscribed"));
       showToast(t("تم اشتراكك في النشرة البريدية بنجاح 🌿", "Abonné avec succès à la newsletter 🌿", "Successfully subscribed to our newsletter 🌿"));
       setTimeout(() => {

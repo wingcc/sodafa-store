@@ -19,8 +19,11 @@ import Payments from './pages/Payments';
 import Analytics from './pages/Analytics';
 import Notifications from './pages/Notifications';
 import Settings from './pages/Settings';
+import DashboardNotFound from './pages/DashboardNotFound';
 import { useStore } from './store/useStore';
 import { usePreferencesStore } from './store/usePreferencesStore';
+import { useSlugRouter } from './hooks/useSlugRouter';
+import type { PageSection } from './types';
 
 // استيراد مكونات إدارة المتجر الجديدة
 import StoreManagerOverview from './pages/store-manager/Overview';
@@ -28,12 +31,26 @@ import HomepageManagement from './pages/store-manager/homepage/page';
 import PromotionalBannersPage from './pages/store-manager/promotional-banners/page';
 import StoreContentPage from './pages/store-manager/store-content/page';
 
+const VALID_PAGE_KEYS = new Set([
+  'dashboard', 'products', 'categories', 'orders', 'customers', 'inventory',
+  'reviews', 'coupons', 'shipping', 'payments', 'analytics', 'notifications',
+  'settings', 'store', 'store-homepage', 'store-homepage-content', 'store-reviews',
+  'store-settings', 'store-seo', 'store-banners', 'store-content',
+]);
+
 const App: React.FC = () => {
+  useSlugRouter();
   const { currentPage, sidebarCollapsed } = useStore();
   const language = usePreferencesStore((s) => s.language);
   const isRTL = language === 'ar';
 
+  // Check if current page is valid (from URL)
+  const isValidPage = VALID_PAGE_KEYS.has(currentPage) || currentPage === ('__not_found__' as PageSection);
+
   const renderPage = () => {
+    if (currentPage === ('__not_found__' as PageSection)) return <DashboardNotFound />;
+    if (!isValidPage) return <DashboardNotFound />;
+
     switch (currentPage) {
       case 'dashboard': return <Dashboard />;
       case 'products': return <Products />;
@@ -57,7 +74,7 @@ const App: React.FC = () => {
       case 'store-seo': return <HomepageManagement initialTab="seo" />;
       case 'store-banners': return <PromotionalBannersPage />;
       case 'store-content': return <StoreContentPage />;
-      default: return <Dashboard />;
+      default: return <DashboardNotFound />;
     }
   };
 

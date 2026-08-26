@@ -93,7 +93,22 @@ export class ProductRepository {
   }
 
   async updateStock(id: string, quantity: number) {
-    return this.supabase.rpc('update_stock', { product_id: id, quantity });
+    return this.supabase.rpc('update_stock', { p_product_id: id, p_quantity: quantity });
+  }
+
+  /**
+   * Atomically check stock AND decrement in one DB statement.
+   * Returns { success, newStock } — never oversells.
+   */
+  async decrementStock(productId: string, qty: number): Promise<{ success: boolean; newStock: number }> {
+    const { data, error } = await this.supabase.rpc('decrement_stock', {
+      p_product_id: productId,
+      p_qty: qty,
+    });
+    if (error) return { success: false, newStock: -1 };
+    const result = data as number;
+    if (result < 0) return { success: false, newStock: -1 };
+    return { success: true, newStock: result };
   }
 
   async getStats() {

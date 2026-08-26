@@ -14,13 +14,15 @@ export class OrderRepository {
     paymentStatus?: string;
     search?: string;
     customerId?: string;
+    dateFrom?: string;
+    dateTo?: string;
     sortBy?: string;
     limit?: number;
     offset?: number;
   }) {
     let query = this.supabase.from('orders').select('*, items:order_items(*)');
 
-    if (options?.status) {
+    if (options?.status && options.status !== 'all') {
       query = query.eq('order_status', options.status);
     }
     if (options?.paymentStatus) {
@@ -28,6 +30,12 @@ export class OrderRepository {
     }
     if (options?.customerId) {
       query = query.eq('customer_id', options.customerId);
+    }
+    if (options?.dateFrom) {
+      query = query.gte('created_at', options.dateFrom);
+    }
+    if (options?.dateTo) {
+      query = query.lte('created_at', options.dateTo);
     }
     if (options?.search) {
       query = query.or(
@@ -62,9 +70,26 @@ export class OrderRepository {
   }
 
   async updateStatus(id: string, status: string, note?: string) {
+    // Auto-update payment_status based on order_status
+    const paymentStatusMap: Record<string, string> = {
+      pending: 'pending',
+      confirmed: 'paid',       // COD: confirmed = collected
+      processing: 'paid',
+      shipped: 'paid',
+      delivered: 'paid',
+      cancelled: 'failed',
+      refunded: 'refunded',
+    };
+    const newPaymentStatus = paymentStatusMap[status];
+
+    const updateData: Record<string, any> = { order_status: status as any };
+    if (newPaymentStatus) {
+      updateData.payment_status = newPaymentStatus;
+    }
+
     const { data, error } = await this.supabase
       .from('orders')
-      .update({ order_status: status as any })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();

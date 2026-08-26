@@ -12,34 +12,35 @@ import styles from "./ProductCard.module.css";
 
 function useCountdown(targetDate: string | undefined) {
   const target = useMemo(() => (targetDate ? new Date(targetDate).getTime() : 0), [targetDate]);
-  const [time, setTime] = useState(() => {
-    if (!target) return { days: 0, hours: 0, minutes: 0, seconds: 0, expired: true };
+  const [mounted, setMounted] = useState(false);
+  const [time, setTime] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, expired: true });
+
+  useEffect(() => {
+    if (!target) { setMounted(true); return; }
     const diff = Math.max(0, target - Date.now());
-    return {
+    setTime({
       days: Math.floor(diff / 86400000),
       hours: Math.floor((diff % 86400000) / 3600000),
       minutes: Math.floor((diff % 3600000) / 60000),
       seconds: Math.floor((diff % 60000) / 1000),
       expired: diff <= 0,
-    };
-  });
+    });
+    setMounted(true);
 
-  useEffect(() => {
-    if (!target || time.expired) return;
     const id = setInterval(() => {
-      const diff = Math.max(0, target - Date.now());
+      const d = Math.max(0, target - Date.now());
       setTime({
-        days: Math.floor(diff / 86400000),
-        hours: Math.floor((diff % 86400000) / 3600000),
-        minutes: Math.floor((diff % 3600000) / 60000),
-        seconds: Math.floor((diff % 60000) / 1000),
-        expired: diff <= 0,
+        days: Math.floor(d / 86400000),
+        hours: Math.floor((d % 86400000) / 3600000),
+        minutes: Math.floor((d % 3600000) / 60000),
+        seconds: Math.floor((d % 60000) / 1000),
+        expired: d <= 0,
       });
     }, 1000);
     return () => clearInterval(id);
-  }, [target, time.expired]);
+  }, [target]);
 
-  return time;
+  return { ...time, mounted };
 }
 
 export type ProductCardProps = {
@@ -99,7 +100,7 @@ export const ProductCard = ({
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const countdown = useCountdown(product.isOffer ? product.offerTime : undefined);
-  const showCountdownTimer = showCountdown && product.isOffer && product.offerTime && !countdown.expired;
+  const showCountdownTimer = showCountdown && product.isOffer && product.offerTime && !countdown.expired && countdown.mounted;
 
   const hasMultiple = allImages.length > 1;
 

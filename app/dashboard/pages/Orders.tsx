@@ -41,10 +41,13 @@ import { useStore } from '../store/useStore';
 import { useToast } from '@/lib/toast';
 import { useTranslation } from '../i18n/useTranslation';
 import { MOROCCAN_CITIES } from '../data/moroccoCities';
+import type { CouponInfo } from '../types';
 
 const statusFilters = ['all', 'pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
 
 const statusFlow = ['pending', 'confirmed', 'processing', 'shipped', 'delivered'];
+const cancelableStatuses = ['pending', 'confirmed', 'processing'];
+const refundableStatuses = ['delivered', 'shipped'];
 
 const statusConfig: Record<string, { label: string; color: string; bg: string; ring: string; activeBg: string }> = {
   pending:    { label: 'Pending',    color: 'text-amber-700',  bg: 'bg-amber-50',  ring: 'ring-amber-200',  activeBg: 'bg-amber-100' },
@@ -151,6 +154,7 @@ const Orders: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showOrderDetail, setShowOrderDetail] = useState<any>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+  const [couponInfo, setCouponInfo] = useState<CouponInfo | null>(null);
   const invoiceRef = useRef<HTMLDivElement>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
   const [openStatusDropdown, setOpenStatusDropdown] = useState<string | null>(null);
@@ -158,6 +162,19 @@ const Orders: React.FC = () => {
   const [storeCitySearch, setStoreCitySearch] = useState('');
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+
+  // ── Auto-open order from notification navigation ───────────────────
+  const pendingNavigation = useStore((s) => s.pendingNavigation);
+  const clearPendingNavigation = useStore((s) => s.clearPendingNavigation);
+
+  useEffect(() => {
+    if (pendingNavigation?.page === 'orders') {
+      if (pendingNavigation.searchQuery) {
+        setSearchQuery(pendingNavigation.searchQuery);
+      }
+      clearPendingNavigation();
+    }
+  }, [pendingNavigation, clearPendingNavigation]);
 
   // City suggestions for store city dropdown
   const citySuggestions = useMemo(() => {
@@ -307,9 +324,38 @@ const Orders: React.FC = () => {
   const openOrderDetail = async (order: any) => {
     setShowOrderDetail(order);
     setIsLoadingDetail(true);
+    setCouponInfo(null);
     const full = await fetchOrderDetail(order.id);
     if (full) {
       setShowOrderDetail(full);
+      // Fetch coupon details if coupon code exists
+      if (full.couponCode) {
+        const code = full.couponCode;
+        try {
+          const res = await fetch(`/api/coupons?search=${encodeURIComponent(code)}`);
+          const json = await res.json();
+          if (json.success && Array.isArray(json.data)) {
+            const found = json.data.find((c: any) => String(c.code).toUpperCase() === code.toUpperCase());
+            if (found) {
+              setCouponInfo({
+                id: String(found.id ?? ''),
+                code: String(found.code ?? ''),
+                description: String(found.description ?? ''),
+                discount_type: found.discount_type ?? 'percentage',
+                discount_value: Number(found.discount_value ?? 0),
+                minimum_order: Number(found.minimum_order ?? 0),
+                maximum_discount: found.maximum_discount != null ? Number(found.maximum_discount) : null,
+                applicable_to: found.applicable_to ?? 'all',
+                start_date: String(found.start_date ?? ''),
+                end_date: String(found.end_date ?? ''),
+                usage_limit: Number(found.usage_limit ?? 0),
+                used_count: Number(found.used_count ?? 0),
+                status: found.status ?? 'active',
+              });
+            }
+          }
+        } catch {}
+      }
     }
     setIsLoadingDetail(false);
   };
@@ -703,13 +749,34 @@ const Orders: React.FC = () => {
                           {nextStatus && (
                             <button
                               onClick={() => handleQuickStatusUpdate(order.id, nextStatus)}
-                              className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-[#0a2c23] to-[#0f3d31] text-white rounded-xl text-xs font-medium hover:shadow-lg hover:shadow-[#0a2c23]/25 transition-all"
+                              className="flex items-center gap-1.5 px-3 py-2 text-white rounded-xl text-xs font-medium hover:shadow-lg transition-all"
+                              style={{ background: 'linear-gradient(135deg, var(--color-darkGreen), var(--color-mediumGreen))' }}
                             >
                               {nextStatus === 'confirmed' && 'Confirm'}
                               {nextStatus === 'processing' && 'Process'}
                               {nextStatus === 'shipped' && 'Ship'}
                               {nextStatus === 'delivered' && 'Deliver'}
                               <ArrowRight size={12} />
+                            </button>
+                          )}
+                          {cancelableStatuses.includes(order.orderStatus) && (
+                            <button
+                              onClick={() => handleQuickStatusUpdate(order.id, 'cancelled')}
+                              className="flex items-center gap-1.5 px-3 py-2 bg-red-50 text-red-600 rounded-xl text-xs font-medium hover:bg-red-100 transition-colors"
+                              title="Cancel Order"
+                            >
+                              <XCircle size={12} />
+                              Cancel
+                            </button>
+                          )}
+                          {refundableStatuses.includes(order.orderStatus) && order.paymentStatus === 'paid' && (
+                            <button
+                              onClick={() => handleQuickStatusUpdate(order.id, 'refunded')}
+                              className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 text-gray-600 rounded-xl text-xs font-medium hover:bg-gray-100 transition-colors"
+                              title="Refund Order"
+                            >
+                              <RotateCcw size={12} />
+                              Refund
                             </button>
                           )}
                            <button
@@ -845,13 +912,33 @@ const Orders: React.FC = () => {
                         <span className="text-xs text-gray-500">{order.paymentMethod.replace('_', ' ')}</span>
                       </td>
                       <td className="px-6 py-4">
-                        <StatusDropdown
-                          orderId={order.id}
-                          currentStatus={order.orderStatus}
-                          onUpdate={handleQuickStatusUpdate}
-                          openDropdown={openStatusDropdown}
-                          setOpenDropdown={setOpenStatusDropdown}
-                        />
+                        <div className="flex items-center gap-1">
+                          <StatusDropdown
+                            orderId={order.id}
+                            currentStatus={order.orderStatus}
+                            onUpdate={handleQuickStatusUpdate}
+                            openDropdown={openStatusDropdown}
+                            setOpenDropdown={setOpenStatusDropdown}
+                          />
+                          {cancelableStatuses.includes(order.orderStatus) && (
+                            <button
+                              onClick={() => handleQuickStatusUpdate(order.id, 'cancelled')}
+                              className="p-1.5 rounded-lg hover:bg-red-50 text-red-400 hover:text-red-600 transition-colors"
+                              title="Cancel Order"
+                            >
+                              <XCircle size={14} />
+                            </button>
+                          )}
+                          {refundableStatuses.includes(order.orderStatus) && order.paymentStatus === 'paid' && (
+                            <button
+                              onClick={() => handleQuickStatusUpdate(order.id, 'refunded')}
+                              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                              title="Refund Order"
+                            >
+                              <RotateCcw size={14} />
+                            </button>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4">
                         <span className="text-sm text-gray-500">
@@ -1019,15 +1106,35 @@ const Orders: React.FC = () => {
                           <CircleDot size={14} className="text-gray-500" />
                           <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Order Status</p>
                         </div>
-                        <StatusDropdown
-                          orderId={showOrderDetail.id}
-                          currentStatus={showOrderDetail.orderStatus}
-                          onUpdate={(id, status) => {
-                            handleStatusUpdateFromDetail(id, status);
-                          }}
-                          openDropdown={openStatusDropdown}
-                          setOpenDropdown={setOpenStatusDropdown}
-                        />
+                        <div className="flex items-center gap-2">
+                          <StatusDropdown
+                            orderId={showOrderDetail.id}
+                            currentStatus={showOrderDetail.orderStatus}
+                            onUpdate={(id, status) => {
+                              handleStatusUpdateFromDetail(id, status);
+                            }}
+                            openDropdown={openStatusDropdown}
+                            setOpenDropdown={setOpenStatusDropdown}
+                          />
+                          {cancelableStatuses.includes(showOrderDetail.orderStatus) && (
+                            <button
+                              onClick={() => handleStatusUpdateFromDetail(showOrderDetail.id, 'cancelled')}
+                              className="flex items-center gap-1 px-2.5 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-medium hover:bg-red-100 transition-colors"
+                            >
+                              <XCircle size={12} />
+                              Cancel
+                            </button>
+                          )}
+                          {refundableStatuses.includes(showOrderDetail.orderStatus) && showOrderDetail.paymentStatus === 'paid' && (
+                            <button
+                              onClick={() => handleStatusUpdateFromDetail(showOrderDetail.id, 'refunded')}
+                              className="flex items-center gap-1 px-2.5 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-200 transition-colors"
+                            >
+                              <RotateCcw size={12} />
+                              Refund
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
                         <div className="flex items-center gap-2 mb-2">
@@ -1160,7 +1267,15 @@ const Orders: React.FC = () => {
                         </div>
                         {showOrderDetail.discount > 0 && (
                           <div className="flex justify-between text-sm">
-                            <span className="text-gray-500">Discount</span>
+                            <span className="text-gray-500">
+                              Discount
+                              {showOrderDetail.couponCode && (
+                                <span className="ml-1.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-100 text-[10px] font-bold text-amber-700">
+                                  <Tag size={8} />
+                                  {showOrderDetail.couponCode}
+                                </span>
+                              )}
+                            </span>
                             <span className="text-emerald-600">-{showOrderDetail.discount} MAD</span>
                           </div>
                         )}
@@ -1174,6 +1289,102 @@ const Orders: React.FC = () => {
                         </div>
                       </div>
                     </div>
+
+                    {/* Coupon Information */}
+                    {showOrderDetail.couponCode && (
+                      <div className="p-4 rounded-xl border border-amber-200 bg-amber-50/50">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Tag size={14} className="text-amber-600" />
+                          <h4 className="text-xs font-medium text-amber-700 uppercase tracking-wide">Coupon Applied</h4>
+                        </div>
+                        {couponInfo ? (
+                          <div className="space-y-2.5">
+                            <div className="flex items-center gap-3">
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-100 border border-amber-300 text-sm font-bold text-amber-800 tracking-wider">
+                                <Tag size={12} />
+                                {couponInfo.code}
+                              </span>
+                              <Badge
+                                variant={couponInfo.status === 'active' ? 'success' : couponInfo.status === 'expired' ? 'danger' : 'default'}
+                                size="sm"
+                              >
+                                {couponInfo.status}
+                              </Badge>
+                            </div>
+                            {couponInfo.description && (
+                              <p className="text-xs text-amber-700">{couponInfo.description}</p>
+                            )}
+                            <div className="grid grid-cols-2 gap-3 mt-2">
+                              <div className="flex items-start gap-2">
+                                <div className="w-7 h-7 rounded-md bg-white border border-amber-200 flex items-center justify-center flex-shrink-0">
+                                  <Receipt size={12} className="text-amber-600" />
+                                </div>
+                                <div>
+                                  <p className="text-[10px] text-amber-500">Discount</p>
+                                  <p className="text-xs font-semibold text-amber-800">
+                                    {couponInfo.discount_type === 'percentage'
+                                      ? `${couponInfo.discount_value}%`
+                                      : couponInfo.discount_type === 'free_shipping'
+                                      ? 'Free Shipping'
+                                      : `${couponInfo.discount_value} MAD`}
+                                    {couponInfo.discount_type === 'percentage' && couponInfo.maximum_discount
+                                      ? ` (max ${couponInfo.maximum_discount} MAD)`
+                                      : ''}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-start gap-2">
+                                <div className="w-7 h-7 rounded-md bg-white border border-amber-200 flex items-center justify-center flex-shrink-0">
+                                  <Package size={12} className="text-amber-600" />
+                                </div>
+                                <div>
+                                  <p className="text-[10px] text-amber-500">Min. Order</p>
+                                  <p className="text-xs font-semibold text-amber-800">{couponInfo.minimum_order} MAD</p>
+                                </div>
+                              </div>
+                              <div className="flex items-start gap-2">
+                                <div className="w-7 h-7 rounded-md bg-white border border-amber-200 flex items-center justify-center flex-shrink-0">
+                                  <User size={12} className="text-amber-600" />
+                                </div>
+                                <div>
+                                  <p className="text-[10px] text-amber-500">Applicable To</p>
+                                  <p className="text-xs font-semibold text-amber-800 capitalize">{couponInfo.applicable_to}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-start gap-2">
+                                <div className="w-7 h-7 rounded-md bg-white border border-amber-200 flex items-center justify-center flex-shrink-0">
+                                  <Calendar size={12} className="text-amber-600" />
+                                </div>
+                                <div>
+                                  <p className="text-[10px] text-amber-500">Valid Until</p>
+                                  <p className="text-xs font-semibold text-amber-800">
+                                    {new Date(couponInfo.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4 pt-2 border-t border-amber-200/60">
+                              <span className="text-[10px] text-amber-500">
+                                Used <span className="font-bold text-amber-700">{couponInfo.used_count}</span> times
+                              </span>
+                              {couponInfo.usage_limit > 0 && (
+                                <span className="text-[10px] text-amber-500">
+                                  Limit <span className="font-bold text-amber-700">{couponInfo.usage_limit}</span>
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-100 border border-amber-300 text-sm font-bold text-amber-800 tracking-wider">
+                              <Tag size={12} />
+                              {showOrderDetail.couponCode}
+                            </span>
+                            <span className="text-xs text-amber-600">Discount: -{showOrderDetail.discount} MAD</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Timeline */}
                     <div>

@@ -11,6 +11,8 @@ const StoreSettings: React.FC<StoreSettingsProps> = ({ settings, setSettings }) 
     setSettings({ ...settings, [key]: value });
   };
 
+  const inputClass = 'w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-darkGreen)]/20 focus:border-[var(--color-darkGreen)]/50 transition-all';
+
   return (
     <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
       <h3 className="text-base font-semibold text-gray-900">Store Configuration</h3>
@@ -22,7 +24,7 @@ const StoreSettings: React.FC<StoreSettingsProps> = ({ settings, setSettings }) 
             type="number"
             value={settings.taxRate}
             onChange={(e) => update('taxRate', Number(e.target.value))}
-            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-300"
+            className={inputClass}
           />
         </div>
         <div>
@@ -31,7 +33,7 @@ const StoreSettings: React.FC<StoreSettingsProps> = ({ settings, setSettings }) 
             type="number"
             value={settings.freeShippingThreshold}
             onChange={(e) => update('freeShippingThreshold', Number(e.target.value))}
-            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-300"
+            className={inputClass}
           />
         </div>
       </div>
@@ -42,7 +44,7 @@ const StoreSettings: React.FC<StoreSettingsProps> = ({ settings, setSettings }) 
           type="number"
           value={settings.lowStockAlert}
           onChange={(e) => update('lowStockAlert', Number(e.target.value))}
-          className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-300"
+          className={inputClass}
         />
       </div>
     </div>
