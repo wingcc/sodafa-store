@@ -5,6 +5,7 @@ import type { PageInfo } from '../types';
 import AnalyticsInfoButton from './AnalyticsInfoButton';
 import { useTranslation } from '../../../i18n/useTranslation';
 import { LogIn, LogOut, Eye, MousePointer } from 'lucide-react';
+import { WidgetIcon } from '../../dashboard/workspace/icons';
 
 interface Props { pages: PageInfo[] }
 
@@ -19,7 +20,8 @@ const UserBehavior: React.FC<Props> = ({ pages }) => {
   return (
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5 h-full flex flex-col min-h-0 overflow-hidden">
       <div className="flex items-center gap-2 mb-4 shrink-0">
-        <h3 className="text-base font-semibold text-gray-900 dark:text-white">{isAr ? 'سلوك المستخدم' : 'User Behavior'}</h3>
+        <WidgetIcon id="user-behavior" />
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white">{isAr ? 'سلوك المستخدم' : 'User Behavior'}</h3>
         <AnalyticsInfoButton title={isAr ? 'سلوك المستخدم' : 'User Behavior'} description={isAr ? 'أين يدخل المستخدمون وأين يغادرون، وأكثر الصفحات مشاهدة.' : 'Where users enter and exit, and most viewed pages.'} hint={isAr ? 'الدخول/الخروج الحقيقي يتطلب تتبع is_entry/is_exit — معروضة تقديرياً.' : 'True entry/exit needs is_entry/is_exit tracking — shown heuristically.'} />
       </div>
 

@@ -5,6 +5,7 @@ import { Users, UserPlus, Repeat, Award } from 'lucide-react';
 import { useStore } from '../../../store/useStore';
 import AnalyticsInfoButton from './AnalyticsInfoButton';
 import { useTranslation } from '../../../i18n/useTranslation';
+import { WidgetIcon } from '../../dashboard/workspace/icons';
 
 const CustomerAnalytics: React.FC<{ visitorNew?: number; visitorReturning?: number }> = ({ visitorNew = 0, visitorReturning = 0 }) => {
   const { language } = useTranslation();
@@ -21,7 +22,8 @@ const CustomerAnalytics: React.FC<{ visitorNew?: number; visitorReturning?: numb
   return (
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5 h-full flex flex-col min-h-0 overflow-hidden">
       <div className="flex items-center gap-2 mb-4 shrink-0">
-        <h3 className="text-base font-semibold text-gray-900 dark:text-white">{isAr ? 'تحليل العملاء' : 'Customer Analytics'}</h3>
+        <WidgetIcon id="customer-analytics" />
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white">{isAr ? 'تحليل العملاء' : 'Customer Analytics'}</h3>
         <AnalyticsInfoButton
           title={isAr ? 'تحليل العملاء' : 'Customer Analytics'}
           description={isAr ? 'الزوار الجدد مقابل العائدين والعملاء الجدد مقابل المتكررين. معدل التكرار يقيس الولاء.' : 'New vs returning visitors & customers. Repeat rate measures loyalty.'}

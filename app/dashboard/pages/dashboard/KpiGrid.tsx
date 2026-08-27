@@ -6,6 +6,7 @@ import { useTranslation } from '../../i18n/useTranslation';
 import DashboardInfoButton from './DashboardInfoButton';
 import { buildRevenueSparkline, sparklinePath } from './utils';
 import type { Order, Product, Customer } from '../../types';
+import { WidgetIcon } from './workspace/icons';
 
 interface Props {
   orders: Order[];

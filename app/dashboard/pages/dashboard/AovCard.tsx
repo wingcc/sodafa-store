@@ -6,8 +6,9 @@ import { useTranslation } from '../../i18n/useTranslation';
 import DashboardInfoButton from './DashboardInfoButton';
 import { getAov, sparklinePath, buildRevenueSparkline, buildOrdersSparkline } from './utils';
 import type { Order } from '../../types';
+import { WidgetIcon } from './workspace/icons';
 
-const AovCard: React.FC<{ orders: Order[] }> = ({ orders }) => {
+const AovCard: React.FC<{ orders: Order[]; onExpand?: () => void }> = ({ orders }) => {
   const { language } = useTranslation();
   const isAr = language === 'ar';
   const { aov, change, count } = getAov(orders);
@@ -18,10 +19,8 @@ const AovCard: React.FC<{ orders: Order[] }> = ({ orders }) => {
   return (
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5 h-full flex flex-col min-h-0 overflow-hidden">
       <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white" style={{ background: 'linear-gradient(135deg, var(--color-gold, #d97706), #f59e0b)' }}>
-            <Banknote size={16} />
-          </div>
+        <div className="flex items-center gap-2">
+          <WidgetIcon id="aov" />
           <div>
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{isAr ? 'متوسط قيمة الطلب' : 'Average Order Value'}</h3>
             <p className="text-xs text-gray-500 dark:text-gray-400">AOV • {isAr ? 'متوسط الإنفاق لكل طلب' : 'avg spent per order'}</p>

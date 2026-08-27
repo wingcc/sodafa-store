@@ -28,8 +28,10 @@ const spanClass = (span: number) => {
 const WorkspaceGrid: React.FC<Props> = ({ registry, layouts, editMode, autoAlign = true, onReorder, onToggleLock, onHide, onChangeSpan, onChangeRowSpan, onExpand, renderWidget }) => {
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const [dragOverGrid, setDragOverGrid] = useState(false);
   const sorted = [...layouts].filter(l => l.visible).sort((a, b) => a.order - b.order);
   const metaMap = new Map(registry.map(m => [m.id, m]));
+  const draggedLayout = dragId ? layouts.find(l => l.id === dragId) : null;
 
   const handleDragStart = (e: React.DragEvent, id: string) => {
     const layout = layouts.find(l => l.id === id);
@@ -106,7 +108,31 @@ const WorkspaceGrid: React.FC<Props> = ({ registry, layouts, editMode, autoAlign
 
       <div
         className={`grid grid-cols-12 gap-3 md:gap-3 lg:gap-4 ${editMode && autoAlign ? 'grid-auto-flow-dense' : ''}`}
-        style={{ gridAutoRows: '140px' }}
+        style={{ gridAutoRows: '180px' }}
+        onDragOver={e => {
+          if (!editMode || !dragId) return;
+          e.preventDefault();
+          setDragOverGrid(true);
+          e.dataTransfer.dropEffect = 'move';
+        }}
+        onDragLeave={e => {
+          // only hide if leaving grid container
+          if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) setDragOverGrid(false);
+        }}
+        onDrop={e => {
+          if (!editMode || !dragId) return;
+          e.preventDefault();
+          setDragOverGrid(false);
+          // if dropped on grid empty area (not on a widget), move to end
+          const target = e.target as HTMLElement;
+          const isWidget = target.closest('[draggable]');
+          if (!isWidget) {
+            const ordered = sorted.map(s => s.id).filter(id => id !== dragId);
+            ordered.push(dragId);
+            onReorder(ordered);
+            setDragId(null);
+          }
+        }}
       >
         {sorted.map(layout => {
           const meta = metaMap.get(layout.id);
@@ -125,7 +151,7 @@ const WorkspaceGrid: React.FC<Props> = ({ registry, layouts, editMode, autoAlign
               onDragLeave={() => setDragOverId(null)}
               onDrop={e => handleDrop(e, layout.id)}
               onDragEnd={handleDragEnd}
-              className={`${spanClass(layout.colSpan)} relative transition-all duration-200 ${isDragged ? 'opacity-40 scale-[0.98]' : ''} ${isOver ? 'ring-2 ring-[var(--color-darkGreen)]/40 ring-offset-2 ring-offset-white dark:ring-offset-gray-900' : ''} ${editMode ? 'pt-3' : ''} flex flex-col min-h-0 overflow-hidden`}
+              className={`${spanClass(layout.colSpan)} relative transition-all duration-200 ${isDragged ? 'opacity-40 scale-[0.98]' : ''} ${isOver ? 'ring-2 ring-[var(--color-darkGreen)]/40 ring-offset-2 ring-offset-white dark:ring-offset-gray-900' : ''} ${editMode ? 'pt-3 overflow-visible' : 'overflow-hidden'} flex flex-col min-h-0`}
               style={{ gridRow: `span ${rowSpan} / span ${rowSpan}` }}
             >
               {/* Drop indicator */}
@@ -154,6 +180,29 @@ const WorkspaceGrid: React.FC<Props> = ({ registry, layouts, editMode, autoAlign
             </div>
           );
         })}
+        {/* Empty area drop placeholder — dynamic dimensions matching dragged widget */}
+        {editMode && dragId && draggedLayout && dragOverGrid && (
+          <div
+            className={`${spanClass(draggedLayout.colSpan)} rounded-2xl border-2 border-dashed flex items-center justify-center p-4`}
+            style={{
+              gridRow: `span ${(draggedLayout as any).rowSpan ?? 2} / span ${(draggedLayout as any).rowSpan ?? 2}`,
+              borderColor: 'var(--color-darkGreen, #047857)',
+              background: 'color-mix(in srgb, var(--color-darkGreen, #047857) 6%, transparent)',
+              minHeight: `${((draggedLayout as any).rowSpan ?? 2) * 140 + (((draggedLayout as any).rowSpan ?? 2) - 1) * 12}px`,
+            }}
+            onDragOver={e => { e.preventDefault(); }}
+            onDrop={e => {
+              e.preventDefault();
+              setDragOverGrid(false);
+              const ordered = sorted.map(s => s.id).filter(id => id !== dragId);
+              ordered.push(dragId);
+              onReorder(ordered);
+              setDragId(null);
+            }}
+          >
+            <span className="text-sm font-medium px-3 py-1.5 rounded-full bg-[var(--color-darkGreen)] text-white shadow">Drop component here</span>
+          </div>
+        )}
       </div>
 
       {editMode && (

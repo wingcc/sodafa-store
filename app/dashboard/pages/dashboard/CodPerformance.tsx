@@ -1,11 +1,12 @@
 'use client';
 
 import React from 'react';
-import { Truck, BadgeCheck, XCircle, Undo2, Wallet, Hourglass } from 'lucide-react';
+import { Truck, BadgeCheck, XCircle, Undo2, Wallet, Hourglass, Maximize2 } from 'lucide-react';
 import { useTranslation } from '../../i18n/useTranslation';
 import DashboardInfoButton from './DashboardInfoButton';
 import { getCodMetrics } from './utils';
 import type { Order } from '../../types';
+import { WidgetIcon } from './workspace/icons';
 
 const Bar: React.FC<{ label: string; value: number; color: string }> = ({ label, value, color }) => (
   <div>
@@ -19,7 +20,7 @@ const Bar: React.FC<{ label: string; value: number; color: string }> = ({ label,
   </div>
 );
 
-const CodPerformance: React.FC<{ orders: Order[] }> = ({ orders }) => {
+const CodPerformance: React.FC<{ orders: Order[]; onExpand?: () => void }> = ({ orders, onExpand }) => {
   const { language } = useTranslation();
   const isAr = language === 'ar';
   const m = getCodMetrics(orders);
@@ -28,21 +29,26 @@ const CodPerformance: React.FC<{ orders: Order[] }> = ({ orders }) => {
   return (
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5 h-full flex flex-col min-h-0 overflow-hidden">
       <div className="flex items-start justify-between gap-3 mb-4">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white" style={{ background: 'linear-gradient(135deg, #0f766e, #14b8a6)' }}>
-            <Truck size={16} />
-          </div>
+        <div className="flex items-center gap-2">
+          <WidgetIcon id="cod-performance" />
           <div>
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{isAr ? 'أداء الدفع عند الاستلام' : 'COD Performance'}</h3>
             <p className="text-xs text-gray-500 dark:text-gray-400">{isAr ? 'من التأكيد إلى التحصيل' : 'Confirmation → delivery → cash'}</p>
           </div>
         </div>
-        <DashboardInfoButton
-          title={isAr ? 'أداء الدفع عند الاستلام' : 'COD Performance'}
-          description={isAr ? 'مهم جداً لمتاجر الدفع عند الاستلام: الطلب الموضوع ليس إيراداً حتى يتم تسليمه وتحصيله.' : 'Critical for COD stores: placed orders are not revenue until delivered and collected.'}
-          bullets={isAr ? ['التأكيد = انتقال الطلب من معلق إلى مؤكد', 'نجاح التسليم = تم التسليم / (تم التسليم+ملغي+مرتجع)'] : ['Confirmation = pending → confirmed', 'Delivery success = delivered / (delivered+cancelled+refunded)']}
-          hint={isAr ? 'البيانات من حالات الطلب والدفع الحالية.' : 'Data derived from current order & payment statuses.'}
-        />
+        <div className="flex items-center gap-1 shrink-0">
+          <DashboardInfoButton
+            title={isAr ? 'أداء الدفع عند الاستلام' : 'COD Performance'}
+            description={isAr ? 'مهم جداً لمتاجر الدفع عند الاستلام: الطلب الموضوع ليس إيراداً حتى يتم تسليمه وتحصيله.' : 'Critical for COD stores: placed orders are not revenue until delivered and collected.'}
+            bullets={isAr ? ['التأكيد = انتقال الطلب من معلق إلى مؤكد', 'نجاح التسليم = تم التسليم / (تم التسليم+ملغي+مرتجع)'] : ['Confirmation = pending → confirmed', 'Delivery success = delivered / (delivered+cancelled+refunded)']}
+            hint={isAr ? 'البيانات من حالات الطلب والدفع الحالية.' : 'Data derived from current order & payment statuses.'}
+          />
+          {onExpand && (
+            <button onClick={onExpand} title={isAr ? 'توسيع' : 'Expand'} className="w-7 h-7 rounded-full flex items-center justify-center border bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-500 hover:text-[var(--color-darkGreen)]">
+              <Maximize2 size={14} />
+            </button>
+          )}
+        </div>
       </div>
 
       {!hasData ? (

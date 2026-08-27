@@ -5,6 +5,7 @@ import { useStore } from '../../../store/useStore';
 import type { SummaryStats } from '../types';
 import AnalyticsInfoButton from './AnalyticsInfoButton';
 import { useTranslation } from '../../../i18n/useTranslation';
+import { WidgetIcon } from '../../dashboard/workspace/icons';
 
 interface Props {
   stats: SummaryStats | null;
@@ -71,7 +72,8 @@ const ConversionFunnel: React.FC<Props> = ({ stats, period }) => {
   return (
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5 h-full flex flex-col min-h-0 overflow-hidden">
       <div className="flex items-center gap-2 mb-4 shrink-0">
-        <h3 className="text-base font-semibold text-gray-900 dark:text-white">{isAr ? 'مسار التحويل' : 'Conversion Funnel'}</h3>
+        <WidgetIcon id="conversion-funnel" />
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white">{isAr ? 'مسار التحويل' : 'Conversion Funnel'}</h3>
         <AnalyticsInfoButton
           title={isAr ? 'مسار التحويل' : 'Conversion Funnel'}
           description={isAr ? 'يوضح انتقال الزوار من المشاهدة حتى التسليم. الانخفاض بين المراحل يكشف مكان التسرب.' : 'Shows how visitors move from viewing to delivery. Drop-off between stages reveals where users abandon.'}

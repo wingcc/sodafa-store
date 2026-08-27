@@ -6,6 +6,7 @@ import { useTranslation } from '../../i18n/useTranslation';
 import DashboardInfoButton from './DashboardInfoButton';
 import { getCustomerSnapshot } from './utils';
 import type { Customer } from '../../types';
+import { WidgetIcon } from './workspace/icons';
 
 const CustomerSnapshot: React.FC<{ customers: Customer[] }> = ({ customers }) => {
   const { language } = useTranslation();
@@ -20,11 +21,9 @@ const CustomerSnapshot: React.FC<{ customers: Customer[] }> = ({ customers }) =>
 
   return (
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5 h-full flex flex-col min-h-0 overflow-hidden">
-      <div className="flex items-start justify-between gap-3 mb-4">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white" style={{ background: 'linear-gradient(135deg, #0ea5e9, #38bdf8)' }}>
-            <Users size={16} />
-          </div>
+      <div className="flex items-start justify-between gap-3 mb-4 shrink-0">
+        <div className="flex items-center gap-2">
+          <WidgetIcon id="customer-snapshot" />
           <div>
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{isAr ? 'نظرة على العملاء' : 'Customer Snapshot'}</h3>
             <p className="text-xs text-gray-500 dark:text-gray-400">{isAr ? 'نمو وولاء' : 'Growth & loyalty'}</p>
@@ -37,25 +36,27 @@ const CustomerSnapshot: React.FC<{ customers: Customer[] }> = ({ customers }) =>
         />
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
-        {cards.map(c => (
-          <div key={c.label} className="rounded-xl bg-gray-50 dark:bg-white/[0.04] border border-gray-100 dark:border-white/5 p-3 text-center">
-            <div className="w-7 h-7 mx-auto rounded-lg flex items-center justify-center text-white" style={{ background: c.color }}>{c.icon}</div>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1.5">{c.label}</p>
-            <p className="text-base font-bold text-gray-900 dark:text-white">{c.value.toLocaleString()}</p>
-          </div>
-        ))}
-      </div>
+      <div className="flex-1 min-h-0 overflow-auto overscroll-contain pr-1 space-y-4">
+        <div className="grid grid-cols-3 gap-2">
+          {cards.map(c => (
+            <div key={c.label} className="rounded-xl bg-gray-50 dark:bg-white/[0.04] border border-gray-100 dark:border-white/5 p-3 text-center">
+              <div className="w-7 h-7 mx-auto rounded-lg flex items-center justify-center text-white" style={{ background: c.color }}>{c.icon}</div>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1.5">{c.label}</p>
+              <p className="text-base font-bold text-gray-900 dark:text-white">{c.value.toLocaleString()}</p>
+            </div>
+          ))}
+        </div>
 
-      <div className="mt-4">
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-xs text-gray-600 dark:text-gray-300">{isAr ? 'معدل الشراء المتكرر' : 'Repeat Purchase Rate'}</span>
-          <span className="text-xs font-bold text-gray-900 dark:text-white">{s.repeatRate}%</span>
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs text-gray-600 dark:text-gray-300">{isAr ? 'معدل الشراء المتكرر' : 'Repeat Purchase Rate'}</span>
+            <span className="text-xs font-bold text-gray-900 dark:text-white">{s.repeatRate}%</span>
+          </div>
+          <div className="h-2 rounded-full bg-gray-100 dark:bg-white/10 overflow-hidden">
+            <div className="h-full rounded-full" style={{ width: `${s.repeatRate}%`, background: 'var(--color-darkGreen, #047857)' }} />
+          </div>
+          <p className="text-[11px] text-gray-400 dark:text-white/40 mt-1">{isAr ? 'العملاء الذين اشتروا أكثر من مرة' : 'Customers with more than one order'}</p>
         </div>
-        <div className="h-2 rounded-full bg-gray-100 dark:bg-white/10 overflow-hidden">
-          <div className="h-full rounded-full" style={{ width: `${s.repeatRate}%`, background: 'var(--color-darkGreen, #047857)' }} />
-        </div>
-        <p className="text-[11px] text-gray-400 dark:text-white/40 mt-1">{isAr ? 'العملاء الذين اشتروا أكثر من مرة' : 'Customers with more than one order'}</p>
       </div>
     </div>
   );

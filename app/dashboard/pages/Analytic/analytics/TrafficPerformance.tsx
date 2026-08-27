@@ -6,6 +6,7 @@ import type { TrafficSource } from '../types';
 import { COLORS } from '../types';
 import AnalyticsInfoButton from './AnalyticsInfoButton';
 import { useTranslation } from '../../../i18n/useTranslation';
+import { WidgetIcon } from '../../dashboard/workspace/icons';
 
 const TrafficPerformance: React.FC<{ sources: TrafficSource[] }> = ({ sources }) => {
   const { language } = useTranslation();
@@ -16,7 +17,8 @@ const TrafficPerformance: React.FC<{ sources: TrafficSource[] }> = ({ sources })
   return (
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5 h-full flex flex-col min-h-0 overflow-hidden">
       <div className="flex items-center gap-2 mb-4 shrink-0">
-        <h3 className="text-base font-semibold text-gray-900 dark:text-white">{isAr ? 'أداء المصادر' : 'Traffic Performance'}</h3>
+        <WidgetIcon id="traffic-performance" />
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white">{isAr ? 'أداء المصادر' : 'Traffic Performance'}</h3>
         <AnalyticsInfoButton
           title={isAr ? 'أداء المصادر' : 'Traffic Performance'}
           description={isAr ? 'يقارن المصادر بالجلسات والطلبات ومعدل التحويل. الهدف معرفة أي قناة تجلب عملاء قيمين.' : 'Compares sources by sessions, orders & conversion. Find which channels bring valuable customers.'}

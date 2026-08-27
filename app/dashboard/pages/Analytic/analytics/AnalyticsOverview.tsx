@@ -6,6 +6,7 @@ import type { SummaryStats, TrendPoint } from '../types';
 import { formatNumber, formatDuration } from '../utils';
 import AnalyticsInfoButton from './AnalyticsInfoButton';
 import { useTranslation } from '../../../i18n/useTranslation';
+import { WidgetIcon } from '../../dashboard/workspace/icons';
 
 interface Props {
   stats: SummaryStats | null;
@@ -81,26 +82,29 @@ const AnalyticsOverview: React.FC<Props> = ({ stats, trend, bounceRate, avgDurat
   const bounceSpark = trend.map(() => bounceRate);
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5 h-full flex flex-col min-h-0 overflow-hidden">
-      <div className="flex items-center gap-2 mb-4 shrink-0">
-        <h3 className="text-base font-semibold text-gray-900 dark:text-white">{isAr ? 'نظرة عامة' : 'Analytics Overview'}</h3>
+    <div className="h-full flex flex-col min-h-0">
+      <div className="flex items-center gap-2 mb-3 shrink-0">
+        <WidgetIcon id="analytics-overview" />
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white">{isAr ? 'نظرة عامة' : 'Analytics Overview'}</h3>
         <AnalyticsInfoButton
           title={isAr ? 'نظرة عامة' : 'Analytics Overview'}
           description={isAr ? 'ملخص لأهم مقاييس الزيارة والتفاعل. استخدم المقارنة مع الفترة السابقة لتقييم النمو.' : 'Summary of key visit & engagement metrics. Compare vs previous period to gauge growth.'}
         />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard icon={<Users size={14} />} label={isAr ? 'الزوار' : 'Visitors'} value={formatNumber(stats.visitors.value)} change={stats.visitors.change} spark={visitorsSpark} color="var(--color-darkGreen, #047857)" infoTitle={isAr ? 'الزوار' : 'Visitors'} infoDesc={isAr ? 'عدد الزوار الفريدين خلال الفترة.' : 'Unique visitors in selected period.'} />
-        <MetricCard icon={<MousePointerClick size={14} />} label={isAr ? 'الجلسات' : 'Sessions'} value={formatNumber(stats.sessions.value)} change={stats.sessions.change} spark={sessionsSpark} color="#0ea5e9" infoTitle={isAr ? 'الجلسات' : 'Sessions'} infoDesc={isAr ? 'عدد الجلسات — زيارة واحدة قد تحتوي عدة صفحات.' : 'Number of sessions — one visit can include multiple page views.'} />
-        <MetricCard icon={<Eye size={14} />} label={isAr ? 'مشاهدات الصفحات' : 'Page Views'} value={formatNumber(stats.pageViews.value)} change={stats.pageViews.change} spark={pageViewsSpark} color="var(--color-gold, #d97706)" infoTitle={isAr ? 'مشاهدات الصفحات' : 'Page Views'} infoDesc={isAr ? 'إجمالي الصفحات التي تم عرضها.' : 'Total pages viewed.'} />
-        <MetricCard icon={<Clock size={14} />} label={isAr ? 'متوسط الجلسة' : 'Avg. Duration'} value={formatDuration(avgDuration)} spark={durationSpark} color="#a78bfa" infoTitle={isAr ? 'متوسط مدة الجلسة' : 'Avg. Session Duration'} infoDesc={isAr ? 'متوسط الوقت الذي يقضيه الزائر في الجلسة.' : 'Average time spent per session.'} />
-      </div>
+      <div className="flex-1 min-h-0 overflow-auto overscroll-contain pr-1 space-y-4 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-200 dark:[&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <MetricCard icon={<Users size={14} />} label={isAr ? 'الزوار' : 'Visitors'} value={formatNumber(stats.visitors.value)} change={stats.visitors.change} spark={visitorsSpark} color="var(--color-darkGreen, #047857)" infoTitle={isAr ? 'الزوار' : 'Visitors'} infoDesc={isAr ? 'عدد الزوار الفريدين خلال الفترة.' : 'Unique visitors in selected period.'} />
+          <MetricCard icon={<MousePointerClick size={14} />} label={isAr ? 'الجلسات' : 'Sessions'} value={formatNumber(stats.sessions.value)} change={stats.sessions.change} spark={sessionsSpark} color="#0ea5e9" infoTitle={isAr ? 'الجلسات' : 'Sessions'} infoDesc={isAr ? 'عدد الجلسات — زيارة واحدة قد تحتوي عدة صفحات.' : 'Number of sessions — one visit can include multiple page views.'} />
+          <MetricCard icon={<Eye size={14} />} label={isAr ? 'مشاهدات الصفحات' : 'Page Views'} value={formatNumber(stats.pageViews.value)} change={stats.pageViews.change} spark={pageViewsSpark} color="var(--color-gold, #d97706)" infoTitle={isAr ? 'مشاهدات الصفحات' : 'Page Views'} infoDesc={isAr ? 'إجمالي الصفحات التي تم عرضها.' : 'Total pages viewed.'} />
+          <MetricCard icon={<Clock size={14} />} label={isAr ? 'متوسط الجلسة' : 'Avg. Duration'} value={formatDuration(avgDuration)} spark={durationSpark} color="#a78bfa" infoTitle={isAr ? 'متوسط مدة الجلسة' : 'Avg. Session Duration'} infoDesc={isAr ? 'متوسط الوقت الذي يقضيه الزائر في الجلسة.' : 'Average time spent per session.'} />
+        </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
-        <MetricCard icon={<Layers size={14} />} label={isAr ? 'صفحات/جلسة' : 'Pages / Session'} value={pagesPerSession} spark={ppsSpark} color="#14b8a6" infoTitle={isAr ? 'صفحات لكل جلسة' : 'Pages per Session'} infoDesc={isAr ? 'متوسط عدد الصفحات التي يشاهدها الزائر في الجلسة.' : 'Average pages viewed per session.'} />
-        <MetricCard icon={<Activity size={14} />} label={isAr ? 'معدل التفاعل' : 'Engagement Rate'} value={`${engagementRate}%`} spark={engagementSpark} color="#10b981" infoTitle={isAr ? 'معدل التفاعل' : 'Engagement Rate'} infoDesc={isAr ? 'نسبة الجلسات المتفاعلة (100 - معدل الارتداد).' : 'Engaged sessions rate (100 - bounce rate).'} />
-        <MetricCard icon={<TrendingDown size={14} />} label={isAr ? 'معدل الارتداد' : 'Bounce Rate'} value={`${bounceRate}%`} spark={bounceSpark} color="#ef4444" infoTitle={isAr ? 'معدل الارتداد' : 'Bounce Rate'} infoDesc={isAr ? 'نسبة الجلسات التي شاهدت صفحة واحدة فقط.' : 'Sessions with only one page viewed.'} />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <MetricCard icon={<Layers size={14} />} label={isAr ? 'صفحات/جلسة' : 'Pages / Session'} value={pagesPerSession} spark={ppsSpark} color="#14b8a6" infoTitle={isAr ? 'صفحات لكل جلسة' : 'Pages per Session'} infoDesc={isAr ? 'متوسط عدد الصفحات التي يشاهدها الزائر في الجلسة.' : 'Average pages viewed per session.'} />
+          <MetricCard icon={<Activity size={14} />} label={isAr ? 'معدل التفاعل' : 'Engagement Rate'} value={`${engagementRate}%`} spark={engagementSpark} color="#10b981" infoTitle={isAr ? 'معدل التفاعل' : 'Engagement Rate'} infoDesc={isAr ? 'نسبة الجلسات المتفاعلة (100 - معدل الارتداد).' : 'Engaged sessions rate (100 - bounce rate).'} />
+          <MetricCard icon={<TrendingDown size={14} />} label={isAr ? 'معدل الارتداد' : 'Bounce Rate'} value={`${bounceRate}%`} spark={bounceSpark} color="#ef4444" infoTitle={isAr ? 'معدل الارتداد' : 'Bounce Rate'} infoDesc={isAr ? 'نسبة الجلسات التي شاهدت صفحة واحدة فقط.' : 'Sessions with only one page viewed.'} />
+        </div>
       </div>
     </div>
   );

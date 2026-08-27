@@ -19,22 +19,22 @@ const QuickActions: React.FC = () => {
     { label: t('dashboard.quick.inventory'), icon: <PackageCheck size={16} />, page: 'inventory' as const, color: 'from-red-500 to-red-600' },
   ];
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-white/10 h-full flex flex-col min-h-0 overflow-hidden">
-      <div className="flex items-center gap-2 mb-4 shrink-0">
-        <h3 className="text-base font-semibold text-gray-900 dark:text-white">{t('dashboard.quickActions')}</h3>
+    <div className="bg-white dark:bg-gray-900 rounded-2xl p-3 border border-gray-100 dark:border-white/10 h-full flex flex-col min-h-0 overflow-hidden" style={{ containerType: 'inline-size' } as any}>
+      <div className="flex items-center gap-2 mb-3 shrink-0">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('dashboard.quickActions')}</h3>
         <DashboardInfoButton title={isAr ? 'إجراءات سريعة' : 'Quick Actions'} description={isAr ? 'اختصارات لأكثر المهام استخداماً.' : 'Shortcuts to your most frequent tasks.'} />
       </div>
-      <div className="flex-1 min-h-0 overflow-auto overscroll-contain grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pr-1 content-start">
+      <div className="flex-1 min-h-0 overflow-auto overscroll-contain grid grid-cols-3 gap-2 pr-1 content-start @container">
         {actions.map(action => (
           <button
             key={action.label}
             onClick={() => setCurrentPage(action.page)}
-            className="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-100 dark:border-white/5 hover:border-[var(--color-darkGreen)]/20 hover:bg-[var(--color-darkGreen)]/5 dark:hover:bg-white/5 transition-all group"
+            className="flex flex-col items-center gap-1 p-2 rounded-xl border border-gray-100 dark:border-white/5 hover:border-[var(--color-darkGreen)]/20 hover:bg-[var(--color-darkGreen)]/5 dark:hover:bg-white/5 transition-all group"
           >
-            <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${action.color} flex items-center justify-center text-white group-hover:scale-110 transition-transform`}>
+            <div className={`w-6 h-6 rounded-lg bg-gradient-to-br ${action.color} flex items-center justify-center text-white group-hover:scale-105 transition-transform`}>
               {action.icon}
             </div>
-            <span className="text-xs font-medium text-gray-700 dark:text-gray-300 text-center leading-tight">{action.label}</span>
+            <span className="text-[11px] font-medium text-gray-700 dark:text-gray-300 text-center leading-tight line-clamp-2">{action.label}</span>
           </button>
         ))}
       </div>

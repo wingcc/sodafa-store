@@ -4,6 +4,7 @@ import React from 'react';
 import { Search } from 'lucide-react';
 import AnalyticsInfoButton from './AnalyticsInfoButton';
 import { useTranslation } from '../../../i18n/useTranslation';
+import { WidgetIcon } from '../../dashboard/workspace/icons';
 
 const SearchBehavior: React.FC = () => {
   const { language } = useTranslation();
@@ -11,10 +12,8 @@ const SearchBehavior: React.FC = () => {
   return (
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5 h-full flex flex-col min-h-0 overflow-hidden">
       <div className="flex items-center gap-2 mb-4 shrink-0">
-        <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white" style={{ background: 'linear-gradient(135deg, var(--color-darkGreen, #047857), #0ea5e9)' }}>
-          <Search size={16} />
-        </div>
-        <h3 className="text-base font-semibold text-gray-900 dark:text-white">{isAr ? 'سلوك البحث' : 'Search Behavior'}</h3>
+        <WidgetIcon id="search-behavior" />
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white">{isAr ? 'سلوك البحث' : 'Search Behavior'}</h3>
         <AnalyticsInfoButton
           title={isAr ? 'سلوك البحث' : 'Search Behavior'}
           description={isAr ? 'ماذا يبحث عنه المستخدمون وكيف يتحول البحث إلى مشاهدة وإضافة للسلة وطلب.' : 'What users search and how search converts to views, cart and orders.'}

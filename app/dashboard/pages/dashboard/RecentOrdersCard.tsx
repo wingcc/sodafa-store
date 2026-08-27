@@ -7,6 +7,7 @@ import { useStore } from '../../store/useStore';
 import Badge from '../../components/ui/Badge';
 import DashboardInfoButton from './DashboardInfoButton';
 import type { Order } from '../../types';
+import { WidgetIcon } from './workspace/icons';
 
 const RecentOrdersCard: React.FC<{ orders: Order[] }> = ({ orders }) => {
   const { t, language } = useTranslation();
@@ -16,6 +17,7 @@ const RecentOrdersCard: React.FC<{ orders: Order[] }> = ({ orders }) => {
     <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-white/10 h-full flex flex-col min-h-0 overflow-hidden">
       <div className="flex items-center justify-between mb-4 shrink-0">
         <div className="flex items-center gap-2">
+          <WidgetIcon id="recent-orders" />
           <h3 className="text-base font-semibold text-gray-900 dark:text-white">{t('dashboard.recentOrders')}</h3>
           <DashboardInfoButton
             title={isAr ? 'الطلبات الأخيرة' : 'Recent Orders'}

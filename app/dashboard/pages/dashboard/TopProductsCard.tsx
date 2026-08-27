@@ -6,6 +6,7 @@ import { useTranslation } from '../../i18n/useTranslation';
 import { useStore } from '../../store/useStore';
 import DashboardInfoButton from './DashboardInfoButton';
 import type { Product } from '../../types';
+import { WidgetIcon } from './workspace/icons';
 
 const TopProductsCard: React.FC<{ products: Product[] }> = ({ products }) => {
   const { t, language } = useTranslation();
@@ -17,6 +18,7 @@ const TopProductsCard: React.FC<{ products: Product[] }> = ({ products }) => {
     <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-white/10 h-full flex flex-col min-h-0 overflow-hidden">
       <div className="flex items-center justify-between mb-4 shrink-0">
         <div className="flex items-center gap-2">
+          <WidgetIcon id="top-products" />
           <h3 className="text-base font-semibold text-gray-900 dark:text-white">{t('dashboard.topProducts')}</h3>
           <DashboardInfoButton title={isAr ? 'أفضل المنتجات' : 'Top Products'} description={isAr ? 'المنتجات الأكثر مبيعاً حسب الوحدات. ركز عليها في التسويق وإعادة التموين.' : 'Best sellers by units sold. Prioritize them for marketing & restock.'} />
         </div>

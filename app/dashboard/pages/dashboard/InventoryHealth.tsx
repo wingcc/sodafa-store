@@ -1,13 +1,14 @@
 'use client';
 
 import React from 'react';
-import { Boxes, TrendingUp, TrendingDown } from 'lucide-react';
+import { Boxes, TrendingUp, TrendingDown, Maximize2 } from 'lucide-react';
 import { useTranslation } from '../../i18n/useTranslation';
 import DashboardInfoButton from './DashboardInfoButton';
 import { getInventoryHealth } from './utils';
 import type { Product } from '../../types';
+import { WidgetIcon } from './workspace/icons';
 
-const InventoryHealth: React.FC<{ products: Product[] }> = ({ products }) => {
+const InventoryHealth: React.FC<{ products: Product[]; onExpand?: () => void }> = ({ products, onExpand }) => {
   const { language } = useTranslation();
   const isAr = language === 'ar';
   const h = getInventoryHealth(products);
@@ -15,19 +16,24 @@ const InventoryHealth: React.FC<{ products: Product[] }> = ({ products }) => {
   return (
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5 h-full flex flex-col min-h-0 overflow-hidden">
       <div className="flex items-start justify-between gap-3 mb-4">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white" style={{ background: 'linear-gradient(135deg, #7c3aed, #a78bfa)' }}>
-            <Boxes size={16} />
-          </div>
+        <div className="flex items-center gap-2">
+          <WidgetIcon id="inventory-health" />
           <div>
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{isAr ? 'صحة المخزون' : 'Inventory Health'}</h3>
             <p className="text-xs text-gray-500 dark:text-gray-400">{isAr ? 'القيمة والحركة' : 'Value & movement'}</p>
           </div>
         </div>
-        <DashboardInfoButton
-          title={isAr ? 'صحة المخزون' : 'Inventory Health'}
-          description={isAr ? 'يساعد على معرفة المنتجات التي تحتاج إعادة تموين والبطيئة الحركة لتجنب ضياع المبيعات وتكدس المخزون.' : 'Spot products needing restock vs slow movers to prevent lost sales and overstock.'}
-        />
+        <div className="flex items-center gap-1 shrink-0">
+          <DashboardInfoButton
+            title={isAr ? 'صحة المخزون' : 'Inventory Health'}
+            description={isAr ? 'يساعد على معرفة المنتجات التي تحتاج إعادة تموين والبطيئة الحركة لتجنب ضياع المبيعات وتكدس المخزون.' : 'Spot products needing restock vs slow movers to prevent lost sales and overstock.'}
+          />
+          {onExpand && (
+            <button onClick={onExpand} title={isAr ? 'توسيع' : 'Expand'} className="w-7 h-7 rounded-full flex items-center justify-center border bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-500 hover:text-[var(--color-darkGreen)]">
+              <Maximize2 size={14} />
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="rounded-xl bg-gray-50 dark:bg-white/[0.04] border border-gray-100 dark:border-white/5 p-3 flex items-center justify-between">

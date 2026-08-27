@@ -12,6 +12,7 @@ export interface WidgetLayout {
   colSpan: number; // 3,6,9,12
   rowSpan: number; // 1-4 rows, independent from width
   order: number;
+  toolsHidden?: boolean; // hide editing tools, keep widget visible
 }
 
 interface WorkspaceState {

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import DashboardInfoButton from './DashboardInfoButton';
 import { useTranslation } from '../../i18n/useTranslation';
+import { WidgetIcon } from './workspace/icons';
 
 type TimeRange = '7d' | '30d' | '90d';
 interface RevenuePoint { date: string; revenue: number; orders: number; }
@@ -55,6 +56,7 @@ const RevenueOverview: React.FC = () => {
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5 h-full flex flex-col min-h-0 overflow-hidden">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 shrink-0">
         <div className="flex items-center gap-2">
+          <WidgetIcon id="revenue-overview" />
           <div>
             <h3 className="text-base font-semibold text-gray-900 dark:text-white">{isAr ? 'نظرة عامة على الإيرادات' : 'Revenue Overview'}</h3>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{isAr ? 'الإيرادات اليومية والطلبات' : 'Daily revenue & orders'}</p>

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import DashboardInfoButton from './DashboardInfoButton';
 import { useTranslation } from '../../i18n/useTranslation';
+import { WidgetIcon } from './workspace/icons';
 
 const COLORS = ['var(--color-darkGreen, #047857)', 'var(--color-gold, #d97706)', '#0ea5e9', '#a78bfa', '#f59e0b', '#10b981', '#f472b6', '#38bdf8'];
 const FALLBACK = ['#047857', '#d97706', '#0ea5e9', '#a78bfa', '#f59e0b', '#10b981'];
@@ -46,11 +47,16 @@ const SalesByCategoryCard: React.FC = () => {
   return (
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5 h-full flex flex-col min-h-0 overflow-hidden">
       <div className="flex items-center justify-between mb-4 shrink-0">
-        <div>
-          <h3 className="text-base font-semibold text-gray-900 dark:text-white">{isAr ? 'المبيعات حسب الفئة' : 'Sales by Category'}</h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{isAr ? 'توزيع الإيرادات' : 'Revenue distribution'}</p>
+        <div className="flex items-center gap-2">
+          <WidgetIcon id="sales-by-category" />
+          <div>
+            <h3 className="text-base font-semibold text-gray-900 dark:text-white">{isAr ? 'المبيعات حسب الفئة' : 'Sales by Category'}</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{isAr ? 'توزيع الإيرادات' : 'Revenue distribution'}</p>
+          </div>
         </div>
-        <DashboardInfoButton title={isAr ? 'المبيعات حسب الفئة' : 'Sales by Category'} description={isAr ? 'يعرض الفئات الأكثر تحقيقاً للإيرادات. ركز تسويقك ومخزونك عليها.' : 'Shows which categories drive most revenue. Focus marketing & stock there.'} />
+        <div className="flex items-center gap-1 shrink-0">
+          <DashboardInfoButton title={isAr ? 'المبيعات حسب الفئة' : 'Sales by Category'} description={isAr ? 'يعرض الفئات الأكثر تحقيقاً للإيرادات. ركز تسويقك ومخزونك عليها.' : 'Shows which categories drive most revenue. Focus marketing & stock there.'} />
+        </div>
       </div>
 
       <div className="flex flex-col items-center">

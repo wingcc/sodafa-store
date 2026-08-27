@@ -7,6 +7,7 @@ import { useStore } from '../../store/useStore';
 import Badge from '../../components/ui/Badge';
 import DashboardInfoButton from './DashboardInfoButton';
 import type { Product } from '../../types';
+import { WidgetIcon } from './workspace/icons';
 
 const LowStockAlertsCard: React.FC<{ products: Product[] }> = ({ products }) => {
   const { t, language } = useTranslation();
@@ -19,7 +20,7 @@ const LowStockAlertsCard: React.FC<{ products: Product[] }> = ({ products }) => 
     <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-white/10 h-full flex flex-col min-h-0 overflow-hidden">
       <div className="flex items-center justify-between mb-4 shrink-0">
         <div className="flex items-center gap-2">
-          <AlertTriangle size={18} className="text-amber-500" />
+          <WidgetIcon id="low-stock" />
           <h3 className="text-base font-semibold text-gray-900 dark:text-white">{t('dashboard.lowStockAlerts')}</h3>
           <DashboardInfoButton title={isAr ? 'تنبيهات المخزون' : 'Stock Alerts'} description={isAr ? 'منتجات على وشك النفاد أو نفدت. عالجها فوراً لتجنب خسارة المبيعات.' : 'Products low or out of stock. Act immediately to avoid lost sales.'} />
         </div>

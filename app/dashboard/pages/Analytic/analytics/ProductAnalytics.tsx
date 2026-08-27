@@ -5,6 +5,7 @@ import { useStore } from '../../../store/useStore';
 import type { PageInfo } from '../types';
 import AnalyticsInfoButton from './AnalyticsInfoButton';
 import { useTranslation } from '../../../i18n/useTranslation';
+import { WidgetIcon } from '../../dashboard/workspace/icons';
 
 const ProductAnalytics: React.FC<{ pages: PageInfo[] }> = ({ pages }) => {
   const { language } = useTranslation();
@@ -45,7 +46,8 @@ const ProductAnalytics: React.FC<{ pages: PageInfo[] }> = ({ pages }) => {
   return (
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5 h-full flex flex-col min-h-0 overflow-hidden">
       <div className="flex items-center gap-2 mb-4 shrink-0">
-        <h3 className="text-base font-semibold text-gray-900 dark:text-white">{isAr ? 'تحليل المنتجات' : 'Product Analytics'}</h3>
+        <WidgetIcon id="product-analytics" />
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white">{isAr ? 'تحليل المنتجات' : 'Product Analytics'}</h3>
         <AnalyticsInfoButton title={isAr ? 'تحليل المنتجات' : 'Product Analytics'} description={isAr ? 'يقارن المشاهدات والإضافة للسلة والطلبات ومعدل التحويل لكل منتج لمعرفة سبب تفاوت الأداء.' : 'Compares views, add-to-cart, orders & conversion per product to see why performance differs.'} />
       </div>
 

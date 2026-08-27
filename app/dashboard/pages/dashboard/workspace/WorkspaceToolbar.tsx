@@ -5,6 +5,7 @@ import { Settings2, RotateCcw, Plus, Eye, EyeOff, LayoutGrid, Sparkles } from 'l
 import type { WidgetMeta } from './types';
 import type { WidgetLayout } from '../../../store/useWorkspaceStore';
 import { useTranslation } from '../../../i18n/useTranslation';
+import { WidgetIcon } from './icons';
 
 interface Props {
   editMode: boolean;
@@ -70,9 +71,12 @@ const WorkspaceToolbar: React.FC<Props> = ({ editMode, autoAlign = true, onEnter
                       <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-white/40">{cat}</p>
                       {items.map(m => (
                         <div key={m.id} className="flex items-center justify-between p-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
-                          <div className="min-w-0 pr-2">
-                            <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{isAr ? m.nameAr : m.name}</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{isAr ? m.descriptionAr : m.description}</p>
+                          <div className="flex items-center gap-2 min-w-0 pr-2">
+                            <WidgetIcon id={m.id} />
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{isAr ? m.nameAr : m.name}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{isAr ? m.descriptionAr : m.description}</p>
+                            </div>
                           </div>
                           <button onClick={() => onShow(m.id)} className="shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-[var(--color-darkGreen)] text-white text-xs font-medium hover:opacity-90">
                             <Eye size={12} /> {isAr ? 'إظهار' : 'Show'}
@@ -129,11 +133,14 @@ const WorkspaceToolbar: React.FC<Props> = ({ editMode, autoAlign = true, onEnter
             <div className="space-y-1.5 max-h-[260px] overflow-auto pr-1">
               {visibleMetas.map(m => (
                 <div key={m.id} className="flex items-center justify-between p-2 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{isAr ? m.nameAr : m.name}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{m.category}</p>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <WidgetIcon id={m.id} />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{isAr ? m.nameAr : m.name}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{m.category}</p>
+                    </div>
                   </div>
-                  <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-500/15">{isAr ? 'ظاهر' : 'Visible'}</span>
+                  <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-500/15 shrink-0">{isAr ? 'ظاهر' : 'Visible'}</span>
                 </div>
               ))}
             </div>
@@ -147,9 +154,12 @@ const WorkspaceToolbar: React.FC<Props> = ({ editMode, autoAlign = true, onEnter
                     <p className="text-[11px] font-semibold text-gray-400 dark:text-white/30 mt-1 mb-1">{cat}</p>
                     {items.map(m => (
                       <div key={m.id} className="flex items-center justify-between p-2 rounded-xl bg-amber-50/50 dark:bg-amber-500/5 border border-amber-100 dark:border-amber-500/10 mb-1">
-                        <div className="min-w-0 pr-2">
-                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{isAr ? m.nameAr : m.name}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{isAr ? m.descriptionAr : m.description}</p>
+                        <div className="flex items-center gap-2 min-w-0 pr-2">
+                          <WidgetIcon id={m.id} />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{isAr ? m.nameAr : m.name}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{isAr ? m.descriptionAr : m.description}</p>
+                          </div>
                         </div>
                         <button onClick={() => onShow(m.id)} className="shrink-0 px-3 py-1 rounded-full bg-[var(--color-darkGreen)] text-white text-xs">Unhide</button>
                       </div>

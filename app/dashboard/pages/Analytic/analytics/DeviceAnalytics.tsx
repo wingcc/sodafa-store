@@ -6,6 +6,7 @@ import type { DeviceInfo, BrowserInfo } from '../types';
 import { COLORS } from '../types';
 import AnalyticsInfoButton from './AnalyticsInfoButton';
 import { useTranslation } from '../../../i18n/useTranslation';
+import { WidgetIcon } from '../../dashboard/workspace/icons';
 
 const iconFor = (d: string) => {
   if (d.toLowerCase().includes('mobile')) return <Smartphone size={14} />;
@@ -21,7 +22,8 @@ const DeviceAnalytics: React.FC<{ devices: DeviceInfo[]; browsers: BrowserInfo[]
   return (
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5 h-full flex flex-col min-h-0 overflow-hidden">
       <div className="flex items-center gap-2 mb-4 shrink-0">
-        <h3 className="text-base font-semibold text-gray-900 dark:text-white">{isAr ? 'الأجهزة والتقنية' : 'Device & Technical'}</h3>
+        <WidgetIcon id="device-analytics" />
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white">{isAr ? 'الأجهزة والتقنية' : 'Device & Technical'}</h3>
         <AnalyticsInfoButton
           title={isAr ? 'الأجهزة' : 'Device Analytics'}
           description={isAr ? 'سلوك الزوار حسب الجهاز والمتصفح. الفروق الكبيرة في التحويل قد تشير لمشاكل تجربة على الهاتف.' : 'Behavior by device & browser. Large conversion gaps may signal mobile UX issues.'}

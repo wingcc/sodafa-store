@@ -6,6 +6,7 @@ import type { CountryInfo } from '../types';
 import AnalyticsInfoButton from './AnalyticsInfoButton';
 import { useTranslation } from '../../../i18n/useTranslation';
 import { useStore } from '../../../store/useStore';
+import { WidgetIcon } from '../../dashboard/workspace/icons';
 
 const GeographicAnalytics: React.FC<{ countries: CountryInfo[] }> = ({ countries }) => {
   const { language } = useTranslation();
@@ -45,6 +46,7 @@ const GeographicAnalytics: React.FC<{ countries: CountryInfo[] }> = ({ countries
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5 h-full flex flex-col min-h-0 overflow-hidden">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 shrink-0">
         <div className="flex items-center gap-2">
+          <WidgetIcon id="geographic-analytics" />
           <h3 className="text-base font-semibold text-gray-900 dark:text-white">{isAr ? 'التحليل الجغرافي' : 'Geographic Analytics'}</h3>
           <AnalyticsInfoButton title={isAr ? 'التحليل الجغرافي' : 'Geographic Analytics'} description={isAr ? 'للبلد والمدينة: الزوار والطلبات ومعدل التحويل والإيراد. ركز على المدن الأعلى تحويلاً.' : 'Country & city: visitors, orders, conversion & revenue. Focus on highest-converting cities.'} />
         </div>
