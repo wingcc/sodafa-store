@@ -12,6 +12,7 @@ import { TopPagesModal } from './components/TopPagesModal';
 import WorkspaceGrid from '../dashboard/workspace/WorkspaceGrid';
 import WorkspaceToolbar from '../dashboard/workspace/WorkspaceToolbar';
 import { analyticsRegistry, analyticsDefaults } from '../dashboard/workspace/registry';
+import DashboardSkeleton from '../../components/ui/DashboardSkeleton';
 
 import AnalyticsOverview from './analytics/AnalyticsOverview';
 import VisitorTrends from './analytics/VisitorTrends';
@@ -34,8 +35,10 @@ const Analytic: React.FC = () => {
   const { loading, refreshing, stats, trend, topPages, trafficSources, devices, browsers, countries, bounceRate, avgDuration, dailyAvgDuration, fetchData } = useAnalyticsData(period);
   const {
     analytics: saved, analyticsDraft, analyticsEditMode, analyticsAutoAlign,
+    analyticsGridVisible, analyticsPreview,
     hasHydrated, setAnalytics, enterAnalyticsEdit, cancelAnalyticsEdit, applyAnalyticsEdit,
-    setAutoAlign, updateWidget, reorderWorkspace, resetWorkspace,
+    setAutoAlign, setGridVisible, setPreview, updateWidget, reorderWorkspace, resetWorkspace,
+    undo, redo, canUndo, canRedo,
   } = useWorkspaceStore();
 
   useEffect(() => {
@@ -82,12 +85,21 @@ const Analytic: React.FC = () => {
     <div className="space-y-4">
       <AnalyticsHeader period={period} setPeriod={setPeriod} refreshing={refreshing} onRefresh={() => fetchData(true)} />
       <WorkspaceToolbar
+        workspace="analytics"
         editMode={analyticsEditMode}
         autoAlign={analyticsAutoAlign}
+        gridVisible={analyticsGridVisible}
+        preview={analyticsPreview}
         onEnterEdit={enterAnalyticsEdit}
         onCancel={cancelAnalyticsEdit}
         onApply={applyAnalyticsEdit}
         onToggleAutoAlign={v => setAutoAlign('analytics', v)}
+        onToggleGrid={v => setGridVisible('analytics', v)}
+        onTogglePreview={v => setPreview('analytics', v)}
+        onUndo={() => undo('analytics')}
+        onRedo={() => redo('analytics')}
+        canUndo={canUndo('analytics')}
+        canRedo={canRedo('analytics')}
         registry={analyticsRegistry}
         layouts={effectiveLayouts}
         onShow={id => updateWidget('analytics', id, { visible: true })}
@@ -95,25 +107,21 @@ const Analytic: React.FC = () => {
       />
 
       {loading ? (
-        <div className="grid grid-cols-12 gap-3">
-          {effectiveLayouts.filter(l => l.visible).map(l => (
-            <div key={l.id} className={`col-span-12 ${l.colSpan === 12 ? 'lg:col-span-12' : l.colSpan === 9 ? 'lg:col-span-9' : l.colSpan === 6 ? 'lg:col-span-6' : 'lg:col-span-3'} md:col-span-6`}>
-              {skeletonFor()}
-            </div>
-          ))}
-        </div>
+        <DashboardSkeleton />
       ) : (
         <WorkspaceGrid
           registry={analyticsRegistry}
           layouts={effectiveLayouts}
           editMode={analyticsEditMode}
           autoAlign={analyticsAutoAlign}
+          gridVisible={analyticsGridVisible}
+          preview={analyticsPreview}
           onReorder={ids => reorderWorkspace('analytics', ids)}
           onToggleLock={id => {
             const cur = effectiveLayouts.find(w => w.id === id);
             if (cur) updateWidget('analytics', id, { locked: !cur.locked });
           }}
-          onHide={id => updateWidget('analytics', id, { visible: false })}
+          onRemove={id => updateWidget('analytics', id, { visible: false })}
           onChangeSpan={(id, span) => updateWidget('analytics', id, { colSpan: span })}
           onChangeRowSpan={(id, span) => updateWidget('analytics', id, { rowSpan: span as any })}
           onExpand={id => setExpandedId(id)}

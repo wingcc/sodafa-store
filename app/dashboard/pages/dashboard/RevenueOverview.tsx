@@ -59,20 +59,32 @@ const RevenueOverview: React.FC = () => {
           <WidgetIcon id="revenue-overview" />
           <div>
             <h3 className="text-base font-semibold text-gray-900 dark:text-white">{isAr ? 'نظرة عامة على الإيرادات' : 'Revenue Overview'}</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{isAr ? 'الإيرادات اليومية والطلبات' : 'Daily revenue & orders'}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{isAr ? 'منحنيات الإيرادات والطلبات اليومية' : 'Daily revenue & order trends'}</p>
           </div>
           <DashboardInfoButton
             title={isAr ? 'نظرة عامة على الإيرادات' : 'Revenue Overview'}
-            description={isAr ? 'يعرض تطور الإيرادات والطلبات يومياً. يساعدك على ربط حملاتك بالمبيعات.' : 'Shows daily revenue and order trends. Correlate campaigns with sales.'}
-            bullets={isAr ? ['المنطقة الخضراء = الإيرادات', 'المنطقة الذهبية = عدد الطلبات'] : ['Green area = revenue', 'Gold area = order count']}
+            description={isAr ? 'يعرض تطور الإيرادات والطلبات يومياً بمنحنيات انسيابية مضيئة.' : 'Shows smooth glowing revenue and order trend curves.'}
+            bullets={isAr ? ['المنحنى الأخضر = الإيرادات (MAD)', 'المنحنى الذهبي = عدد الطلبات'] : ['Green Curve = Revenue (MAD)', 'Amber Curve = Order Count']}
           />
         </div>
-        <div className="flex bg-gray-100 dark:bg-white/5 rounded-xl p-1 self-start sm:self-auto">
-          {timeRanges.map(r => (
-            <button key={r.value} onClick={() => setTimeRange(r.value)} className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${timeRange === r.value ? 'bg-white dark:bg-white/10 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white'}`}>
-              {isAr ? r.labelAr : r.label}
-            </button>
-          ))}
+
+        <div className="flex items-center gap-3 self-start sm:self-auto">
+          <div className="hidden md:flex items-center gap-3 text-xs font-semibold">
+            <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-xs inline-block" /> {isAr ? 'الإيرادات' : 'Revenue'}
+            </span>
+            <span className="flex items-center gap-1.5 text-amber-500 dark:text-amber-400">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-xs inline-block" /> {isAr ? 'الطلبات' : 'Orders'}
+            </span>
+          </div>
+
+          <div className="flex bg-gray-100 dark:bg-white/5 rounded-xl p-1">
+            {timeRanges.map(r => (
+              <button key={r.value} onClick={() => setTimeRange(r.value)} className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${timeRange === r.value ? 'bg-white dark:bg-white/10 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white'}`}>
+                {isAr ? r.labelAr : r.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -83,23 +95,28 @@ const RevenueOverview: React.FC = () => {
           </div>
         ) : data.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
+            <AreaChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
               <defs>
-                <linearGradient id="revDark" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--color-darkGreen, #047857)" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="var(--color-darkGreen, #047857)" stopOpacity={0} />
+                <linearGradient id="revAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.35} />
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
                 </linearGradient>
-                <linearGradient id="revGold" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--color-gold, #d97706)" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="var(--color-gold, #d97706)" stopOpacity={0} />
+                <linearGradient id="ordersAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.25} />
+                  <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(156, 163, 175, 0.12)" vertical={false} />
               <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9ca3af' }} tickFormatter={formatDate} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9ca3af' }} tickFormatter={v => `${(v/1000).toFixed(0)}k`} />
-              <Tooltip contentStyle={{ background: 'var(--dashboard-card-dark, #131a28)', border: 'none', borderRadius: '12px', color: '#fff' } as any} labelFormatter={(l: any) => formatDate(l)} formatter={((v: any, n: any) => n === 'revenue' ? [`${Number(v).toLocaleString()} MAD`, isAr ? 'الإيرادات' : 'Revenue'] : [v, isAr ? 'الطلبات' : 'Orders']) as any} />
-              <Area type="monotone" dataKey="revenue" stroke="var(--color-darkGreen, #047857)" strokeWidth={2.4} fill="url(#revDark)" dot={false} activeDot={{ r: 4, strokeWidth: 2, stroke: 'var(--color-darkGreen, #047857)', fill: '#fff' }} />
-              <Area type="monotone" dataKey="orders" stroke="var(--color-gold, #d97706)" strokeWidth={2} fill="url(#revGold)" dot={false} activeDot={{ r: 3, strokeWidth: 2, stroke: 'var(--color-gold, #d97706)', fill: '#fff' }} />
+              <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9ca3af' }} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
+              <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#f59e0b' }} />
+              <Tooltip
+                contentStyle={{ background: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#fff', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)' } as any}
+                labelFormatter={(l: any) => formatDate(l)}
+                formatter={((v: any, n: any) => n === 'revenue' ? [`${Number(v).toLocaleString()} MAD`, isAr ? 'الإيرادات' : 'Revenue'] : [v, isAr ? 'الطلبات' : 'Orders']) as any}
+              />
+              <Area yAxisId="right" type="monotone" dataKey="orders" name="orders" stroke="#f59e0b" strokeWidth={2.4} strokeDasharray="4 2" fill="url(#ordersAreaGrad)" dot={false} activeDot={{ r: 4, stroke: '#f59e0b', fill: '#fff' }} />
+              <Area yAxisId="left" type="monotone" dataKey="revenue" name="revenue" stroke="#10b981" strokeWidth={2.8} fill="url(#revAreaGrad)" dot={false} activeDot={{ r: 5, stroke: '#10b981', fill: '#fff' }} />
             </AreaChart>
           </ResponsiveContainer>
         ) : (

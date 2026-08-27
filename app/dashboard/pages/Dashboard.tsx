@@ -20,17 +20,21 @@ import TopProductsCard from './dashboard/TopProductsCard';
 import PendingActionsCard from './dashboard/PendingActionsCard';
 import LowStockAlertsCard from './dashboard/LowStockAlertsCard';
 import QuickActions from './dashboard/QuickActions';
+import OrdersTimelineCard from './dashboard/OrdersTimelineCard';
 import WorkspaceGrid from './dashboard/workspace/WorkspaceGrid';
 import WorkspaceToolbar from './dashboard/workspace/WorkspaceToolbar';
 import { dashboardRegistry, dashboardDefaults } from './dashboard/workspace/registry';
+import DashboardSkeleton from '../components/ui/DashboardSkeleton';
 
 const Dashboard: React.FC = () => {
   const { products, orders, customers, isLoadingProducts, isLoadingOrders, isLoadingCustomers, fetchProducts, fetchOrders, fetchCustomers } = useStore();
   const { t } = useTranslation();
   const {
     dashboard, dashboardDraft, dashboardEditMode, dashboardAutoAlign,
+    dashboardGridVisible, dashboardPreview,
     hasHydrated, setDashboard, enterDashboardEdit, cancelDashboardEdit, applyDashboardEdit,
-    setAutoAlign, updateWidget, reorderWorkspace, resetWorkspace,
+    setAutoAlign, setGridVisible, setPreview, updateWidget, reorderWorkspace, resetWorkspace,
+    undo, redo, canUndo, canRedo,
   } = useWorkspaceStore();
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -41,8 +45,18 @@ const Dashboard: React.FC = () => {
   useEffect(() => { fetchProducts(); fetchOrders(); fetchCustomers(); }, [fetchProducts, fetchOrders, fetchCustomers]);
 
   useEffect(() => {
-    if (hasHydrated && dashboard.length === 0) setDashboard(dashboardDefaults);
-  }, [hasHydrated, dashboard.length, setDashboard]);
+    if (hasHydrated) {
+      if (dashboard.length === 0) {
+        setDashboard(dashboardDefaults);
+      } else {
+        const existingIds = new Set(dashboard.map(w => w.id));
+        const missing = dashboardDefaults.filter(d => !existingIds.has(d.id));
+        if (missing.length > 0) {
+          setDashboard([...dashboard, ...missing]);
+        }
+      }
+    }
+  }, [hasHydrated, dashboard, setDashboard]);
 
   const effectiveLayouts = useMemo(() => {
     if (dashboardEditMode) return dashboardDraft ?? dashboard;
@@ -71,6 +85,7 @@ const Dashboard: React.FC = () => {
       case 'low-stock': return <LowStockAlertsCard products={products} />;
       case 'pending-actions': return <PendingActionsCard orders={orders} />;
       case 'quick-actions': return <QuickActions />;
+      case 'orders-timeline': return <OrdersTimelineCard />;
       default: return null;
     }
   };
@@ -98,12 +113,21 @@ const Dashboard: React.FC = () => {
     <div className="space-y-4">
       <DashboardHeader onRefresh={handleRefreshAll} isLoading={isLoading} />
       <WorkspaceToolbar
+        workspace="dashboard"
         editMode={dashboardEditMode}
         autoAlign={dashboardAutoAlign}
+        gridVisible={dashboardGridVisible}
+        preview={dashboardPreview}
         onEnterEdit={enterDashboardEdit}
         onCancel={cancelDashboardEdit}
         onApply={applyDashboardEdit}
         onToggleAutoAlign={v => setAutoAlign('dashboard', v)}
+        onToggleGrid={v => setGridVisible('dashboard', v)}
+        onTogglePreview={v => setPreview('dashboard', v)}
+        onUndo={() => undo('dashboard')}
+        onRedo={() => redo('dashboard')}
+        canUndo={canUndo('dashboard')}
+        canRedo={canRedo('dashboard')}
         registry={dashboardRegistry}
         layouts={effectiveLayouts}
         onShow={id => updateWidget('dashboard', id, { visible: true })}
@@ -111,25 +135,21 @@ const Dashboard: React.FC = () => {
       />
 
       {isLoading ? (
-        <div className="grid grid-cols-12 gap-3 auto-rows-fr">
-          {effectiveLayouts.filter(l => l.visible).map(l => (
-            <div key={l.id} className={`col-span-12 ${l.colSpan === 12 ? 'lg:col-span-12' : l.colSpan === 9 ? 'lg:col-span-9' : l.colSpan === 6 ? 'lg:col-span-6' : 'lg:col-span-3'} md:col-span-6`}>
-              {skeletonFor(l.id)}
-            </div>
-          ))}
-        </div>
+        <DashboardSkeleton />
       ) : (
         <WorkspaceGrid
           registry={dashboardRegistry}
           layouts={effectiveLayouts}
           editMode={dashboardEditMode}
           autoAlign={dashboardAutoAlign}
+          gridVisible={dashboardGridVisible}
+          preview={dashboardPreview}
           onReorder={ids => reorderWorkspace('dashboard', ids)}
           onToggleLock={id => {
             const cur = effectiveLayouts.find(w => w.id === id);
             if (cur) updateWidget('dashboard', id, { locked: !cur.locked });
           }}
-          onHide={id => updateWidget('dashboard', id, { visible: false })}
+          onRemove={id => updateWidget('dashboard', id, { visible: false })}
           onChangeSpan={(id, span) => updateWidget('dashboard', id, { colSpan: span })}
           onChangeRowSpan={(id, span) => updateWidget('dashboard', id, { rowSpan: span as any })}
           onExpand={id => setExpandedId(id)}

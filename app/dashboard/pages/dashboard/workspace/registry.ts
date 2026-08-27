@@ -14,7 +14,8 @@ export const dashboardRegistry: WidgetMeta[] = [
   { id: 'top-products', name: 'Top Products', nameAr: 'أفضل المنتجات', description: 'Best sellers by units', descriptionAr: 'الأكثر مبيعاً حسب الوحدات', category: 'Products', defaultVisible: true, defaultColSpan: 6, defaultRowSpan: 3, minColSpan: 3, maxColSpan: 9, minRowSpan: 1, maxRowSpan: 4 },
   { id: 'low-stock', name: 'Low Stock Alerts', nameAr: 'تنبيهات المخزون', description: 'Low & out of stock', descriptionAr: 'منخفض ونافد', category: 'Inventory', defaultVisible: true, defaultColSpan: 6, defaultRowSpan: 2, minColSpan: 3, maxColSpan: 9, minRowSpan: 1, maxRowSpan: 3 },
   { id: 'pending-actions', name: 'Pending Actions', nameAr: 'إجراءات معلقة', description: 'Orders needing action', descriptionAr: 'طلبات تحتاج إجراء', category: 'Orders', defaultVisible: true, defaultColSpan: 6, defaultRowSpan: 2, minColSpan: 3, maxColSpan: 9, minRowSpan: 1, maxRowSpan: 3 },
-  { id: 'quick-actions', name: 'Quick Actions', nameAr: 'إجراءات سريعة', description: 'Shortcuts to frequent tasks', descriptionAr: 'اختصارات للمهام المتكررة', category: 'Actions', defaultVisible: true, defaultColSpan: 3, defaultRowSpan: 1, minColSpan: 3, maxColSpan: 12, minRowSpan: 1, maxRowSpan: 2 },
+  { id: 'quick-actions', name: 'Quick Actions', nameAr: 'إجراءات سريعة', description: 'Shortcuts to frequent tasks', descriptionAr: 'اختصارات للمهام المتكررة', category: 'Actions', defaultVisible: true, defaultColSpan: 4, defaultRowSpan: 1, minColSpan: 3, maxColSpan: 12, minRowSpan: 1, maxRowSpan: 4 },
+  { id: 'orders-timeline', name: 'Orders Delivery Timeline', nameAr: 'جدول تسليم الطلبات', description: 'Gantt-style timeline for order delivery windows & call alerts', descriptionAr: 'جدول تتبع مواعيد وصول الطلبات وتنبيهات الاتصال بالزبناء', category: 'Delivery', defaultVisible: true, defaultColSpan: 12, defaultRowSpan: 2, minColSpan: 6, maxColSpan: 12, minRowSpan: 2, maxRowSpan: 4 },
 ];
 
 export const analyticsRegistry: WidgetMeta[] = [

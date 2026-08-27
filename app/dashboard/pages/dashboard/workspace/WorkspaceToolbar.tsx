@@ -1,36 +1,70 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Settings2, RotateCcw, Plus, Eye, EyeOff, LayoutGrid, Sparkles } from 'lucide-react';
+import {
+  Settings2, RotateCcw, Plus, Eye, EyeOff, LayoutGrid,
+  Sparkles, Grid3X3, Undo2, Redo2, MoreHorizontal, X, Check,
+} from 'lucide-react';
 import type { WidgetMeta } from './types';
 import type { WidgetLayout } from '../../../store/useWorkspaceStore';
 import { useTranslation } from '../../../i18n/useTranslation';
 import { WidgetIcon } from './icons';
 
 interface Props {
+  workspace: 'dashboard' | 'analytics';
   editMode: boolean;
   autoAlign?: boolean;
+  gridVisible?: boolean;
+  preview?: boolean;
   onEnterEdit: () => void;
   onCancel: () => void;
   onApply: () => void;
   onToggleAutoAlign?: (v: boolean) => void;
+  onToggleGrid?: (v: boolean) => void;
+  onTogglePreview?: (v: boolean) => void;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
   registry: WidgetMeta[];
-  layouts: WidgetLayout[]; // draft when editing else saved
+  layouts: WidgetLayout[];
   onShow: (id: string) => void;
-  onHide?: (id: string) => void;
   onReset: () => void;
 }
 
-const WorkspaceToolbar: React.FC<Props> = ({ editMode, autoAlign = true, onEnterEdit, onCancel, onApply, onToggleAutoAlign, registry, layouts, onShow, onReset }) => {
-  const [showManager, setShowManager] = useState(false);
+const WorkspaceToolbar: React.FC<Props> = ({
+  workspace,
+  editMode,
+  autoAlign = true,
+  gridVisible = true,
+  preview = false,
+  onEnterEdit,
+  onCancel,
+  onApply,
+  onToggleAutoAlign,
+  onToggleGrid,
+  onTogglePreview,
+  onUndo,
+  onRedo,
+  canUndo = false,
+  canRedo = false,
+  registry,
+  layouts,
+  onShow,
+  onReset,
+}) => {
+  const [showComponents, setShowComponents] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [showOverflow, setShowOverflow] = useState(false);
   const { language } = useTranslation();
   const isAr = language === 'ar';
 
   const hidden = layouts.filter(l => !l.visible);
   const visible = layouts.filter(l => l.visible);
-  const hiddenMetas = useMemo(() => hidden.map(l => registry.find(r => r.id === l.id)).filter(Boolean) as WidgetMeta[], [hidden, registry]);
-  const visibleMetas = useMemo(() => visible.map(l => registry.find(r => r.id === l.id)).filter(Boolean) as WidgetMeta[], [visible, registry]);
+  const hiddenMetas = useMemo(
+    () => hidden.map(l => registry.find(r => r.id === l.id)).filter(Boolean) as WidgetMeta[],
+    [hidden, registry],
+  );
 
   const groupedHidden = useMemo(() => {
     const map = new Map<string, WidgetMeta[]>();
@@ -41,8 +75,7 @@ const WorkspaceToolbar: React.FC<Props> = ({ editMode, autoAlign = true, onEnter
     return Array.from(map.entries());
   }, [hiddenMetas]);
 
-  // Keep for backward compat: support old onToggleEdit prop via enter/cancel
-  // This toolbar is used in both modes; when not editing show Customize, when editing show Cancel/Apply + controls
+  // ─── View Mode (not editing) ─────────────────────────────────
   if (!editMode) {
     return (
       <div className="flex flex-wrap items-center gap-2">
@@ -53,14 +86,17 @@ const WorkspaceToolbar: React.FC<Props> = ({ editMode, autoAlign = true, onEnter
           <Settings2 size={16} /> {isAr ? 'تخصيص' : 'Customize'}
         </button>
 
-        <button
-          onClick={() => setShowManager(v => !v)}
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5"
-        >
-          <Plus size={14} /> {isAr ? 'إدارة المكونات' : 'Add Components'} {hidden.length > 0 && <span className="ml-1 px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 text-xs">{hidden.length}</span>}
-        </button>
+        {hidden.length > 0 && (
+          <button
+            onClick={() => setShowComponents(v => !v)}
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5"
+          >
+            <Plus size={14} /> {isAr ? 'إضافة مكونات' : 'Add Components'}
+            <span className="px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 text-xs">{hidden.length}</span>
+          </button>
+        )}
 
-        {showManager && (
+        {showComponents && (
           <div className="w-full mt-2 p-4 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 shadow-lg">
             {hiddenMetas.length ? (
               <div className="space-y-3">
@@ -96,90 +132,206 @@ const WorkspaceToolbar: React.FC<Props> = ({ editMode, autoAlign = true, onEnter
     );
   }
 
-  // Edit mode toolbar
+  // ─── Edit Mode — Sticky Toolbar ──────────────────────────────
   return (
-    <div className="sticky top-0 z-20 -mx-4 lg:-mx-6 px-4 lg:px-6 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-100 dark:border-white/10">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-500/15 border border-amber-200 dark:border-amber-500/20 text-amber-700 dark:text-amber-300 text-xs font-medium">
-            <Sparkles size={12} /> {isAr ? 'وضع التخصيص' : 'Customizing'}
-          </span>
-          <label className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-xs font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
-            <input type="checkbox" checked={autoAlign} onChange={e => onToggleAutoAlign?.(e.target.checked)} className="w-3.5 h-3.5 rounded border-gray-300 text-[var(--color-darkGreen)] focus:ring-[var(--color-darkGreen)]/20" />
-            <LayoutGrid size={12} /> {isAr ? 'محاذاة تلقائية' : 'Auto Align'}
-          </label>
-        </div>
+    <>
+      <div className="sticky top-20 z-30 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+        <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-gray-200 dark:border-white/10 rounded-2xl shadow-lg shadow-gray-200/30 dark:shadow-black/30">
+          <div className="flex items-center gap-1 p-2 min-w-0">
+            {/* ═══ Left: Status badge ═══ */}
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-500/15 border border-amber-200/60 dark:border-amber-500/20 text-amber-700 dark:text-amber-300 text-xs font-semibold">
+                <Sparkles size={12} />
+                <span className="hidden sm:inline">{isAr ? 'وضع التحرير' : 'Editing'}</span>
+              </span>
+            </div>
 
-        <div className="ml-auto flex items-center gap-2">
-          <button onClick={() => setShowManager(v => !v)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300">
-            <Plus size={14} /> {isAr ? 'المكونات' : 'Components'} {hidden.length > 0 && <span className="px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-white/10 text-xs">{hidden.length}</span>}
-          </button>
-          <button onClick={() => setConfirmReset(true)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-400">
-            <RotateCcw size={14} /> {isAr ? 'إعادة الضبط' : 'Reset'}
-          </button>
-          <button onClick={onCancel} className="px-4 py-2 rounded-xl text-sm font-medium bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-50">
-            {isAr ? 'إلغاء' : 'Cancel'}
-          </button>
-          <button onClick={onApply} className="px-5 py-2 rounded-xl text-sm font-semibold bg-[var(--color-darkGreen)] text-white shadow hover:opacity-90 border border-[var(--color-darkGreen)]">
-            {isAr ? 'تطبيق' : 'Apply'}
-          </button>
+            {/* ═══ Divider ═══ */}
+            <div className="w-px h-6 bg-gray-200 dark:bg-white/10 mx-1 shrink-0" />
+
+            {/* ═══ Group: Layout (desktop) ═══ */}
+            <div className="hidden lg:flex items-center gap-1 shrink-0">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-white/40 px-1.5 select-none">Layout</span>
+              <button
+                onClick={() => onToggleAutoAlign?.(!autoAlign)}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  autoAlign
+                    ? 'bg-[var(--color-darkGreen)] text-white'
+                    : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'
+                }`}
+                title="Auto Align"
+              >
+                <LayoutGrid size={13} /> {isAr ? 'محاذاة' : 'Auto'}
+              </button>
+              <button
+                onClick={() => onToggleGrid?.(!gridVisible)}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  gridVisible
+                    ? 'bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300'
+                    : 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500'
+                }`}
+                title="Grid guides"
+              >
+                <Grid3X3 size={13} /> {isAr ? 'شبكة' : 'Grid'}
+              </button>
+            </div>
+
+            {/* ═══ Divider (desktop) ═══ */}
+            <div className="hidden lg:block w-px h-6 bg-gray-200 dark:bg-white/10 mx-1 shrink-0" />
+
+            {/* ═══ Group: Components (desktop) ═══ */}
+            <div className="hidden lg:flex items-center gap-1 shrink-0">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-white/40 px-1.5 select-none">Components</span>
+              <button
+                onClick={() => setShowComponents(v => !v)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
+              >
+                <Plus size={13} /> {isAr ? 'إضافة' : 'Add'}
+                {hidden.length > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-md bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 text-[10px] font-bold">{hidden.length}</span>
+                )}
+              </button>
+            </div>
+
+            {/* ═══ Divider (desktop) ═══ */}
+            <div className="hidden lg:block w-px h-6 bg-gray-200 dark:bg-white/10 mx-1 shrink-0" />
+
+            {/* ═══ Group: History (desktop) ═══ */}
+            <div className="hidden lg:flex items-center gap-1 shrink-0">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-white/40 px-1.5 select-none">History</span>
+              <button
+                onClick={onUndo}
+                disabled={!canUndo}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                title="Undo"
+              >
+                <Undo2 size={15} />
+              </button>
+              <button
+                onClick={onRedo}
+                disabled={!canRedo}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                title="Redo"
+              >
+                <Redo2 size={15} />
+              </button>
+            </div>
+
+            {/* ═══ Divider (desktop) ═══ */}
+            <div className="hidden lg:block w-px h-6 bg-gray-200 dark:bg-white/10 mx-1 shrink-0" />
+
+            {/* ═══ Group: View (desktop) ═══ */}
+            <div className="hidden lg:flex items-center gap-1 shrink-0">
+              <button
+                onClick={() => onTogglePreview?.(!preview)}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  preview
+                    ? 'bg-sky-50 dark:bg-sky-500/15 text-sky-700 dark:text-sky-300'
+                    : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'
+                }`}
+              >
+                {preview ? <EyeOff size={13} /> : <Eye size={13} />}
+                {preview ? (isAr ? 'خروج' : 'Exit') : (isAr ? 'معاينة' : 'Preview')}
+              </button>
+            </div>
+
+            {/* ═══ Spacer ═══ */}
+            <div className="flex-1 min-w-4" />
+
+            {/* ═══ Mobile overflow menu ═══ */}
+            <div className="lg:hidden relative">
+              <button
+                onClick={() => setShowOverflow(v => !v)}
+                className="w-9 h-9 rounded-lg flex items-center justify-center bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
+              >
+                <MoreHorizontal size={16} />
+              </button>
+              {showOverflow && (
+                <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 rounded-xl shadow-xl z-50 p-1.5">
+                  <button onClick={() => { onToggleAutoAlign?.(!autoAlign); setShowOverflow(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5">
+                    <LayoutGrid size={14} /> {isAr ? 'محاذاة تلقائية' : 'Auto Align'} {autoAlign && <Check size={14} className="ml-auto text-[var(--color-darkGreen)]" />}
+                  </button>
+                  <button onClick={() => { onToggleGrid?.(!gridVisible); setShowOverflow(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5">
+                    <Grid3X3 size={14} /> {isAr ? 'إظهار الشبكة' : 'Show Grid'} {gridVisible && <Check size={14} className="ml-auto text-[var(--color-darkGreen)]" />}
+                  </button>
+                  <div className="h-px bg-gray-200 dark:bg-white/10 my-1" />
+                  <button onClick={() => { onUndo?.(); setShowOverflow(false); }} disabled={!canUndo} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 disabled:opacity-40">
+                    <Undo2 size={14} /> {isAr ? 'تراجع' : 'Undo'}
+                  </button>
+                  <button onClick={() => { onRedo?.(); setShowOverflow(false); }} disabled={!canRedo} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 disabled:opacity-40">
+                    <Redo2 size={14} /> {isAr ? 'إعادة' : 'Redo'}
+                  </button>
+                  <div className="h-px bg-gray-200 dark:bg-white/10 my-1" />
+                  <button onClick={() => { onTogglePreview?.(!preview); setShowOverflow(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5">
+                    {preview ? <EyeOff size={14} /> : <Eye size={14} />} {preview ? (isAr ? 'خروج المعاينة' : 'Exit Preview') : (isAr ? 'معاينة' : 'Preview')}
+                  </button>
+                  <button onClick={() => { setShowComponents(v => !v); setShowOverflow(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5">
+                    <Plus size={14} /> {isAr ? 'إضافة مكونات' : 'Add Components'} {hidden.length > 0 && <span className="ml-auto px-1.5 py-0.5 rounded-md bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 text-[10px] font-bold">{hidden.length}</span>}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* ═══ Group: Actions (always visible) ═══ */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                onClick={() => setConfirmReset(true)}
+                className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+              >
+                <RotateCcw size={13} /> {isAr ? 'إعادة ضبط' : 'Reset'}
+              </button>
+              <button
+                onClick={onCancel}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
+              >
+                {isAr ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button
+                onClick={onApply}
+                className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold bg-[var(--color-darkGreen)] text-white shadow-sm hover:opacity-90 transition-opacity"
+              >
+                <Check size={14} /> {isAr ? 'تطبيق' : 'Apply'}
+              </button>
+            </div>
+          </div>
+
+          {/* ═══ Components Panel (dropdown) ═══ */}
+          {showComponents && (
+            <div className="border-t border-gray-200 dark:border-white/10 p-3">
+              {hiddenMetas.length ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {groupedHidden.map(([cat, items]) => (
+                    <div key={cat} className="space-y-1.5">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-white/40 px-1">{cat}</p>
+                      {items.map(m => (
+                        <div key={m.id} className="flex items-center gap-2 p-2 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 hover:border-[var(--color-darkGreen)]/30 transition-colors">
+                          <WidgetIcon id={m.id} />
+                          <span className="text-sm font-medium text-gray-900 dark:text-white truncate flex-1">{isAr ? m.nameAr : m.name}</span>
+                          <button onClick={() => onShow(m.id)} className="shrink-0 px-2.5 py-1 rounded-lg bg-[var(--color-darkGreen)] text-white text-xs font-medium hover:opacity-90 transition-opacity">
+                            <Eye size={11} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-400 dark:text-white/40 text-center py-3">{isAr ? 'جميع المكونات ظاهرة' : 'All components visible'}</p>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
-      {showManager && (
-        <div className="mt-3 grid grid-cols-1 lg:grid-cols-2 gap-3">
-          <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 p-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-white/40 mb-2 flex items-center gap-1.5"><Eye size={12} /> {isAr ? 'النشطة' : 'Active'} • {visible.length}</h4>
-            <div className="space-y-1.5 max-h-[260px] overflow-auto pr-1">
-              {visibleMetas.map(m => (
-                <div key={m.id} className="flex items-center justify-between p-2 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <WidgetIcon id={m.id} />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{isAr ? m.nameAr : m.name}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{m.category}</p>
-                    </div>
-                  </div>
-                  <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-500/15 shrink-0">{isAr ? 'ظاهر' : 'Visible'}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 p-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-white/40 mb-2 flex items-center gap-1.5"><EyeOff size={12} /> {isAr ? 'المخفية' : 'Hidden'} • {hidden.length}</h4>
-            {hiddenMetas.length ? (
-              <div className="space-y-1.5 max-h-[260px] overflow-auto pr-1">
-                {groupedHidden.map(([cat, items]) => (
-                  <div key={cat}>
-                    <p className="text-[11px] font-semibold text-gray-400 dark:text-white/30 mt-1 mb-1">{cat}</p>
-                    {items.map(m => (
-                      <div key={m.id} className="flex items-center justify-between p-2 rounded-xl bg-amber-50/50 dark:bg-amber-500/5 border border-amber-100 dark:border-amber-500/10 mb-1">
-                        <div className="flex items-center gap-2 min-w-0 pr-2">
-                          <WidgetIcon id={m.id} />
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{isAr ? m.nameAr : m.name}</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{isAr ? m.descriptionAr : m.description}</p>
-                          </div>
-                        </div>
-                        <button onClick={() => onShow(m.id)} className="shrink-0 px-3 py-1 rounded-full bg-[var(--color-darkGreen)] text-white text-xs">Unhide</button>
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-gray-400 dark:text-white/40 py-6 text-center">{isAr ? 'لا توجد مكونات مخفية' : 'No hidden widgets'}</p>
-            )}
-          </div>
-        </div>
-      )}
-
+      {/* ═══ Reset Confirmation Modal ═══ */}
       {confirmReset && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setConfirmReset(false)} />
           <div className="relative bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/10 p-6 max-w-md w-full shadow-2xl">
             <h4 className="text-base font-semibold text-gray-900 dark:text-white">{isAr ? 'إعادة ضبط التخطيط؟' : 'Reset Layout?'}</h4>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{isAr ? 'سيتم استعادة الترتيب الافتراضي. لن يتم الحفظ حتى تضغط تطبيق.' : 'This will restore the default arrangement. Not saved until you click Apply.'}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+              {isAr ? 'سيتم استعادة الترتيب الافتراضي. لن يتم الحفظ حتى تضغط تطبيق.' : 'This will restore the default arrangement. Not saved until you click Apply.'}
+            </p>
             <div className="flex justify-end gap-2 mt-4">
               <button onClick={() => setConfirmReset(false)} className="px-4 py-2 rounded-xl text-sm bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300">{isAr ? 'إلغاء' : 'Cancel'}</button>
               <button onClick={() => { onReset(); setConfirmReset(false); }} className="px-4 py-2 rounded-xl text-sm bg-[var(--color-darkGreen)] text-white">Reset</button>
@@ -187,7 +339,7 @@ const WorkspaceToolbar: React.FC<Props> = ({ editMode, autoAlign = true, onEnter
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 

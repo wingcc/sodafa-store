@@ -10,9 +10,11 @@ interface Props {
   layouts: WidgetLayout[];
   editMode: boolean;
   autoAlign?: boolean;
+  gridVisible?: boolean;
+  preview?: boolean;
   onReorder: (orderedIds: string[]) => void;
   onToggleLock: (id: string) => void;
-  onHide: (id: string) => void;
+  onRemove: (id: string) => void;
   onChangeSpan: (id: string, span: number) => void;
   onChangeRowSpan?: (id: string, span: number) => void;
   onExpand?: (id: string) => void;
@@ -25,7 +27,7 @@ const spanClass = (span: number) => {
   return `col-span-12 ${md} ${lg}`;
 };
 
-const WorkspaceGrid: React.FC<Props> = ({ registry, layouts, editMode, autoAlign = true, onReorder, onToggleLock, onHide, onChangeSpan, onChangeRowSpan, onExpand, renderWidget }) => {
+const WorkspaceGrid: React.FC<Props> = ({ registry, layouts, editMode, autoAlign = true, gridVisible = true, preview = false, onReorder, onToggleLock, onRemove, onChangeSpan, onChangeRowSpan, onExpand, renderWidget }) => {
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [dragOverGrid, setDragOverGrid] = useState(false);
@@ -39,7 +41,6 @@ const WorkspaceGrid: React.FC<Props> = ({ registry, layouts, editMode, autoAlign
     setDragId(id);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', id);
-    // ghost image offset
     if (e.dataTransfer.setDragImage) {
       const el = e.currentTarget as HTMLElement;
       e.dataTransfer.setDragImage(el, 20, 20);
@@ -77,16 +78,18 @@ const WorkspaceGrid: React.FC<Props> = ({ registry, layouts, editMode, autoAlign
     return (
       <div className="rounded-2xl border-2 border-dashed border-gray-200 dark:border-white/10 p-10 text-center bg-white/80 dark:bg-white/5">
         <p className="text-sm font-medium text-gray-600 dark:text-gray-300">No components visible</p>
-        <p className="text-xs text-gray-400 dark:text-white/40 mt-1">Use “Add Components” to restore widgets. Layout will auto-align to fill gaps.</p>
+        <p className="text-xs text-gray-400 dark:text-white/40 mt-1">Use "Add Components" to restore widgets.</p>
       </div>
     );
   }
 
+  const showEditUI = editMode && !preview;
+
   return (
     <div
-      className={`relative rounded-2xl transition-colors ${editMode ? 'p-3' : ''} ${editMode ? 'bg-white dark:bg-gray-900 border border-dashed border-gray-200 dark:border-white/10' : ''}`}
+      className={`relative rounded-2xl transition-colors ${showEditUI ? 'p-3' : ''} ${showEditUI && gridVisible ? 'bg-white dark:bg-gray-900 border border-dashed border-gray-200 dark:border-white/10' : ''}`}
       style={
-        editMode
+        showEditUI && gridVisible
           ? {
               backgroundImage: `radial-gradient(rgba(0,0,0,0.08) 1px, transparent 1px), radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px)`,
               backgroundSize: '18px 18px, 18px 18px',
@@ -95,35 +98,33 @@ const WorkspaceGrid: React.FC<Props> = ({ registry, layouts, editMode, autoAlign
           : undefined
       }
     >
-      {editMode && (
+      {showEditUI && (
         <div className="flex items-center justify-between mb-3 px-1">
           <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
             {autoAlign ? 'Auto Align: snap & fill gaps • Drag to reorder' : 'Free arrange • Drag to reorder'}
           </p>
           <span className="text-[11px] px-2 py-1 rounded-full bg-[var(--color-darkGreen)]/10 dark:bg-white/10 text-[var(--color-darkGreen)] dark:text-white/70 border border-[var(--color-darkGreen)]/10">
-            Studio grid • {sorted.length} widgets
+            {sorted.length} widgets
           </span>
         </div>
       )}
 
       <div
-        className={`grid grid-cols-12 gap-3 md:gap-3 lg:gap-4 ${editMode && autoAlign ? 'grid-auto-flow-dense' : ''}`}
+        className={`grid grid-cols-12 gap-3 md:gap-3 lg:gap-4 ${showEditUI && autoAlign ? 'grid-auto-flow-dense' : ''}`}
         style={{ gridAutoRows: '180px' }}
         onDragOver={e => {
-          if (!editMode || !dragId) return;
+          if (!showEditUI || !dragId) return;
           e.preventDefault();
           setDragOverGrid(true);
           e.dataTransfer.dropEffect = 'move';
         }}
         onDragLeave={e => {
-          // only hide if leaving grid container
           if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) setDragOverGrid(false);
         }}
         onDrop={e => {
-          if (!editMode || !dragId) return;
+          if (!showEditUI || !dragId) return;
           e.preventDefault();
           setDragOverGrid(false);
-          // if dropped on grid empty area (not on a widget), move to end
           const target = e.target as HTMLElement;
           const isWidget = target.closest('[draggable]');
           if (!isWidget) {
@@ -141,21 +142,20 @@ const WorkspaceGrid: React.FC<Props> = ({ registry, layouts, editMode, autoAlign
           if (!content) return null;
           const isDragged = dragId === layout.id;
           const isOver = dragOverId === layout.id && dragId !== layout.id;
-          const rowSpan = (layout as any).rowSpan ?? 2;
+          const rowSpan = layout.rowSpan ?? 2;
           return (
             <div
               key={layout.id}
-              draggable={editMode && !layout.locked}
+              draggable={showEditUI && !layout.locked}
               onDragStart={e => handleDragStart(e, layout.id)}
               onDragOver={e => handleDragOver(e, layout.id)}
               onDragLeave={() => setDragOverId(null)}
               onDrop={e => handleDrop(e, layout.id)}
               onDragEnd={handleDragEnd}
-              className={`${spanClass(layout.colSpan)} relative transition-all duration-200 ${isDragged ? 'opacity-40 scale-[0.98]' : ''} ${isOver ? 'ring-2 ring-[var(--color-darkGreen)]/40 ring-offset-2 ring-offset-white dark:ring-offset-gray-900' : ''} ${editMode ? 'pt-3 overflow-visible' : 'overflow-hidden'} flex flex-col min-h-0`}
+              className={`${spanClass(layout.colSpan)} relative transition-all duration-200 ${isDragged ? 'opacity-40 scale-[0.98]' : ''} ${isOver ? 'ring-2 ring-[var(--color-darkGreen)]/40 ring-offset-2 ring-offset-white dark:ring-offset-gray-900' : ''} ${showEditUI ? 'pt-3 overflow-visible' : 'overflow-hidden'} flex flex-col min-h-0`}
               style={{ gridRow: `span ${rowSpan} / span ${rowSpan}` }}
             >
-              {/* Drop indicator */}
-              {isOver && editMode && (
+              {isOver && showEditUI && (
                 <div className="absolute inset-0 rounded-2xl border-2 border-dashed border-[var(--color-darkGreen)] bg-[var(--color-darkGreen)]/5 pointer-events-none z-10 flex items-center justify-center">
                   <span className="text-xs font-semibold px-2 py-1 rounded-full bg-[var(--color-darkGreen)] text-white shadow">Drop here</span>
                 </div>
@@ -164,14 +164,14 @@ const WorkspaceGrid: React.FC<Props> = ({ registry, layouts, editMode, autoAlign
               <ComponentWrapper
                 meta={meta}
                 layout={layout}
-                editMode={editMode}
+                editMode={showEditUI}
                 onToggleLock={() => onToggleLock(layout.id)}
-                onHide={() => onHide(layout.id)}
+                onRemove={() => onRemove(layout.id)}
                 onChangeSpan={span => onChangeSpan(layout.id, span)}
                 onChangeRowSpan={onChangeRowSpan ? span => onChangeRowSpan(layout.id, span) : undefined}
                 onExpand={onExpand ? () => onExpand(layout.id) : undefined}
                 dragHandleProps={{
-                  draggable: editMode && !layout.locked,
+                  draggable: showEditUI && !layout.locked,
                   onDragStart: (e: any) => handleDragStart(e, layout.id),
                 } as any}
               >
@@ -180,8 +180,7 @@ const WorkspaceGrid: React.FC<Props> = ({ registry, layouts, editMode, autoAlign
             </div>
           );
         })}
-        {/* Empty area drop placeholder — dynamic dimensions matching dragged widget */}
-        {editMode && dragId && draggedLayout && dragOverGrid && (
+        {showEditUI && dragId && draggedLayout && dragOverGrid && (
           <div
             className={`${spanClass(draggedLayout.colSpan)} rounded-2xl border-2 border-dashed flex items-center justify-center p-4`}
             style={{
@@ -205,9 +204,9 @@ const WorkspaceGrid: React.FC<Props> = ({ registry, layouts, editMode, autoAlign
         )}
       </div>
 
-      {editMode && (
+      {showEditUI && (
         <div className="mt-3 text-[11px] text-gray-400 dark:text-white/30 text-center">
-          Tip: <span className="font-medium text-gray-600 dark:text-gray-300">W: Small/Medium/Large/Full</span> • <span className="font-medium text-gray-600 dark:text-gray-300">H: Short/Medium/Tall/Extra Tall</span> • Tallest widget sets row height • Auto Align fills gaps
+          Tip: <span className="font-medium text-gray-600 dark:text-gray-300">W: Small/Medium/Large/Full</span> • <span className="font-medium text-gray-600 dark:text-gray-300">H: Short/Medium/Tall/Extra Tall</span> • Tallest widget sets row height
         </div>
       )}
     </div>

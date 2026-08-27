@@ -42,6 +42,7 @@ export const widgetIcons: Record<string, React.ReactNode> = {
   'low-stock': <AlertTriangle size={16} />,
   'pending-actions': <Clock size={16} />,
   'quick-actions': <Zap size={16} />,
+  'orders-timeline': <Truck size={16} />,
   // Analytics
   'analytics-overview': <BarChart3 size={16} />,
   'visitor-trends': <TrendingUp size={16} />,
@@ -74,6 +75,7 @@ const widgetTypeMap: Record<string, string> = {
   'low-stock': 'inventory',
   'pending-actions': 'order',
   'quick-actions': 'system',
+  'orders-timeline': 'shipping',
   'analytics-overview': 'analytics',
   'visitor-trends': 'analytics',
   'conversion-funnel': 'order',

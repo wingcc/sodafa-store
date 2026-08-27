@@ -1,5 +1,5 @@
 // Analytic - shared types
-export type Period = 'today' | 'yesterday' | '7d' | '30d' | '90d' | 'year';
+export type Period = 'today' | 'yesterday' | '7d' | '30d' | '90d' | 'year' | 'custom';
 
 export interface StatValue {
   value: number;
@@ -51,11 +51,12 @@ export interface CountryInfo {
 
 export const COLORS = ['#1E7A57', '#C6A15B', '#38BDF8', '#F472B6', '#FB923C', '#4ADE80', '#FBBF24', '#C084FC', '#F87171', '#22D3EE'];
 
-export const periodOptions: { value: Period; label: string }[] = [
-  { value: 'today', label: 'Today' },
-  { value: 'yesterday', label: 'Yesterday' },
-  { value: '7d', label: 'Last 7 Days' },
-  { value: '30d', label: 'Last 30 Days' },
-  { value: '90d', label: 'Last 90 Days' },
-  { value: 'year', label: 'This Year' },
+export const periodOptions: { value: Period; label: string; labelAr: string }[] = [
+  { value: 'today', label: 'Today', labelAr: 'اليوم' },
+  { value: 'yesterday', label: 'Yesterday', labelAr: 'الأمس' },
+  { value: '7d', label: '7 Days', labelAr: '7 أيام' },
+  { value: '30d', label: '30 Days', labelAr: '30 يوم' },
+  { value: '90d', label: '90 Days', labelAr: '90 يوم' },
+  { value: 'year', label: 'This Year', labelAr: 'هذه السنة' },
+  { value: 'custom', label: 'Custom Range', labelAr: 'تاريخ مخصص' },
 ];
