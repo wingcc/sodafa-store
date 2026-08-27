@@ -406,6 +406,13 @@ export const useStore = create<AppState>((set) => ({
     }
   },
   updateOrderStatus: async (id, status) => {
+    // Optimistic local state update
+    set((state) => ({
+      orders: state.orders.map((o) =>
+        o.id === id ? { ...o, orderStatus: status, updatedAt: new Date().toISOString(), shippedAt: status === 'shipped' ? new Date().toISOString() : (o as any).shippedAt, deliveredAt: status === 'delivered' ? new Date().toISOString() : (o as any).deliveredAt } : o
+      ),
+    }));
+
     try {
       const res = await fetch(`${API_BASE}/orders/${id}`, {
         method: 'PUT',
@@ -413,13 +420,13 @@ export const useStore = create<AppState>((set) => ({
         body: JSON.stringify({ orderStatus: status }),
       });
       const json = await res.json();
-      if (json.success) {
+      if (json.success && json.data) {
         set((state) => ({
           orders: state.orders.map((o) => (o.id === id ? mapOrder(json.data) : o)),
         }));
       }
     } catch (err: unknown) {
-      console.error('Failed to update order status:', err);
+      console.error('Failed to update order status on server:', err);
     }
   },
 
