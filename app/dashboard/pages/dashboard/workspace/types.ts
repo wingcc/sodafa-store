@@ -7,7 +7,10 @@ export interface WidgetMeta {
   category: string;
   defaultVisible: boolean;
   defaultColSpan: number; // 3,6,9,12
+  defaultRowSpan: number; // 1-4
   minColSpan?: number;
   maxColSpan?: number;
+  minRowSpan?: number;
+  maxRowSpan?: number;
   lockedByDefault?: boolean;
 }
