@@ -16,7 +16,7 @@ import Reviews from './pages/Reviews';
 import Coupons from './pages/Coupons';
 import Shipping from './pages/Shipping';
 import Payments from './pages/Payments';
-import Analytics from './pages/Analytics';
+import Analytics from './pages/Analytic';
 import Notifications from './pages/Notifications';
 import Settings from './pages/Settings';
 import DashboardNotFound from './pages/DashboardNotFound';
