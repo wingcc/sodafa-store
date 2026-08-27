@@ -17,6 +17,7 @@ import Coupons from './pages/Coupons';
 import Shipping from './pages/Shipping';
 import Payments from './pages/Payments';
 import Analytics from './pages/Analytic';
+import Logs from './pages/Logs';
 import Notifications from './pages/Notifications';
 import Settings from './pages/Settings';
 import DashboardNotFound from './pages/DashboardNotFound';
@@ -32,8 +33,8 @@ import PromotionalBannersPage from './pages/store-manager/promotional-banners/pa
 import StoreContentPage from './pages/store-manager/store-content/page';
 
 const VALID_PAGE_KEYS = new Set([
-  'dashboard', 'products', 'categories', 'orders', 'customers', 'inventory',
-  'reviews', 'coupons', 'shipping', 'payments', 'analytics', 'notifications',
+  'dashboard', 'analytics', 'logs', 'products', 'categories', 'orders', 'customers', 'inventory',
+  'reviews', 'coupons', 'shipping', 'payments', 'notifications',
   'settings', 'store', 'store-homepage', 'store-homepage-content', 'store-reviews',
   'store-settings', 'store-seo', 'store-banners', 'store-content',
 ]);
@@ -63,6 +64,7 @@ const App: React.FC = () => {
       case 'shipping': return <Shipping />;
       case 'payments': return <Payments />;
       case 'analytics': return <Analytics />;
+      case 'logs': return <Logs />;
       case 'notifications': return <Notifications />;
       case 'settings': return <Settings />;
       // حالات إدارة المتجر الجديدة

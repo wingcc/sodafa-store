@@ -298,6 +298,8 @@ export interface StoreSettings {
 
 export type PageSection =
   | 'dashboard'
+  | 'analytics'
+  | 'logs'
   | 'products'
   | 'categories'
   | 'orders'
@@ -307,7 +309,6 @@ export type PageSection =
   | 'coupons'
   | 'shipping'
   | 'payments'
-  | 'analytics'
   | 'notifications'
   | 'store'              // ← الصفحة الرئيسية لإدارة المتجر
   | 'store-homepage'     // ← إدارة أقسام الصفحة الرئيسية

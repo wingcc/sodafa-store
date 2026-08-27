@@ -20,6 +20,7 @@ import {
   ExternalLink,
   ChevronsLeft,
   ChevronsRight,
+  ScrollText,
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { usePreferencesStore } from '../../store/usePreferencesStore';
@@ -34,7 +35,9 @@ interface NavItemDef {
 }
 
 const navDefs: NavItemDef[] = [
-  { id: 'dashboard', icon: <LayoutDashboard size={19} />, labelKey: 'sidebar.dashboard', groupKey: 'sidebar.overview' },
+  { id: 'dashboard', icon: <LayoutDashboard size={19} />, labelKey: 'sidebar.dashboard', groupKey: 'sidebar.intelligence' },
+  { id: 'analytics', icon: <BarChart3 size={19} />, labelKey: 'sidebar.analytics', groupKey: 'sidebar.intelligence' },
+  { id: 'logs', icon: <ScrollText size={19} />, labelKey: 'sidebar.logs', groupKey: 'sidebar.intelligence' },
   { id: 'products', icon: <Package size={19} />, labelKey: 'sidebar.products', groupKey: 'sidebar.catalog' },
   { id: 'categories', icon: <FolderTree size={19} />, labelKey: 'sidebar.categories', groupKey: 'sidebar.catalog' },
   { id: 'orders', icon: <ShoppingCart size={19} />, labelKey: 'sidebar.orders', groupKey: 'sidebar.sales' },
@@ -44,7 +47,6 @@ const navDefs: NavItemDef[] = [
   { id: 'coupons', icon: <Ticket size={19} />, labelKey: 'sidebar.coupons', groupKey: 'sidebar.marketing' },
   { id: 'shipping', icon: <Truck size={19} />, labelKey: 'sidebar.shipping', groupKey: 'sidebar.operations' },
   { id: 'payments', icon: <CreditCard size={19} />, labelKey: 'sidebar.payments', groupKey: 'sidebar.finance' },
-  { id: 'analytics', icon: <BarChart3 size={19} />, labelKey: 'sidebar.analytics', groupKey: 'sidebar.insights' },
   { id: 'notifications', icon: <Bell size={19} />, labelKey: 'sidebar.notifications', groupKey: 'sidebar.system' },
   { id: 'store', icon: <Store size={19} />, labelKey: 'sidebar.store', groupKey: 'sidebar.system' },
   { id: 'settings', icon: <Settings size={19} />, labelKey: 'sidebar.settings', groupKey: 'sidebar.system' },
