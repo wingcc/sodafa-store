@@ -16,8 +16,8 @@ const LowStockAlertsCard: React.FC<{ products: Product[] }> = ({ products }) => 
   const out = products.filter(p => p.stock === 0).slice(0, 3);
   const list = [...low, ...out].slice(0, 5);
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-white/10">
-      <div className="flex items-center justify-between mb-4">
+    <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-white/10 h-full flex flex-col min-h-0 overflow-hidden">
+      <div className="flex items-center justify-between mb-4 shrink-0">
         <div className="flex items-center gap-2">
           <AlertTriangle size={18} className="text-amber-500" />
           <h3 className="text-base font-semibold text-gray-900 dark:text-white">{t('dashboard.lowStockAlerts')}</h3>
@@ -27,7 +27,7 @@ const LowStockAlertsCard: React.FC<{ products: Product[] }> = ({ products }) => 
           {t('dashboard.manage')} <ArrowRight size={14} className={isAr ? 'rotate-180' : ''} />
         </button>
       </div>
-      <div className="space-y-2">
+      <div className="flex-1 min-h-0 overflow-auto overscroll-contain space-y-2 pr-1">
         {list.map(product => {
           const isOut = product.stock === 0;
           return (

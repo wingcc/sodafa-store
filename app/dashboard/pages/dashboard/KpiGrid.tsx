@@ -77,7 +77,7 @@ const KpiGrid: React.FC<Props> = ({ orders, products, customers, totalRevenue, p
   })();
 
   return (
-    <div className="space-y-4">
+    <div className="flex-1 min-h-0 overflow-auto overscroll-contain space-y-4 pr-1">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
           title={isAr ? 'إجمالي الإيرادات' : 'Total Revenue'}

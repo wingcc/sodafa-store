@@ -17,8 +17,8 @@ const UserBehavior: React.FC<Props> = ({ pages }) => {
   const exitPages = [...pages].filter(p => p.path.includes('checkout') || p.path.includes('cart') || p.path === '/').slice(0, 3).length ? [...pages].filter(p => p.path.includes('checkout') || p.path.includes('cart')).slice(0, 5) : [...pages].slice(-5).reverse();
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5">
-      <div className="flex items-center gap-2 mb-4">
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5 h-full flex flex-col min-h-0 overflow-hidden">
+      <div className="flex items-center gap-2 mb-4 shrink-0">
         <h3 className="text-base font-semibold text-gray-900 dark:text-white">{isAr ? 'سلوك المستخدم' : 'User Behavior'}</h3>
         <AnalyticsInfoButton title={isAr ? 'سلوك المستخدم' : 'User Behavior'} description={isAr ? 'أين يدخل المستخدمون وأين يغادرون، وأكثر الصفحات مشاهدة.' : 'Where users enter and exit, and most viewed pages.'} hint={isAr ? 'الدخول/الخروج الحقيقي يتطلب تتبع is_entry/is_exit — معروضة تقديرياً.' : 'True entry/exit needs is_entry/is_exit tracking — shown heuristically.'} />
       </div>

@@ -49,7 +49,7 @@ const PeakHoursHeatmap: React.FC<{ period: string }> = ({ period }) => {
 
   return (
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5 overflow-hidden">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 shrink-0">
         <div className="flex items-center gap-2">
           <h3 className="text-base font-semibold text-gray-900 dark:text-white">{isAr ? 'ساعات الذروة' : 'Peak Hours'}</h3>
           <AnalyticsInfoButton title={isAr ? 'ساعات الذروة' : 'Peak Hours'} description={isAr ? 'النشاط حسب اليوم والساعة. يساعدك على جدولة الحملات وإدارة المخزون.' : 'Activity by day & hour. Schedule campaigns and staffing.'} />

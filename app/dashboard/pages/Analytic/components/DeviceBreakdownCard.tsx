@@ -6,7 +6,7 @@ import { COLORS } from '../types';
 import { deviceIcon } from '../utils';
 
 export const DeviceBreakdownCard: React.FC<{ devices: DeviceInfo[]; browsers: BrowserInfo[] }> = ({ devices, browsers }) => (
-  <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-gray-800">
+  <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-gray-800 h-full flex flex-col min-h-0 overflow-hidden">
     <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-4">Devices</h3>
     <div className="space-y-4">
       {devices.length > 0 ? devices.map((d) => {
@@ -34,7 +34,7 @@ export const DeviceBreakdownCard: React.FC<{ devices: DeviceInfo[]; browsers: Br
     {browsers.length > 0 && (
       <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800">
         <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Browsers</h4>
-        <div className="space-y-2">
+        <div className="flex-1 min-h-0 overflow-auto overscroll-contain space-y-2 pr-1">
           {browsers.slice(0, 4).map((b) => {
             const total = browsers.reduce((s, x) => s + x.count, 0);
             const pct = total > 0 ? Math.round((b.count / total) * 100) : 0;

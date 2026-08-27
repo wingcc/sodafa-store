@@ -14,8 +14,8 @@ const PendingActionsCard: React.FC<{ orders: Order[] }> = ({ orders }) => {
   const isAr = language === 'ar';
   const pending = orders.filter(o => o.orderStatus === 'pending' || o.orderStatus === 'confirmed').slice(0, 5);
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-white/10">
-      <div className="flex items-center justify-between mb-4">
+    <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-white/10 h-full flex flex-col min-h-0 overflow-hidden">
+      <div className="flex items-center justify-between mb-4 shrink-0">
         <div className="flex items-center gap-2">
           <Clock size={18} className="text-blue-500" />
           <h3 className="text-base font-semibold text-gray-900 dark:text-white">{t('dashboard.pendingActions')}</h3>
@@ -25,7 +25,7 @@ const PendingActionsCard: React.FC<{ orders: Order[] }> = ({ orders }) => {
           {t('dashboard.viewAll')} <ArrowRight size={14} className={isAr ? 'rotate-180' : ''} />
         </button>
       </div>
-      <div className="space-y-2">
+      <div className="flex-1 min-h-0 overflow-auto overscroll-contain space-y-2 pr-1">
         {pending.map(order => (
           <div key={order.id} className="flex items-center justify-between p-3 rounded-xl bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/15">
             <div className="flex items-center gap-3 min-w-0">

@@ -5,7 +5,7 @@ import type { SummaryStats } from '../types';
 import { formatDuration } from '../utils';
 
 export const SessionQualityCard: React.FC<{ bounceRate: number; avgDuration: number; stats: SummaryStats | null }> = ({ bounceRate, avgDuration, stats }) => (
-  <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-gray-800">
+  <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-gray-800 h-full flex flex-col min-h-0 overflow-hidden">
     <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-4">Session Quality</h3>
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
       <div>

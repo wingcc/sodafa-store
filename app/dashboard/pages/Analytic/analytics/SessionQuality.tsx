@@ -31,8 +31,8 @@ const SessionQuality: React.FC<Props> = ({ bounceRate, avgDuration, stats, trend
   }, [bounceRate, isAr]);
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5">
-      <div className="flex items-center gap-2 mb-4">
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5 h-full flex flex-col min-h-0 overflow-hidden">
+      <div className="flex items-center gap-2 mb-4 shrink-0">
         <h3 className="text-base font-semibold text-gray-900 dark:text-white">{isAr ? 'جودة الجلسة' : 'Session Quality'}</h3>
         <AnalyticsInfoButton title={isAr ? 'جودة الجلسة' : 'Session Quality'} description={isAr ? 'تقيس الجلسات باستخدام المدة والصفحات والتفاعل. التركيز على تحسين المتوسطة والضعيفة.' : 'Scores sessions via duration, pages & engagement. Focus on lifting Average/Poor.'} />
       </div>

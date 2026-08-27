@@ -19,12 +19,12 @@ const QuickActions: React.FC = () => {
     { label: t('dashboard.quick.inventory'), icon: <PackageCheck size={16} />, page: 'inventory' as const, color: 'from-red-500 to-red-600' },
   ];
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-white/10">
-      <div className="flex items-center gap-2 mb-4">
+    <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-white/10 h-full flex flex-col min-h-0 overflow-hidden">
+      <div className="flex items-center gap-2 mb-4 shrink-0">
         <h3 className="text-base font-semibold text-gray-900 dark:text-white">{t('dashboard.quickActions')}</h3>
         <DashboardInfoButton title={isAr ? 'إجراءات سريعة' : 'Quick Actions'} description={isAr ? 'اختصارات لأكثر المهام استخداماً.' : 'Shortcuts to your most frequent tasks.'} />
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="flex-1 min-h-0 overflow-auto overscroll-contain grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pr-1 content-start">
         {actions.map(action => (
           <button
             key={action.label}

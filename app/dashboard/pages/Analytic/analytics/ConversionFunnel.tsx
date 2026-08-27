@@ -69,8 +69,8 @@ const ConversionFunnel: React.FC<Props> = ({ stats, period }) => {
   const max = stages[0]?.value || 1;
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5">
-      <div className="flex items-center gap-2 mb-4">
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5 h-full flex flex-col min-h-0 overflow-hidden">
+      <div className="flex items-center gap-2 mb-4 shrink-0">
         <h3 className="text-base font-semibold text-gray-900 dark:text-white">{isAr ? 'مسار التحويل' : 'Conversion Funnel'}</h3>
         <AnalyticsInfoButton
           title={isAr ? 'مسار التحويل' : 'Conversion Funnel'}
@@ -78,7 +78,7 @@ const ConversionFunnel: React.FC<Props> = ({ stats, period }) => {
         />
       </div>
 
-      <div className="space-y-3">
+      <div className="flex-1 min-h-0 overflow-auto overscroll-contain space-y-3 pr-1">
         {stages.map((s, i) => {
           const width = Math.max(12, Math.round((s.value / max) * 100));
           const isFirst = i === 0;

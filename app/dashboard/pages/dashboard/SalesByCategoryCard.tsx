@@ -44,8 +44,8 @@ const SalesByCategoryCard: React.FC = () => {
   const total = data.reduce((s, i) => s + i.revenue, 0);
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5">
-      <div className="flex items-center justify-between mb-4">
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5 h-full flex flex-col min-h-0 overflow-hidden">
+      <div className="flex items-center justify-between mb-4 shrink-0">
         <div>
           <h3 className="text-base font-semibold text-gray-900 dark:text-white">{isAr ? 'المبيعات حسب الفئة' : 'Sales by Category'}</h3>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{isAr ? 'توزيع الإيرادات' : 'Revenue distribution'}</p>
@@ -54,7 +54,7 @@ const SalesByCategoryCard: React.FC = () => {
       </div>
 
       <div className="flex flex-col items-center">
-        <div className="h-[200px] w-full">
+        <div className="flex-1 min-h-0 min-h-[200px] w-full">
           {loading ? (
             <div className="h-full flex items-center justify-center">
               <div className="w-8 h-8 border-2 border-[var(--color-darkGreen, #047857)] border-t-transparent rounded-full animate-spin" />

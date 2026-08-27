@@ -19,8 +19,8 @@ const DeviceAnalytics: React.FC<{ devices: DeviceInfo[]; browsers: BrowserInfo[]
   const total = devices.reduce((a, d) => a + d.count, 0) || 1;
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5">
-      <div className="flex items-center gap-2 mb-4">
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5 h-full flex flex-col min-h-0 overflow-hidden">
+      <div className="flex items-center gap-2 mb-4 shrink-0">
         <h3 className="text-base font-semibold text-gray-900 dark:text-white">{isAr ? 'الأجهزة والتقنية' : 'Device & Technical'}</h3>
         <AnalyticsInfoButton
           title={isAr ? 'الأجهزة' : 'Device Analytics'}
@@ -29,7 +29,7 @@ const DeviceAnalytics: React.FC<{ devices: DeviceInfo[]; browsers: BrowserInfo[]
         />
       </div>
 
-      <div className="space-y-3">
+      <div className="flex-1 min-h-0 overflow-auto overscroll-contain space-y-3 pr-1">
         {devices.map(d => {
           const pct = Math.round((d.count / total) * 100);
           return (

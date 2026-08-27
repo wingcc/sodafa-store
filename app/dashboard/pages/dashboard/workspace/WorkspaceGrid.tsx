@@ -106,7 +106,7 @@ const WorkspaceGrid: React.FC<Props> = ({ registry, layouts, editMode, autoAlign
 
       <div
         className={`grid grid-cols-12 gap-3 md:gap-3 lg:gap-4 ${editMode && autoAlign ? 'grid-auto-flow-dense' : ''}`}
-        style={{ gridAutoRows: 'minmax(140px, auto)' }}
+        style={{ gridAutoRows: '140px' }}
       >
         {sorted.map(layout => {
           const meta = metaMap.get(layout.id);
@@ -125,7 +125,7 @@ const WorkspaceGrid: React.FC<Props> = ({ registry, layouts, editMode, autoAlign
               onDragLeave={() => setDragOverId(null)}
               onDrop={e => handleDrop(e, layout.id)}
               onDragEnd={handleDragEnd}
-              className={`${spanClass(layout.colSpan)} relative transition-all duration-200 ${isDragged ? 'opacity-40 scale-[0.98]' : ''} ${isOver ? 'ring-2 ring-[var(--color-darkGreen)]/40 ring-offset-2 ring-offset-white dark:ring-offset-gray-900' : ''} ${editMode ? 'pt-3' : ''} flex flex-col`}
+              className={`${spanClass(layout.colSpan)} relative transition-all duration-200 ${isDragged ? 'opacity-40 scale-[0.98]' : ''} ${isOver ? 'ring-2 ring-[var(--color-darkGreen)]/40 ring-offset-2 ring-offset-white dark:ring-offset-gray-900' : ''} ${editMode ? 'pt-3' : ''} flex flex-col min-h-0 overflow-hidden`}
               style={{ gridRow: `span ${rowSpan} / span ${rowSpan}` }}
             >
               {/* Drop indicator */}
@@ -149,12 +149,7 @@ const WorkspaceGrid: React.FC<Props> = ({ registry, layouts, editMode, autoAlign
                   onDragStart: (e: any) => handleDragStart(e, layout.id),
                 } as any}
               >
-                {/* Internal scroll: content respects widget height, scrolls if overflow; row height follows tallest widget in row */}
-                <div className="h-full flex flex-col min-h-0">
-                  <div className="flex-1 min-h-0 overflow-auto overscroll-contain pr-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-200 dark:[&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full">
-                    {content}
-                  </div>
-                </div>
+                {content}
               </ComponentWrapper>
             </div>
           );

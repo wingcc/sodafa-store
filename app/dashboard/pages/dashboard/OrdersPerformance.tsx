@@ -35,7 +35,7 @@ const OrdersPerformance: React.FC<{ orders: Order[] }> = ({ orders }) => {
   ];
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5">
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5 h-full flex flex-col min-h-0 overflow-hidden">
       <div className="flex items-start justify-between gap-3 mb-4">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white" style={{ background: 'var(--color-darkGreen, #047857)' }}>

@@ -16,7 +16,7 @@ const AovCard: React.FC<{ orders: Order[] }> = ({ orders }) => {
   const aovSpark = revSpark.map((r, i) => (ordSpark[i] ? r / ordSpark[i] : 0));
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5">
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5 h-full flex flex-col min-h-0 overflow-hidden">
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white" style={{ background: 'linear-gradient(135deg, var(--color-gold, #d97706), #f59e0b)' }}>

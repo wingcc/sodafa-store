@@ -22,8 +22,8 @@ const CartAbandonment: React.FC<Props> = ({ stats }) => {
   const hasData = visitors > 0 && addToCart > 0;
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5">
-      <div className="flex items-center gap-2 mb-4">
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5 h-full flex flex-col min-h-0 overflow-hidden">
+      <div className="flex items-center gap-2 mb-4 shrink-0">
         <h3 className="text-base font-semibold text-gray-900 dark:text-white">{isAr ? 'التخلي عن السلة' : 'Cart & Checkout Abandonment'}</h3>
         <AnalyticsInfoButton title={isAr ? 'التخلي عن السلة' : 'Abandonment'} description={isAr ? 'يقارن من أضاف للسلة وبدأ الشراء وأكمل الطلب. المعدل المرتفع يشير لمشاكل سعر/شحن/ثقة.' : 'Compares add-to-cart vs checkout vs completed orders. High abandonment signals price/shipping/trust issues.'} />
       </div>

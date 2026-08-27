@@ -14,8 +14,8 @@ const TopProductsCard: React.FC<{ products: Product[] }> = ({ products }) => {
   const top = [...products].sort((a, b) => b.totalSold - a.totalSold).slice(0, 5);
   const maxSold = Math.max(...top.map(p => p.totalSold), 1);
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-white/10">
-      <div className="flex items-center justify-between mb-4">
+    <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-white/10 h-full flex flex-col min-h-0 overflow-hidden">
+      <div className="flex items-center justify-between mb-4 shrink-0">
         <div className="flex items-center gap-2">
           <h3 className="text-base font-semibold text-gray-900 dark:text-white">{t('dashboard.topProducts')}</h3>
           <DashboardInfoButton title={isAr ? 'أفضل المنتجات' : 'Top Products'} description={isAr ? 'المنتجات الأكثر مبيعاً حسب الوحدات. ركز عليها في التسويق وإعادة التموين.' : 'Best sellers by units sold. Prioritize them for marketing & restock.'} />
@@ -24,7 +24,7 @@ const TopProductsCard: React.FC<{ products: Product[] }> = ({ products }) => {
           {t('dashboard.viewAll')} <ArrowRight size={14} className={isAr ? 'rotate-180' : ''} />
         </button>
       </div>
-      <div className="space-y-3">
+      <div className="flex-1 min-h-0 overflow-auto overscroll-contain space-y-3 pr-1">
         {top.map((product, index) => (
           <div key={product.id} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-white/[0.04] hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-colors border border-transparent dark:border-white/5">
             <div className="flex items-center gap-3 min-w-0">

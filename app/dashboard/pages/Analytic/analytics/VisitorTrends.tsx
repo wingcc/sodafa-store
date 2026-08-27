@@ -19,8 +19,8 @@ const VisitorTrends: React.FC<{ trend: TrendPoint[] }> = ({ trend }) => {
   const showViews = metric === 'all' || metric === 'pageViews';
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5 h-full flex flex-col min-h-0 overflow-hidden">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 shrink-0">
         <div className="flex items-center gap-2">
           <h3 className="text-base font-semibold text-gray-900 dark:text-white">{isAr ? 'اتجاهات الزوار' : 'Visitor Trends'}</h3>
           <AnalyticsInfoButton
@@ -42,7 +42,7 @@ const VisitorTrends: React.FC<{ trend: TrendPoint[] }> = ({ trend }) => {
         </div>
       </div>
 
-      <div className="h-[300px]">
+      <div className="flex-1 min-h-0 min-h-[220px]">
         {trend.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={trend} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>

@@ -52,8 +52,8 @@ const RevenueOverview: React.FC = () => {
   const formatDate = (s: string) => new Date(s + 'T00:00:00').toLocaleDateString(isAr ? 'ar-MA' : 'en', { month: 'short', day: 'numeric' });
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5 h-full flex flex-col min-h-0 overflow-hidden">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 shrink-0">
         <div className="flex items-center gap-2">
           <div>
             <h3 className="text-base font-semibold text-gray-900 dark:text-white">{isAr ? 'نظرة عامة على الإيرادات' : 'Revenue Overview'}</h3>
@@ -74,7 +74,7 @@ const RevenueOverview: React.FC = () => {
         </div>
       </div>
 
-      <div className="h-[300px]">
+      <div className="flex-1 min-h-0 min-h-[220px]">
         {loading ? (
           <div className="h-full flex items-center justify-center">
             <div className="w-8 h-8 border-2 border-[var(--color-darkGreen, #047857)] border-t-transparent rounded-full animate-spin" />

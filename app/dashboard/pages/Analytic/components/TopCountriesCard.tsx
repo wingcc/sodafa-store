@@ -7,7 +7,7 @@ import type { CountryInfo } from '../types';
 export const TopCountriesCard: React.FC<{ countries: CountryInfo[] }> = ({ countries }) => {
   if (countries.length === 0) return null;
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-gray-800">
+    <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-gray-800 h-full flex flex-col min-h-0 overflow-hidden">
       <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-4">Top Countries</h3>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {countries.slice(0, 10).map((c) => {

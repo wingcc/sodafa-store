@@ -14,8 +14,8 @@ const TrafficPerformance: React.FC<{ sources: TrafficSource[] }> = ({ sources })
   if (!sources.length) return <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5 text-sm text-gray-400">No traffic data</div>;
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5">
-      <div className="flex items-center gap-2 mb-4">
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5 h-full flex flex-col min-h-0 overflow-hidden">
+      <div className="flex items-center gap-2 mb-4 shrink-0">
         <h3 className="text-base font-semibold text-gray-900 dark:text-white">{isAr ? 'أداء المصادر' : 'Traffic Performance'}</h3>
         <AnalyticsInfoButton
           title={isAr ? 'أداء المصادر' : 'Traffic Performance'}

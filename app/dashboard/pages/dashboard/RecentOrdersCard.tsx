@@ -13,8 +13,8 @@ const RecentOrdersCard: React.FC<{ orders: Order[] }> = ({ orders }) => {
   const { setCurrentPage } = useStore();
   const isAr = language === 'ar';
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-white/10">
-      <div className="flex items-center justify-between mb-4">
+    <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-white/10 h-full flex flex-col min-h-0 overflow-hidden">
+      <div className="flex items-center justify-between mb-4 shrink-0">
         <div className="flex items-center gap-2">
           <h3 className="text-base font-semibold text-gray-900 dark:text-white">{t('dashboard.recentOrders')}</h3>
           <DashboardInfoButton
@@ -22,11 +22,11 @@ const RecentOrdersCard: React.FC<{ orders: Order[] }> = ({ orders }) => {
             description={isAr ? 'آخر 5 طلبات. يساعدك على متابعة النشاط الحالي بسرعة.' : 'Latest 5 orders. Track current activity at a glance.'}
           />
         </div>
-        <button onClick={() => setCurrentPage('orders')} className="text-sm font-medium flex items-center gap-1" style={{ color: 'var(--color-darkGreen, #047857)' }}>
+        <button onClick={() => setCurrentPage('orders')} className="text-sm font-medium flex items-center gap-1 shrink-0" style={{ color: 'var(--color-darkGreen, #047857)' }}>
           {t('dashboard.viewAll')} <ArrowRight size={14} className={isAr ? 'rotate-180' : ''} />
         </button>
       </div>
-      <div className="space-y-3">
+      <div className="flex-1 min-h-0 overflow-auto overscroll-contain space-y-3 pr-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-200 dark:[&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full">
         {orders.slice(0, 5).map((order) => (
           <div key={order.id} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-white/[0.04] hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-colors border border-transparent dark:border-white/5">
             <div className="flex items-center gap-3 min-w-0">
