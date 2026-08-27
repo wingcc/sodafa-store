@@ -111,7 +111,7 @@ const WorkspaceGrid: React.FC<Props> = ({ registry, layouts, editMode, autoAlign
 
       <div
         className={`grid grid-cols-12 gap-3 md:gap-3 lg:gap-4 ${showEditUI && autoAlign ? 'grid-auto-flow-dense' : ''}`}
-        style={{ gridAutoRows: '180px' }}
+        style={{ gridAutoRows: '220px' }}
         onDragOver={e => {
           if (!showEditUI || !dragId) return;
           e.preventDefault();
@@ -187,7 +187,7 @@ const WorkspaceGrid: React.FC<Props> = ({ registry, layouts, editMode, autoAlign
               gridRow: `span ${(draggedLayout as any).rowSpan ?? 2} / span ${(draggedLayout as any).rowSpan ?? 2}`,
               borderColor: 'var(--color-darkGreen, #047857)',
               background: 'color-mix(in srgb, var(--color-darkGreen, #047857) 6%, transparent)',
-              minHeight: `${((draggedLayout as any).rowSpan ?? 2) * 140 + (((draggedLayout as any).rowSpan ?? 2) - 1) * 12}px`,
+              minHeight: `${((draggedLayout as any).rowSpan ?? 2) * 220 + (((draggedLayout as any).rowSpan ?? 2) - 1) * 16}px`,
             }}
             onDragOver={e => { e.preventDefault(); }}
             onDrop={e => {

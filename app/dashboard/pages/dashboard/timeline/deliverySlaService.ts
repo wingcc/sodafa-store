@@ -37,9 +37,24 @@ export function getSlaDurationMs(deliveryMethod?: string): number {
 export function getShippedTimestamp(order: any): number {
   if (order.shippedAt) return new Date(order.shippedAt).getTime();
   if (order.updatedAt && order.orderStatus === 'shipped') return new Date(order.updatedAt).getTime();
-  // Fallback to creation date minus 2 hours as shipping start
   const created = new Date(order.createdAt || Date.now()).getTime();
   return created;
+}
+
+export function getOrderTimestampForStatus(order: any): number {
+  const st = order.orderStatus;
+  if (st === 'shipped' && order.shippedAt) return new Date(order.shippedAt).getTime();
+  if (st === 'delivered' && order.deliveredAt) return new Date(order.deliveredAt).getTime();
+  if (st === 'confirmed' && order.confirmedAt) return new Date(order.confirmedAt).getTime();
+  if (st === 'processing' && order.processingStartedAt) return new Date(order.processingStartedAt).getTime();
+  if (st === 'cancelled' && order.cancelledAt) return new Date(order.cancelledAt).getTime();
+
+  return new Date(order.createdAt || Date.now()).getTime();
+}
+
+export function calcPercentFromTimestamp(ts: number, viewportStart: number, viewportDuration: number): number {
+  if (viewportDuration <= 0) return 0;
+  return Math.max(0, Math.min(100, ((ts - viewportStart) / viewportDuration) * 100));
 }
 
 export function formatDurationMs(ms: number, isAr: boolean = false): string {

@@ -298,10 +298,10 @@ const OrderTimelineModal: React.FC<Props> = ({ data, onClose }) => {
                 >
                   <div className="flex items-center gap-2 truncate">
                     <Package size={14} className="text-gray-400 shrink-0" />
-                    <span className="font-semibold text-gray-800 dark:text-gray-200 truncate">{item.name}</span>
+                    <span className="font-semibold text-gray-800 dark:text-gray-200 truncate">{item.productName}</span>
                   </div>
                   <div className="text-gray-500 dark:text-gray-400 font-semibold shrink-0">
-                    x{item.quantity} • {item.price} MAD
+                    x{item.quantity} • {item.total} MAD
                   </div>
                 </div>
               ))
