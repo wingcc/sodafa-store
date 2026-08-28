@@ -27,8 +27,59 @@ import {
   UsersRound,
   Megaphone,
   Plus,
+  RefreshCw,
+  Clock,
+  CheckCircle2,
+  Cog,
+  PackageCheck,
+  XCircle,
+  RotateCcw,
 } from 'lucide-react';
 import type { NotificationType, NotificationPriority } from '../../types';
+
+// ── Order status-change helpers (single source of truth) ───────────────
+// New order (ShoppingBag) vs status-change (distinct icon) are both type='order'
+// We distinguish by metadata.status / title / message so no DB migration needed.
+
+export type OrderStatusIconOpts = { metadata?: any; title?: string; message?: string } | any;
+
+function parseMeta(meta: any): any {
+  if (!meta) return null;
+  if (typeof meta === 'string') {
+    try { return JSON.parse(meta); } catch { return null; }
+  }
+  return meta;
+}
+
+function isOrderStatusChange(type: string, opts?: OrderStatusIconOpts): boolean {
+  const c = canonical(type);
+  if (c !== 'order') return false;
+  if (!opts) return false;
+  // opts may be the full notification object
+  const rawMeta = (opts as any).metadata;
+  const meta = parseMeta(rawMeta) ?? (opts as any);
+  const title = (opts as any).title ?? '';
+  const message = (opts as any).message ?? '';
+  const status = meta?.status ?? (meta as any)?.kind === 'status_change' ? (meta?.status || 'updated') : null;
+  if (status && typeof status === 'string' && status.length > 0) return true;
+  if (meta?.kind === 'status_change') return true;
+  // fallback heuristics for legacy rows / seed data that used title/message without metadata.status
+  if (typeof title === 'string' && /updated|cancelled|delivered|shipped|processing|confirmed|refunded/i.test(title)) return true;
+  if (typeof message === 'string' && /status changed/i.test(message)) return true;
+  return false;
+}
+
+function getOrderStatusValue(opts?: OrderStatusIconOpts): string {
+  if (!opts) return '';
+  const rawMeta = (opts as any).metadata;
+  const meta = parseMeta(rawMeta) ?? (opts as any);
+  const raw = meta?.status ?? (opts as any).status ?? '';
+  if (typeof raw === 'string' && raw.length > 0) return raw.toLowerCase();
+  // fallback: infer from title/message for legacy/seed rows that lack metadata.status
+  const text = `${(opts as any).title ?? ''} ${(opts as any).message ?? ''}`;
+  const m = text.match(/\b(pending|confirmed|processing|shipped|delivered|cancelled|refunded)\b/i);
+  return m ? m[1].toLowerCase() : '';
+}
 
 // Legacy aliases → canonical visual key
 const CANONICAL_TYPE: Record<string, NotificationType> = {
@@ -40,8 +91,26 @@ function canonical(t: string): NotificationType {
   return (CANONICAL_TYPE[t] ?? t) as NotificationType;
 }
 
-export function getTypeIcon(type: string, size = 18) {
+export function getTypeIcon(type: string, size = 18, notification?: OrderStatusIconOpts) {
   const c = canonical(type);
+
+  // ── Order: new-order vs status-change get DIFFERENT icons (same DB type='order')
+  if (c === 'order' && isOrderStatusChange(type, notification)) {
+    const status = getOrderStatusValue(notification);
+    const perStatus: Record<string, React.ReactNode> = {
+      pending: <Clock size={size} />,
+      confirmed: <CheckCircle2 size={size} />,
+      processing: <Cog size={size} />,
+      shipped: <Truck size={size} />,
+      delivered: <PackageCheck size={size} />,
+      cancelled: <XCircle size={size} />,
+      refunded: <RotateCcw size={size} />,
+    };
+    if (status && perStatus[status]) return perStatus[status];
+    // generic status-change fallback — distinct from new-order's ShoppingBag
+    return <RefreshCw size={size} />;
+  }
+
   const map: Record<string, React.ReactNode> = {
     order: <ShoppingBag size={size} />,
     review: <Star size={size} />,
@@ -80,8 +149,28 @@ export function getPriorityClasses(priority: string) {
   return map[priority] ?? map.medium;
 }
 
-export function getTypeClasses(type: string) {
+export function getTypeClasses(type: string, notification?: OrderStatusIconOpts) {
   const c = canonical(type);
+
+  // Order status-change: keep Orders family but give per-status tint so the
+  // timeline is scannable (pending=amber, shipped=cyan, delivered=emerald,
+  // cancelled=red, refunded=orange). New orders stay indigo.
+  if (c === 'order' && isOrderStatusChange(type, notification)) {
+    const status = getOrderStatusValue(notification);
+    const perStatus: Record<string, string> = {
+      pending: 'bg-amber-50 text-amber-600 border-amber-200',
+      confirmed: 'bg-blue-50 text-blue-600 border-blue-200',
+      processing: 'bg-violet-50 text-violet-600 border-violet-200',
+      shipped: 'bg-cyan-50 text-cyan-600 border-cyan-200',
+      delivered: 'bg-emerald-50 text-emerald-600 border-emerald-200',
+      cancelled: 'bg-red-50 text-red-600 border-red-200',
+      refunded: 'bg-orange-50 text-orange-600 border-orange-200',
+    };
+    if (status && perStatus[status]) return perStatus[status];
+    // generic status-change — still Orders family but slightly warm to differ from new-order indigo
+    return 'bg-indigo-50 text-indigo-600 border-indigo-200';
+  }
+
   const map: Record<string, string> = {
     order: 'bg-indigo-50 text-indigo-600 border-indigo-200',
     review: 'bg-yellow-50 text-yellow-600 border-yellow-200',
@@ -109,8 +198,15 @@ export function getTypeClasses(type: string) {
   return map[c] ?? map[type] ?? 'bg-gray-50 text-gray-600 border-gray-200';
 }
 
-export function getCategoryLabel(type: string) {
+export function getCategoryLabel(type: string, notification?: OrderStatusIconOpts) {
   const c = canonical(type);
+  // Order status-change reads as "Order Update" in chips so users can spot it,
+  // but filters still group under "Orders" — caller passes notification only for display.
+  if (c === 'order' && isOrderStatusChange(type, notification)) {
+    const status = getOrderStatusValue(notification);
+    if (status) return `Order • ${status.charAt(0).toUpperCase() + status.slice(1)}`;
+    return 'Order Update';
+  }
   const labels: Record<string, string> = {
     order: 'Orders',
     review: 'Reviews',
@@ -155,11 +251,11 @@ export function formatRelativeTime(dateInput: string | Date) {
 }
 
 // Header popup — same as Center: subtle bg, border + icon same deep color family, rounded border
-export function getHeaderBg(type: string) {
-  return getTypeClasses(type);
+export function getHeaderBg(type: string, notification?: OrderStatusIconOpts) {
+  return getTypeClasses(type, notification);
 }
 
 // Header icon — very dark/deep version, same family as border/bg (inherits from getTypeClasses via parent)
-export function getHeaderIcon(type: string, size = 15) {
-  return getTypeIcon(type, size);
+export function getHeaderIcon(type: string, size = 15, notification?: OrderStatusIconOpts) {
+  return getTypeIcon(type, size, notification);
 }

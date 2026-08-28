@@ -319,3 +319,32 @@
   from { opacity: 0; transform: scale(0.95) translateY(8px); }
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
+
+/* ── Timeline lifecycle dashed lines — Real-Time Controller (time-respect, always visible) ── */
+@keyframes dashFlowX {
+  to { background-position-x: -14px; }
+}
+@keyframes dashFlowY {
+  to { background-position-y: -14px; }
+}
+.dashboard-root .lifecycle-dash-x {
+  background-image: repeating-linear-gradient(90deg, rgba(100,116,139,0.75) 0, rgba(100,116,139,0.75) 7px, transparent 7px, transparent 13px);
+  background-size: 13px 2px;
+  background-repeat: repeat-x;
+  height: 2px;
+  animation: dashFlowX 1s linear infinite;
+  opacity: 0.95;
+}
+.dashboard-root .lifecycle-dash-y {
+  background-image: repeating-linear-gradient(180deg, rgba(100,116,139,0.75) 0, rgba(100,116,139,0.75) 7px, transparent 7px, transparent 13px);
+  background-size: 2px 13px;
+  background-repeat: repeat-y;
+  width: 2px;
+  animation: dashFlowY 1s linear infinite;
+  opacity: 0.95;
+}
+/* Subtle hover boost */
+.group\/row:hover .lifecycle-dash-x,
+.group\/row:hover .lifecycle-dash-y {
+  filter: brightness(1.15);
+}

@@ -6,6 +6,14 @@ import { NextResponse } from 'next/server';
 const PREF_TO_TYPE: Record<string, string> = {
   notify_new_orders: 'order',
   notify_order_status: 'order',
+  // Order status sub-keys — each maps to order type but with distinct status payload
+  notify_order_pending: 'order',
+  notify_order_confirmed: 'order',
+  notify_order_processing: 'order',
+  notify_order_shipped: 'order',
+  notify_order_delivered: 'order',
+  notify_order_cancelled: 'order',
+  notify_order_refunded: 'order',
   notify_low_stock: 'inventory',
   notify_out_of_stock: 'inventory',
   notify_new_reviews: 'review',
@@ -56,10 +64,25 @@ export async function POST(request: Request) {
     };
 
     const t = resolvedType;
+    const isOrderSub = !!prefKey && prefKey.startsWith('notify_order_');
 
     if (!t || t === 'order') {
       if (orders[0]) {
-        await send('New Order', notificationService.notifyNewOrder(orders[0].id, orders[0].order_number, orders[0].customer_name, orders[0].total));
+        // If testing a specific order status sub-key (e.g. notify_order_shipped), send that status instead of generic new order
+        if (isOrderSub) {
+          const status = prefKey.replace('notify_order_', '').toLowerCase();
+          const valid = ['pending','confirmed','processing','shipped','delivered','cancelled','refunded'];
+          if (valid.includes(status)) {
+            await send(`Order • ${status}`, notificationService.notifyOrderStatusChange(orders[0].id, orders[0].order_number, status));
+          } else {
+            await send('New Order', notificationService.notifyNewOrder(orders[0].id, orders[0].order_number, orders[0].customer_name, orders[0].total));
+          }
+        } else if (prefKey === 'notify_new_orders') {
+          await send('New Order', notificationService.notifyNewOrder(orders[0].id, orders[0].order_number, orders[0].customer_name, orders[0].total));
+        } else {
+          // generic order test without prefKey → send new order as before
+          await send('New Order', notificationService.notifyNewOrder(orders[0].id, orders[0].order_number, orders[0].customer_name, orders[0].total));
+        }
       } else {
         results.push('⚠️ No orders found — skipped');
       }

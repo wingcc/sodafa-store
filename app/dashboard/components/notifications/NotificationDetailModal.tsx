@@ -25,6 +25,12 @@ import {
   Megaphone,
   Plus,
   AlertCircle,
+  RefreshCw,
+  CheckCircle2,
+  Cog,
+  PackageCheck,
+  XCircle,
+  RotateCcw,
 } from 'lucide-react';
 import type { Notification, NotificationType } from '../../types';
 
@@ -37,8 +43,49 @@ function canonical(t: string): NotificationType {
   return (CANONICAL_TYPE[t] ?? t) as NotificationType;
 }
 
-function getTypeIcon(type: string, size = 20) {
+function parseMetaLocal(meta: any): any {
+  if (!meta) return null;
+  if (typeof meta === 'string') { try { return JSON.parse(meta); } catch { return null; } }
+  return meta;
+}
+function isOrderStatusChange(type: string, notification?: any): boolean {
   const c = canonical(type);
+  if (c !== 'order' || !notification) return false;
+  const meta = parseMetaLocal((notification as any).metadata) ?? notification;
+  const title = (notification as any).title ?? '';
+  const message = (notification as any).message ?? '';
+  if (meta?.status && typeof meta.status === 'string' && meta.status.length > 0) return true;
+  if ((meta as any)?.kind === 'status_change') return true;
+  if (typeof title === 'string' && /updated|cancelled|delivered|shipped|processing|confirmed|refunded/i.test(title)) return true;
+  if (typeof message === 'string' && /status changed/i.test(message)) return true;
+  return false;
+}
+function getOrderStatusValue(notification?: any): string {
+  if (!notification) return '';
+  const meta = parseMetaLocal((notification as any).metadata) ?? notification;
+  const raw = meta?.status ?? (notification as any).status ?? '';
+  if (typeof raw === 'string' && raw.length > 0) return raw.toLowerCase();
+  const text = `${(notification as any).title ?? ''} ${(notification as any).message ?? ''}`;
+  const m = text.match(/\b(pending|confirmed|processing|shipped|delivered|cancelled|refunded)\b/i);
+  return m ? m[1].toLowerCase() : '';
+}
+
+function getTypeIcon(type: string, size = 20, notification?: any) {
+  const c = canonical(type);
+  if (c === 'order' && isOrderStatusChange(type, notification)) {
+    const status = getOrderStatusValue(notification);
+    const perStatus: Record<string, React.ReactNode> = {
+      pending: <Clock size={size} />,
+      confirmed: <CheckCircle2 size={size} />,
+      processing: <Cog size={size} />,
+      shipped: <Truck size={size} />,
+      delivered: <PackageCheck size={size} />,
+      cancelled: <XCircle size={size} />,
+      refunded: <RotateCcw size={size} />,
+    };
+    if (status && perStatus[status]) return perStatus[status];
+    return <RefreshCw size={size} />;
+  }
   const map: Record<string, React.ReactNode> = {
     order: <ShoppingBag size={size} />,
     review: <Star size={size} />,
@@ -64,8 +111,22 @@ function getTypeIcon(type: string, size = 20) {
   return map[c] ?? map[type] ?? <Bell size={size} />;
 }
 
-function getTypeClasses(type: string) {
+function getTypeClasses(type: string, notification?: any) {
   const c = canonical(type);
+  if (c === 'order' && isOrderStatusChange(type, notification)) {
+    const status = getOrderStatusValue(notification);
+    const perStatus: Record<string, string> = {
+      pending: 'bg-amber-50 text-amber-600 border-amber-200',
+      confirmed: 'bg-blue-50 text-blue-600 border-blue-200',
+      processing: 'bg-violet-50 text-violet-600 border-violet-200',
+      shipped: 'bg-cyan-50 text-cyan-600 border-cyan-200',
+      delivered: 'bg-emerald-50 text-emerald-600 border-emerald-200',
+      cancelled: 'bg-red-50 text-red-600 border-red-200',
+      refunded: 'bg-orange-50 text-orange-600 border-orange-200',
+    };
+    if (status && perStatus[status]) return perStatus[status];
+    return 'bg-indigo-50 text-indigo-600 border-indigo-200';
+  }
   const map: Record<string, string> = {
     order: 'bg-indigo-50 text-indigo-600 border-indigo-200',
     review: 'bg-yellow-50 text-yellow-600 border-yellow-200',
@@ -91,8 +152,13 @@ function getPriorityClasses(priority: string) {
   return map[priority] ?? map.medium;
 }
 
-function getCategoryLabel(type: string) {
+function getCategoryLabel(type: string, notification?: any) {
   const c = canonical(type);
+  if (c === 'order' && isOrderStatusChange(type, notification)) {
+    const status = getOrderStatusValue(notification);
+    if (status) return `Order • ${status.charAt(0).toUpperCase() + status.slice(1)}`;
+    return 'Order Update';
+  }
   const labels: Record<string, string> = {
     order: 'Order', review: 'Review', product: 'Product', payment: 'Payment',
     shipping: 'Shipping', promotion: 'Promotion', system: 'System', social: 'Social',
@@ -123,7 +189,7 @@ const NotificationDetailModal: React.FC<NotificationDetailModalProps> = ({
   onClose,
   onNavigate,
 }) => {
-  const typeColor = getTypeClasses(notification.type);
+  const typeColor = getTypeClasses(notification.type, notification as any);
   const priorityColor = getPriorityClasses(notification.priority);
 
   // Parse metadata — handle both object and JSON string cases
@@ -145,7 +211,7 @@ const NotificationDetailModal: React.FC<NotificationDetailModalProps> = ({
         <div className="flex items-start justify-between p-6 pb-4 border-b border-slate-100 dark:border-white/10">
           <div className="flex items-start gap-3">
             <div className={`w-12 h-12 rounded-xl flex items-center justify-center border ${typeColor}`}>
-              {getTypeIcon(notification.type)}
+              {getTypeIcon(notification.type, 20, notification as any)}
             </div>
             <div>
               <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">
@@ -153,7 +219,7 @@ const NotificationDetailModal: React.FC<NotificationDetailModalProps> = ({
               </h3>
               <div className="flex items-center gap-2 mt-1">
                 <span className={`text-xs px-2 py-0.5 rounded-full border ${typeColor}`}>
-                  {getCategoryLabel(notification.type)}
+                  {getCategoryLabel(notification.type, notification as any)}
                 </span>
                 <span className={`text-xs px-2 py-0.5 rounded-full border ${priorityColor}`}>
                   {notification.priority}

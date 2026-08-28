@@ -20,7 +20,7 @@ export class OrderRepository {
     limit?: number;
     offset?: number;
   }) {
-    let query = this.supabase.from('orders').select('*, items:order_items(*)');
+    let query = this.supabase.from('orders').select('*, items:order_items(*), timeline:order_timeline(*)');
 
     if (options?.status && options.status !== 'all') {
       query = query.eq('order_status', options.status);

@@ -18,7 +18,7 @@ const sections: Section[] = [
     label: "Homepage",
     icon: Layout,
     description: "Manage homepage sections and layout",
-    href: "/dashboard/pages/store-manager/homepage",
+    href: "/dashboard/store-homepage",
     color: "purple",
   },
   {
@@ -26,7 +26,7 @@ const sections: Section[] = [
     label: "Promotional Banners",
     icon: Megaphone,
     description: "Manage promotional banners and offers",
-    href: "/dashboard/pages/store-manager/promotional-banners",
+    href: "/dashboard/store-banners",
     color: "pink",
   },
    
@@ -35,7 +35,7 @@ const sections: Section[] = [
     label: "Store Content",
     icon: FileText,
     description: "Manage store pages and policies",
-    href: "/dashboard/pages/store-manager/store-content",
+    href: "/dashboard/store-content",
     color: "emerald",
   },
 ];

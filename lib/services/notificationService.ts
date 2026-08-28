@@ -101,13 +101,27 @@ class NotificationService {
     });
   }
 
-  async notifyOrderStatusChange(orderId: string, orderNumber: string, newStatus: string): Promise<void> {
+  async notifyOrderStatusChange(orderId: string, orderNumber: string, newStatus: string, opts?: { previousStatus?: string; note?: string }): Promise<void> {
+    // Distinct icon/color for status-change vs new-order is handled in notificationVisuals via metadata.status
+    // Keep same DB type='order' so filters still group under Orders, but visuals show RefreshCw / per-status icon.
+    const statusLabel = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
+    // Priority hint per status (delivered=low, cancelled/refunded=high, others=medium)
+    const priorityMap: Record<string, NotificationPriority> = {
+      pending: 'medium',
+      confirmed: 'medium',
+      processing: 'medium',
+      shipped: 'medium',
+      delivered: 'low',
+      cancelled: 'high',
+      refunded: 'high',
+    };
     await this.create({
       type: 'order',
-      title: `Order #${orderNumber} Updated`,
-      message: `Order status changed to ${newStatus}`,
+      priority: priorityMap[newStatus.toLowerCase()] ?? 'medium',
+      title: `Order #${orderNumber} — ${statusLabel}`,
+      message: `Order status changed to ${statusLabel}${opts?.note ? ` — ${opts.note}` : ''}`,
       actionUrl: `/dashboard/orders/${orderId}`,
-      metadata: { orderId, orderNumber, status: newStatus },
+      metadata: { orderId, orderNumber, status: newStatus, previousStatus: opts?.previousStatus, note: opts?.note, kind: 'status_change' },
     });
   }
 
@@ -300,6 +314,13 @@ class NotificationService {
           'notify_team',
           'notify_event',
           'notify_custom',
+          'notify_order_pending',
+          'notify_order_confirmed',
+          'notify_order_processing',
+          'notify_order_shipped',
+          'notify_order_delivered',
+          'notify_order_cancelled',
+          'notify_order_refunded',
         ]);
 
       if (error) throw error;
@@ -327,6 +348,13 @@ class NotificationService {
         notify_team: true,
         notify_event: true,
         notify_custom: true,
+        notify_order_pending: true,
+        notify_order_confirmed: true,
+        notify_order_processing: true,
+        notify_order_shipped: true,
+        notify_order_delivered: true,
+        notify_order_cancelled: true,
+        notify_order_refunded: true,
       };
 
       if (!data) return defaults;
@@ -361,6 +389,13 @@ class NotificationService {
         notify_team: true,
         notify_event: true,
         notify_custom: true,
+        notify_order_pending: true,
+        notify_order_confirmed: true,
+        notify_order_processing: true,
+        notify_order_shipped: true,
+        notify_order_delivered: true,
+        notify_order_cancelled: true,
+        notify_order_refunded: true,
       };
     }
   }
@@ -375,6 +410,10 @@ class NotificationService {
 
   /**
    * Create notification only if the type is enabled
+   * Orders have granular sub-preferences: new-order vs per-status change.
+   * - New order (no metadata.status) → checks notify_new_orders
+   * - Status change (metadata.status / kind) → checks notify_order_<status> (pending…refunded)
+   *   If parent notify_new_orders is OFF, status changes are also skipped (master kill-switch).
    */
   async createIfEnabled(event: NotificationEvent): Promise<{ success: boolean; id?: string; error?: string }> {
     const typeMap: Record<NotificationType, string> = {
@@ -401,6 +440,33 @@ class NotificationService {
       event: 'notify_event',
       custom: 'notify_custom',
     };
+
+    // ── Order granular check (must happen before generic typeMap)
+    if (event.type === 'order') {
+      const rawStatus = (event.metadata as any)?.status;
+      const status = typeof rawStatus === 'string' ? rawStatus.toLowerCase() : '';
+      const validStatuses = ['pending','confirmed','processing','shipped','delivered','cancelled','refunded'];
+      const prefs = await this.getPreferences();
+      // Master switch: if orders completely disabled, skip everything order-related
+      // For status changes we still require master ON? Only if you want master kill-switch.
+      // Here we allow fine control: new-orders use notify_new_orders, status uses own key;
+      // master is considered the "Orders" group toggle (which sets all). We do NOT double-gate status
+      // behind notify_new_orders, so users can silence new orders while keeping status updates.
+      if (status && validStatuses.includes(status)) {
+        const subKey = `notify_order_${status}`;
+        if (prefs[subKey] === false) {
+          return { success: true, id: 'skipped' };
+        }
+        // status change does NOT require notify_new_orders to be ON — independent
+        return this.create(event);
+      }
+      // Fallback: generic order (new order, deleted, updated without status, etc.)
+      const prefKey = typeMap[event.type];
+      if (prefKey && prefs[prefKey] === false) {
+        return { success: true, id: 'skipped' };
+      }
+      return this.create(event);
+    }
 
     const prefKey = typeMap[event.type];
     if (prefKey && !(await this.isEnabled(prefKey))) {

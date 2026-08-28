@@ -31,6 +31,14 @@ const PREFERENCE_KEYS = [
   'notify_team',
   'notify_event',
   'notify_custom',
+  // ── Order status sub-preferences (granular order controls) — parent is notify_new_orders, children expand in Settings
+  'notify_order_pending',
+  'notify_order_confirmed',
+  'notify_order_processing',
+  'notify_order_shipped',
+  'notify_order_delivered',
+  'notify_order_cancelled',
+  'notify_order_refunded',
 ];
 
 const DEFAULT_PREFERENCES = {
@@ -56,6 +64,14 @@ const DEFAULT_PREFERENCES = {
   notify_team: true,
   notify_event: true,
   notify_custom: true,
+  // Order status sub-flags — default ON so existing installs stay noisy until user customizes
+  notify_order_pending: true,
+  notify_order_confirmed: true,
+  notify_order_processing: true,
+  notify_order_shipped: true,
+  notify_order_delivered: true,
+  notify_order_cancelled: true,
+  notify_order_refunded: true,
 };
 
 export async function GET() {

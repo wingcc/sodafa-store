@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   Truck, Clock, AlertTriangle, Phone, ChevronRight, Sparkles, Filter, CheckCircle2, Radio,
   ZoomIn, ZoomOut, RotateCcw, PackageCheck, RefreshCw, XCircle, AlertCircle, Search,
-  ShieldAlert, Layers, ChevronLeft, Calendar, Maximize2, Minimize2, X
+  ShieldAlert, Layers, ChevronLeft, Calendar, Maximize2, Minimize2, X, HelpCircle
 } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from '../../i18n/useTranslation';
 import { useStore } from '../../store/useStore';
 import DashboardInfoButton from './DashboardInfoButton';
@@ -16,7 +17,206 @@ import {
   calculateOrderSla, checkAndTriggerSlaNotifications,
   getOrderTimestampForStatus, calcPercentFromTimestamp
 } from './timeline/deliverySlaService';
+import { normalizeHistory, buildAccurateTimeline, GROUP_THRESHOLD_MS, type TimelineElement } from './timeline/timelineController';
 import type { Order, OrderStatus } from '../../types';
+
+// ── Lifecycle helpers (kept for style mapping) ──
+const LIFECYCLE_ORDER: OrderStatus[] = ['pending','confirmed','processing','shipped','delivered','cancelled','refunded'];
+
+// ── Shared state style constants (used by both render branches) ──
+const STATUS_STYLE: Record<string, { bg: string; border: string; iconColor: string; pill: string; anim: string }> = {
+  pending:    { bg: 'bg-amber-50 dark:bg-amber-950/80',  border: 'border-amber-300 dark:border-amber-600',  iconColor: 'text-amber-500',  pill: 'bg-amber-50 dark:bg-amber-950/80 border-amber-300 dark:border-amber-500 text-amber-700 dark:text-amber-200', anim: 'animate-pulse' },
+  confirmed:  { bg: 'bg-blue-50 dark:bg-blue-950/80',    border: 'border-blue-300 dark:border-blue-600',    iconColor: 'text-blue-500',    pill: 'bg-blue-50 dark:bg-blue-950/80 border-blue-300 dark:border-blue-500 text-blue-700 dark:text-blue-200', anim: '' },
+  processing: { bg: 'bg-violet-50 dark:bg-violet-950/80', border: 'border-violet-300 dark:border-violet-600', iconColor: 'text-violet-500', pill: 'bg-violet-50 dark:bg-violet-950/80 border-violet-300 dark:border-violet-500 text-violet-700 dark:text-violet-200', anim: 'animate-spin' },
+  shipped:    { bg: 'bg-emerald-50 dark:bg-emerald-950/80', border: 'border-emerald-300 dark:border-emerald-600', iconColor: 'text-emerald-500', pill: '', anim: '' },
+  delivered:  { bg: 'bg-gray-100 dark:bg-gray-800/60',   border: 'border-gray-300 dark:border-gray-600',    iconColor: 'text-gray-400',    pill: 'bg-gray-100 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 grayscale-[30%]', anim: '' },
+  cancelled:  { bg: 'bg-red-50 dark:bg-red-950/80',      border: 'border-red-300 dark:border-red-600',      iconColor: 'text-red-500',     pill: 'bg-gray-100 dark:bg-red-950/60 border-gray-300 dark:border-red-700 text-gray-500 dark:text-red-300 line-through opacity-60', anim: '' },
+  refunded:   { bg: 'bg-gray-100 dark:bg-gray-800/60',   border: 'border-gray-300 dark:border-gray-600',    iconColor: 'text-gray-400',    pill: 'bg-gray-100 dark:bg-gray-800/60 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400', anim: '' },
+};
+const ICON_MAP: Record<string, any> = { pending: Clock, confirmed: CheckCircle2, processing: RefreshCw, shipped: Truck, delivered: CheckCircle2, cancelled: XCircle, refunded: XCircle };
+// ── Real-Time Controller delegation ──
+// getLifecycleHistory and buildTimeline now delegate to timelineController.ts
+// which enforces time-respect (chronological sort), 2-4h grouping, and merge rules.
+// The old pixel-based threshold (44px / pxPerMs) is replaced by fixed 4h (GROUP_THRESHOLD_MS)
+// to guarantee same result at any zoom and correct day column placement.
+
+function getLifecycleHistory(order: any): { status: OrderStatus; timestampMs: number; timeStr: string }[] {
+  // Delegate to centralized controller — ensures every call respects actual timestamp
+  return normalizeHistory(order);
+}
+
+type TimelineNode = { status: OrderStatus; timestampMs: number; timeStr: string };
+
+function buildTimeline(
+  lifecycleHistory: TimelineNode[],
+  currentStatus: string,
+  viewportStartMs: number,
+  viewportDurationMs: number,
+  zoomLevel: number,
+  currentPct: number,
+): { elements: TimelineElement[]; connectors: { from: number; to: number }[] } {
+  // Re-derive currentTimestamp from currentPct for accurate time-based controller
+  const currentTimestamp = viewportStartMs + (currentPct / 100) * viewportDurationMs;
+  const result = buildAccurateTimeline(lifecycleHistory, currentStatus, viewportStartMs, viewportDurationMs, zoomLevel, currentTimestamp);
+  // Preserve 'merged' type for new rendering (shows 3 icons in same shipping column)
+  return { elements: result.elements as any, connectors: result.connectors };
+}
+const DensityHelpButton: React.FC<{ isAr: boolean }> = ({ isAr }) => {
+  const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const updatePos = React.useCallback(() => {
+    if (!btnRef.current || !popupRef.current) return;
+    const rect = btnRef.current.getBoundingClientRect();
+    const pw = popupRef.current.offsetWidth || 380;
+    const ph = popupRef.current.offsetHeight || 520;
+    const margin = 10;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    let top = rect.top - ph - margin;
+    let left = rect.left - pw + rect.width;
+    if (isAr) left = rect.right - pw;
+    else left = Math.min(rect.left, vw - pw - margin);
+    if (top < margin) top = rect.bottom + margin;
+    if (top + ph > vh - margin) top = Math.max(margin, vh - ph - margin);
+    if (left + pw > vw - margin) left = vw - pw - margin;
+    if (left < margin) left = margin;
+    if (vw < 640) {
+      const w = Math.min(pw, vw - margin * 2);
+      left = (vw - w) / 2;
+      top = Math.min(top, vh - ph - margin);
+    }
+    setPos({ top, left });
+  }, [isAr]);
+  useEffect(() => {
+    if (!open) return;
+    const raf = requestAnimationFrame(() => updatePos());
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (btnRef.current?.contains(t) || popupRef.current?.contains(t)) return;
+      setOpen(false);
+    };
+    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    const onScroll = () => updatePos();
+    const onResize = () => updatePos();
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onEsc);
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', onResize);
+    return () => {
+      cancelAnimationFrame(raf);
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onEsc);
+      window.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('resize', onResize);
+    };
+  }, [open, updatePos]);
+  return (
+    <>
+      <button ref={btnRef} type="button" aria-label={isAr ? 'ما الفرق بين الأوضاع؟' : 'What do these modes do?'} aria-expanded={open} onClick={() => setOpen(v => !v)} className={`w-7 h-7 rounded-full flex items-center justify-center border shadow-2xs transition-all shrink-0 ${open ? 'bg-emerald-500 border-emerald-500 text-white shadow-md' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400 hover:text-emerald-600 hover:border-emerald-200 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-300 dark:hover:border-emerald-800/40'}`} title={isAr ? 'شرح أوضاع العرض' : 'Explain display modes'}>
+        <HelpCircle size={14} strokeWidth={2.2} />
+      </button>
+      {open && typeof document !== 'undefined' && createPortal(
+        <div ref={popupRef} role="dialog" aria-label={isAr ? 'شرح أوضاع الكثافة' : 'Density modes explained'} style={{ position: 'fixed', top: pos.top, left: pos.left, maxWidth: 'calc(100vw - 16px)' }} className="z-[100] w-[360px] sm:w-[400px] rounded-2xl border shadow-2xl backdrop-blur-xl bg-white dark:bg-[#131a28] border-gray-200 dark:border-white/10 overflow-hidden flex flex-col max-h-[88vh]">
+          <div className="px-4 pt-4 pb-3 border-b border-gray-100 dark:border-white/5 shrink-0">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-sm">
+                  <Layers size={16} />
+                </span>
+                <div>
+                  <h4 className="text-sm font-extrabold text-gray-900 dark:text-white leading-4">{isAr ? 'أوضاع العرض — ما الفرق؟' : 'Display density — what changes?'}</h4>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{isAr ? 'نفس الطلبات، ارتفاع صف مختلف' : 'Same orders, different row heights'}</p>
+                </div>
+              </div>
+              <button onClick={() => setOpen(false)} className="p-1.5 rounded-xl text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 shrink-0">
+                <X size={14} />
+              </button>
+            </div>
+            <p className="text-xs leading-5 text-gray-600 dark:text-gray-300 mt-3">
+              {isAr ? 'هذه الأزرار تتحكم فقط في كثافة الصفوف داخل الجدول الزمني. لا تخفي طلبات، فقط تغير المسافة والتفاصيل الظاهرة.' : 'These buttons only control how tall each order lane is inside the timeline. They never hide orders — they just change spacing and how much detail is shown.'}
+            </p>
+          </div>
+          <div className="overflow-y-auto flex-1 px-3 py-3 space-y-2.5">
+            <div className="rounded-xl border border-emerald-200 dark:border-emerald-800/30 bg-emerald-50/60 dark:bg-emerald-950/20 p-3">
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-xs font-extrabold text-emerald-800 dark:text-emerald-300">{isAr ? 'مريح' : 'Comfortable'}</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500 text-white font-bold">{isAr ? 'افتراضي' : 'Default'}</span>
+                <span className="ml-auto text-[10px] font-bold text-emerald-700 dark:text-emerald-400">~50px / 46px • h-8</span>
+              </div>
+              <div className="space-y-1 mb-2">
+                <p className="text-[11px] leading-4 text-gray-700 dark:text-gray-300 flex gap-1.5"><span className="font-extrabold text-emerald-700 dark:text-emerald-300 shrink-0">{isAr ? 'الفرق:' : 'Diff:'}</span><span>{isAr ? 'صفوف واسعة جداً + شريط SLA كامل متدرج + نسبة % + سهم متحرك + مسافات مريحة' : 'Widest rows + full gradient SLA bar + progress % + animated chevron + generous padding'}</span></p>
+                <p className="text-[11px] leading-4 text-gray-700 dark:text-gray-300 flex gap-1.5"><span className="font-extrabold text-emerald-700 dark:text-emerald-300 shrink-0">{isAr ? 'الميزة:' : 'Benefit:'}</span><span>{isAr ? 'راحة للعين، قراءة تفصيلية دقيقة لكل طلب — مثالي لـ 1–7 طلبات تحتاج تركيز' : 'Eye comfort, precise per-order inspection — ideal for 1–7 orders needing focus'}</span></p>
+              </div>
+              <div className="rounded-lg border border-emerald-200 dark:border-emerald-800/40 bg-white dark:bg-gray-900 p-2 flex items-center gap-2">
+                <div className="flex-1 h-8 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-2 flex items-center gap-1.5 text-[11px] font-bold shadow-sm">
+                  <Truck size={12} className="shrink-0" />
+                  <span>#ORD-1024</span>
+                  <span className="text-[10px] opacity-80">(10:15)</span>
+                  <span className="ml-auto text-[10px] bg-white/20 px-1.5 py-0.5 rounded-full">42%</span>
+                </div>
+                <ChevronRight size={12} className="text-emerald-500" />
+              </div>
+              <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1.5">{isAr ? 'نفس التصميم في الجدول الزمني — زر أخضر = مريح' : 'Same design in timeline — green button = comfortable'}</p>
+            </div>
+            <div className="rounded-xl border border-blue-200 dark:border-blue-800/30 bg-blue-50/50 dark:bg-blue-950/20 p-3">
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="w-2 h-2 rounded-full bg-blue-500" />
+                <span className="text-xs font-extrabold text-blue-800 dark:text-blue-300">{isAr ? 'مدمج' : 'Compact'}</span>
+                <span className="ml-auto text-[10px] font-bold text-blue-700 dark:text-blue-400">~42px / 38px • h-7</span>
+              </div>
+              <div className="space-y-1 mb-2">
+                <p className="text-[11px] leading-4 text-gray-700 dark:text-gray-300 flex gap-1.5"><span className="font-extrabold text-blue-700 dark:text-blue-300 shrink-0">{isAr ? 'الفرق:' : 'Diff:'}</span><span>{isAr ? 'نفس الشريط لكن أنحف (h-7 بدل h-8) + بدون سهم + شارات SLA أصغر + حشوة أقل' : 'Same bar but thinner (h-7 vs h-8) + no chevron + smaller SLA badges + tighter padding'}</span></p>
+                <p className="text-[11px] leading-4 text-gray-700 dark:text-gray-300 flex gap-1.5"><span className="font-extrabold text-blue-700 dark:text-blue-300 shrink-0">{isAr ? 'الميزة:' : 'Benefit:'}</span><span>{isAr ? 'توازن مثالي — ترى ~12 طلباً مع الحفاظ على كل تفاصيل SLA (ممتاز للاستخدام اليومي)' : 'Perfect balance — see ~12 orders while keeping all SLA details (best daily driver)'}</span></p>
+              </div>
+              <div className="rounded-lg border border-blue-200 dark:border-blue-800/40 bg-white dark:bg-gray-900 p-2 flex items-center gap-2">
+                <div className="flex-1 h-7 rounded-full bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 px-2 flex items-center gap-1 text-[11px] font-bold">
+                  <Clock size={11} className="shrink-0" />
+                  <span>#ORD-1025</span>
+                  <span className="text-[10px] opacity-60">(11:42)</span>
+                  <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500 text-white">Warning</span>
+                </div>
+              </div>
+              <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1.5">{isAr ? 'نفس التصميم في الجدول — زر أزرق = مدمج' : 'Same design in timeline — blue button = compact'}</p>
+            </div>
+            <div className="rounded-xl border border-violet-200 dark:border-violet-800/30 bg-violet-50/50 dark:bg-violet-950/20 p-3">
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="w-2 h-2 rounded-full bg-violet-500" />
+                <span className="text-xs font-extrabold text-violet-800 dark:text-violet-300">{isAr ? 'مكثف' : 'Dense'}</span>
+                <span className="ml-auto text-[10px] font-bold text-violet-700 dark:text-violet-400">~32px • h-6</span>
+              </div>
+              <div className="space-y-1 mb-2">
+                <p className="text-[11px] leading-4 text-gray-700 dark:text-gray-300 flex gap-1.5"><span className="font-extrabold text-violet-700 dark:text-violet-300 shrink-0">{isAr ? 'الفرق:' : 'Diff:'}</span><span>{isAr ? 'حبة صغيرة جداً h-6 فقط (# + ساعة + نقطة) + بدون شريط SLA طويل + حتى طلبات الشحن تصبح نقاط' : 'Tiny h-6 pill only (# + time + dot) + no long SLA bar + even shipped orders become dots'}</span></p>
+                <p className="text-[11px] leading-4 text-gray-700 dark:text-gray-300 flex gap-1.5"><span className="font-extrabold text-violet-700 dark:text-violet-300 shrink-0">{isAr ? 'الميزة:' : 'Benefit:'}</span><span>{isAr ? 'أقصى نظرة عامة — ~18 طلباً في الشاشة، مسح فوري للمتأخر/الحرج في الأيام المزدحمة (+20 طلب)' : 'Max overview — ~18 orders per viewport, instant scan for overdue/critical on busy +20 order days'}</span></p>
+              </div>
+              <div className="rounded-lg border border-violet-200 dark:border-violet-800/40 bg-white dark:bg-gray-900 p-2 flex items-center gap-1.5">
+                <span className="h-6 rounded-full bg-violet-50 dark:bg-violet-900/30 border border-violet-200 dark:border-violet-700 text-violet-700 dark:text-violet-200 px-2.5 flex items-center gap-1 text-[11px] font-bold gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-pulse" />
+                  #ORD-1026
+                  <span className="text-[10px] opacity-60">(09:08)</span>
+                </span>
+                <span className="h-6 rounded-full bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-2 flex items-center gap-1 text-[11px] font-bold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                  #ORD-1027 <span className="text-[10px] opacity-60">(09:12)</span>
+                </span>
+              </div>
+              <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1.5">{isAr ? 'نفس التصميم في الجدول — زر بنفسجي = مكثف' : 'Same design in timeline — violet button = dense'}</p>
+            </div>
+          </div>
+          <div className="px-3 py-2.5 bg-amber-50 dark:bg-amber-950/20 border-t border-amber-100 dark:border-amber-900/30 flex gap-2 shrink-0">
+            <span className="text-amber-600 dark:text-amber-400 mt-0.5">💡</span>
+            <p className="text-[11px] leading-4 text-amber-800 dark:text-amber-200">
+              {isAr ? 'نصيحة: استخدم المكثف عند وجود +20 شحنة، وعد إلى المريح عند فحص طلب واحد بالتفصيل.' : 'Tip: Use Dense when you have 20+ shipments, switch back to Comfortable to inspect a single order’s SLA timeline.'}
+            </p>
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
+  );
+};
 
 interface OrderTimelineMeta {
   order: Order;
@@ -37,6 +237,7 @@ interface OrderTimelineMeta {
   eventTimeStr: string;
   shippedAtMs: number | null;
   deadlineMs: number | null;
+  lifecycleHistory: { status: OrderStatus; timestampMs: number; timeStr: string }[];
 }
 
 const OrdersTimelineCard: React.FC = () => {
@@ -60,6 +261,16 @@ const OrdersTimelineCard: React.FC = () => {
   const [zoomLevel, setZoomLevel] = useState<number>(1); // 0.75, 1, 1.25, 1.5, 2
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
+  const [rowRefreshTick, setRowRefreshTick] = useState<Record<string, number>>({});
+  const [rowRefreshing, setRowRefreshing] = useState<Record<string, boolean>>({});
+
+  const handleRowRefresh = useCallback((orderId: string) => {
+    setRowRefreshing(prev => ({ ...prev, [orderId]: true }));
+    setRowRefreshTick(prev => ({ ...prev, [orderId]: (prev[orderId] || 0) + 1 }));
+    // Real-Time Controller re-validates position, groups, circles, links for this row only
+    // Force re-render; timeline is recomputed via buildAccurateTimeline on next render with fresh tick
+    setTimeout(() => setRowRefreshing(prev => ({ ...prev, [orderId]: false })), 650);
+  }, []);
 
   // Close on Escape key
   useEffect(() => {
@@ -212,6 +423,9 @@ const OrdersTimelineCard: React.FC = () => {
         deadlineMs = sla.deadline;
       }
 
+      // Get lifecycle history (all previous states as circles)
+      const lifecycleHistory = getLifecycleHistory(order);
+
       return {
         order,
         orderStatus: status,
@@ -231,6 +445,7 @@ const OrdersTimelineCard: React.FC = () => {
         eventTimeStr,
         shippedAtMs,
         deadlineMs,
+        lifecycleHistory,
       };
     });
   }, [orders, isAr, now]);
@@ -378,9 +593,13 @@ const OrdersTimelineCard: React.FC = () => {
                   <Radio size={10} className="animate-pulse text-emerald-500" />
                   {isAr ? 'مباشر' : 'LIVE'}
                 </span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800/40 shadow-2xs" title={isAr ? 'المتحكم الزمني يصحح المواضع تلقائياً' : 'Real-Time Controller: time-respect on'}>
+                  <RefreshCw size={10} className="animate-spin text-violet-500" />
+                  RTC
+                </span>
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                {isAr ? `توقيت المحرر: ${todayDateFormatted} • الساعة ${nowTimeFormatted}` : `Editor Clock: ${todayDateFormatted} • ${nowTimeFormatted}`}
+                {isAr ? `توقيت المحرر: ${todayDateFormatted} • الساعة ${nowTimeFormatted} • 4 ساعة تجميع` : `Editor Clock: ${todayDateFormatted} • ${nowTimeFormatted} • 4h grouping`}
               </p>
             </div>
             <DashboardInfoButton
@@ -662,8 +881,6 @@ const OrdersTimelineCard: React.FC = () => {
                           const orderIdStr = item.order.orderNumber || item.order.id.slice(0, 8);
                           const st = item.orderStatus;
 
-                          const leftPercent = calcPercentFromTimestamp(item.eventTimestamp, viewportStartMs, viewportDurationMs);
-                          
                           let technicalColor = 'text-gray-600 dark:text-gray-400';
                           if (st === 'pending') technicalColor = 'text-amber-600 dark:text-amber-500';
                           else if (st === 'confirmed') technicalColor = 'text-blue-600 dark:text-blue-500';
@@ -684,102 +901,402 @@ const OrdersTimelineCard: React.FC = () => {
                             }
                           }
 
-                          // Non-shipped / Non-delivered -> Compact node pill
-                          if (st === 'pending' || st === 'confirmed' || st === 'processing' || st === 'cancelled' || density === 'dense') {
+                          // ── LIFECYCLE HISTORY — Real-Time Controller (time-respect, 4h grouping, merge) ──
+                          const lifecycleNodes = (item.lifecycleHistory || []).filter((n: any) => n.status !== st);
+
+                          // Density-aware sizing — COMFORTABLE vs COMPACT vs DENSE actually change layout
+                          const nodeH = density === 'dense' ? 24 : density === 'compact' ? 28 : 32;
+                          const nodeIconSize = density === 'dense' ? 10 : density === 'compact' ? 12 : 14;
+                          const rowHNonShipped = density === 'dense' ? 'h-[32px]' : density === 'compact' ? 'h-[38px]' : 'h-[46px]';
+                          const rowHShipped = density === 'dense' ? 'h-[32px]' : density === 'compact' ? 'h-[42px]' : 'h-[50px]';
+                          const slaBarH = density === 'dense' ? 'h-6' : density === 'compact' ? 'h-7' : 'h-8';
+                          const isDense = density === 'dense';
+                          const isCompact = density === 'compact';
+                          const nodeY = 0;
+                          const centerY = nodeH / 2;
+
+                          const leftPercent = calcPercentFromTimestamp(item.eventTimestamp, viewportStartMs, viewportDurationMs);
+
+                          // Shipped pill position (for connector endpoint alignment)
+                          const startPercent = item.shippedAtMs ? calcPercentFromTimestamp(item.shippedAtMs, viewportStartMs, viewportDurationMs) : leftPercent;
+                          const endPercent = item.deadlineMs ? calcPercentFromTimestamp(item.deadlineMs, viewportStartMs, viewportDurationMs) : leftPercent + 15;
+                          const widthPercent = Math.max(3, endPercent - startPercent);
+
+                          // Connector endpoint = where the current pill actually sits
+                          const isShippedBranch = st === 'shipped' || st === 'delivered';
+                          const pillPct = isShippedBranch ? startPercent : leftPercent;
+
+                          // Helper: format duration between two timestamps
+                          const fmtDur = (aMs: number, bMs: number) => {
+                            const diff = Math.abs(bMs - aMs);
+                            const m = Math.floor(diff / 60000);
+                            if (m < 60) return `${m}m`;
+                            return `${Math.floor(m / 60)}h ${m % 60}m`;
+                          };
+
+                          // Helper: format full date string
+                          const fmtDate = (ts: number) => {
+                            return new Date(ts).toLocaleDateString(isAr ? 'ar-MA' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + ' — ' + new Date(ts).toLocaleTimeString(isAr ? 'ar-MA' : 'en-GB', { hour: '2-digit', minute: '2-digit' });
+                          };
+
+                          // Pre-compute accurate timeline via Real-Time Controller (time-respect)
+                          const timelineBuild = buildTimeline(
+                            lifecycleNodes, st, viewportStartMs, viewportDurationMs, zoomLevel, leftPercent,
+                          );
+                          const hasMergedCurrent = (timelineBuild.elements as any).some((el: any) => el.type === 'merged' && el.nodes.some((n: any) => n.status === st));
+                          const mergedElement = (timelineBuild.elements as any).find((el: any) => el.type === 'merged') as any;
+                          const recentForHeader = [...lifecycleNodes].sort((a:any,b:any)=> b.timestampMs - a.timestampMs).slice(0,2).reverse();
+
+                          const renderLifecycleCircles = (opts?: { excludeMerged?: boolean }) => {
+                            if (!lifecycleNodes.length) return null;
+
+                            let { elements, connectors } = timelineBuild as any;
+                            if (opts?.excludeMerged) {
+                              elements = elements.filter((el: any) => el.type !== 'merged');
+                              // recompute connectors without merged element
+                              connectors = connectors.filter((c: any) => {
+                                // keep connectors that don't involve merged pct
+                                if (mergedElement && (Math.abs(c.from - mergedElement.pct) < 0.01 || Math.abs(c.to - mergedElement.pct) < 0.01)) return false;
+                                return true;
+                              });
+                            }
+                            if (elements.length === 0 && !opts?.excludeMerged) return null;
+                            if (opts?.excludeMerged && elements.length === 0) return null;
+
+                            if (elements.length === 0) return null;
+
                             return (
-                              <div key={item.order.id} className="flex w-full relative">
-                                {/* Sticky label column — fully opaque + right border to mask scrolling content */}
-                                <div className="w-44 shrink-0 text-[11px] font-semibold pl-3 pr-2 truncate sticky left-0 z-30 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-white/10 flex items-center h-[46px] pb-2.5">
+                              <>
+                                {/* Connectors */}
+                                {connectors.map((c: { from: number; to: number }, ci: number) => (
+                                  <div
+                                    key={`conn-${ci}`}
+                                    className="absolute z-[5] lifecycle-dash-x"
+                                    style={{ left: `${c.from}%`, width: `${Math.max(0, c.to - c.from)}%`, top: `${centerY - 1}px` }}
+                                  />
+                                ))}
+
+                                {/* Visual elements — time-respect, merged shows same-column */}
+                                {elements.map((el: TimelineElement, ei: number) => {
+                                  const nextEl = elements[ei + 1];
+                                  const nextFirstNode = nextEl ? (nextEl.type === 'circle' ? (nextEl as any).node : (nextEl as any).nodes[0]) : null;
+                                  const nextPct = nextEl?.pct ?? leftPercent;
+
+                                  if ((el as any).type === 'merged') {
+                                    const m = el as any;
+                                    // Merged: historical + current in same shipping column — show as separate circles at same x, no bending group
+                                    return (
+                                      <React.Fragment key={`merged-${ei}`}>
+                                        <div
+                                          style={{ left: `${m.pct}%`, transform: 'translateX(-50%)', top: `${nodeY}px` }}
+                                          className="absolute z-10 flex items-center gap-1"
+                                        >
+                                          {m.nodes.map((node: any, ni: number) => {
+                                            const Ic2: any = ICON_MAP[node.status] || Clock;
+                                            const sc2: any = STATUS_STYLE[node.status] || STATUS_STYLE.pending;
+                                            return (
+                                              <div key={`m-${ni}`} className={`w-8 h-8 rounded-full border flex items-center justify-center shadow-md ${sc2.pill}`}>
+                                                <Ic2 size={nodeIconSize} className={`${sc2.iconColor} ${sc2.anim} shrink-0`} />
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      </React.Fragment>
+                                    );
+                                  }
+
+                                  if (el.type === 'circle') {
+                                    const node = el.node;
+                                    const sc = STATUS_STYLE[node.status] || STATUS_STYLE.pending;
+                                    const Ic = ICON_MAP[node.status] || Clock;
+                                    const durStr = nextFirstNode
+                                      ? fmtDur(node.timestampMs, nextFirstNode.timestampMs)
+                                      : fmtDur(node.timestampMs, item.eventTimestamp);
+                                    return (
+                                      <React.Fragment key={`lc-${node.status}-${ei}`}>
+                                        <div
+                                          style={{ left: `${el.pct}%`, transform: 'translateX(-50%)', top: `${nodeY}px` }}
+                                          className={`absolute z-10 h-8 w-8 rounded-full border flex items-center justify-center shadow-md cursor-pointer group/lc transition-all hover:scale-125 hover:shadow-lg hover:z-[60] whitespace-nowrap ${sc.pill}`}
+                                        >
+                                          <Ic size={nodeIconSize} className={`${sc.iconColor} ${sc.anim} shrink-0`} />
+                                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/lc:block z-[9999] pointer-events-none">
+                                            <div className="bg-gray-900 dark:bg-gray-800 text-white text-[10px] rounded-lg px-2.5 py-1.5 shadow-xl border border-gray-700 whitespace-nowrap">
+                                              <div className="font-bold capitalize">{node.status}</div>
+                                              <div className="opacity-70">#{orderIdStr}</div>
+                                              <div className="opacity-70">{fmtDate(node.timestampMs)}</div>
+                                              {durStr && <div className="text-emerald-400 mt-0.5">{isAr ? 'المدة:' : 'Duration:'} {durStr}</div>}
+                                              <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900 dark:border-t-gray-800" />
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </React.Fragment>
+                                    );
+                                  }
+
+                                  // Group
+                                  return (
+                                    <React.Fragment key={`lg-${ei}`}>
+                                      <div
+                                        style={{ left: `${el.pct}%`, transform: 'translateX(-4px)', top: `${nodeY}px` }}
+                                        className={`absolute z-10 h-8 rounded-full border p-0.5 flex items-center gap-1 shadow-md cursor-pointer transition-all hover:shadow-lg hover:scale-[1.01] hover:z-[60] whitespace-nowrap ${STATUS_STYLE[el.nodes[0].status]?.pill || STATUS_STYLE.pending.pill}`}
+                                      >
+                                        {(el as any).nodes.map((node: any, ni: number) => {
+                                          const Ic = ICON_MAP[node.status] || Clock;
+                                          const nextNodeInGroup = el.nodes[ni + 1];
+                                          const durStr = nextNodeInGroup
+                                            ? fmtDur(node.timestampMs, nextNodeInGroup.timestampMs)
+                                            : fmtDur(node.timestampMs, item.eventTimestamp);
+                                          return (
+                                            <div key={`gn-${ni}`} className="relative group/lc cursor-pointer">
+                                              <div className={`w-6 h-6 rounded-full border flex items-center justify-center shadow-sm transition-all hover:scale-125 ${STATUS_STYLE[node.status]?.pill || STATUS_STYLE.pending.pill}`}>
+                                                <Ic size={nodeIconSize - 1} className={`${STATUS_STYLE[node.status]?.iconColor || STATUS_STYLE.pending.iconColor} ${STATUS_STYLE[node.status]?.anim || ''} shrink-0`} />
+                                              </div>
+                                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/lc:block z-[9999] pointer-events-none">
+                                                <div className="bg-gray-900 dark:bg-gray-800 text-white text-[10px] rounded-lg px-2.5 py-1.5 shadow-xl border border-gray-700 whitespace-nowrap">
+                                                  <div className="font-bold capitalize">{node.status}</div>
+                                                  <div className="opacity-70">#{orderIdStr}</div>
+                                                  <div className="opacity-70">{fmtDate(node.timestampMs)}</div>
+                                                  {durStr && <div className="text-emerald-400 mt-0.5">{isAr ? 'المدة:' : 'Duration:'} {durStr}</div>}
+                                                  <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900 dark:border-t-gray-800" />
+                                                </div>
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </React.Fragment>
+                                  );
+                                })}
+                              </>
+                            );
+                          };
+
+                          // ── BRANCH: Non-shipped — density-aware with enhanced Dense premium design
+                          if (st === 'pending' || st === 'confirmed' || st === 'processing' || st === 'cancelled') {
+                            const sc = STATUS_STYLE[st] || STATUS_STYLE.pending;
+                            const hideCurrentPill = hasMergedCurrent;
+                            // Enhanced Dense: premium compact pill with left accent, status abbreviation, and refined typography
+                            if (isDense) {
+                              const statusAbbr = st === 'pending' ? 'PND' : st === 'confirmed' ? 'CNF' : st === 'processing' ? 'PRC' : 'CNL';
+                              const accentColor = st === 'pending' ? 'border-amber-400' : st === 'confirmed' ? 'border-blue-400' : st === 'processing' ? 'border-violet-400' : 'border-red-400';
+                              const dotColor = st === 'pending' ? 'bg-amber-500' : st === 'confirmed' ? 'bg-blue-500' : st === 'processing' ? 'bg-violet-500' : 'bg-red-500';
+                              return (
+                                <div key={`${item.order.id}-${rowRefreshTick[item.order.id]||0}`} className={`flex w-full relative group/row hover:bg-gray-50/50 dark:hover:bg-white/[0.03] transition-colors ${rowRefreshing[item.order.id] ? 'bg-emerald-50/20 dark:bg-emerald-900/5' : ''}`}>
+                                  <div className={`w-44 shrink-0 text-[11px] font-semibold pl-3 pr-2 truncate sticky left-0 z-30 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-white/10 flex items-center ${rowHNonShipped} pb-2.5 group-hover/row:bg-gray-50/50 dark:group-hover/row:bg-white/[0.03]`}>
+                                    <span className={`w-1 h-4 rounded-full mr-2 ${dotColor} opacity-60 ${rowRefreshing[item.order.id] ? 'animate-pulse' : ''}`} />
+                                    <span className={technicalColor}>#{orderIdStr}</span> <span className="text-gray-400 mx-1">•</span> <span className="text-gray-700 dark:text-gray-200 font-bold">{item.eventTimeStr}</span>
+                                  </div>
+                                  <div className={`flex-1 relative ${rowHNonShipped} pb-2.5`}>
+                                    {renderLifecycleCircles()}
+                                    {/* Per-row refresh — top of line only */}
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); handleRowRefresh(item.order.id); }}
+                                      disabled={!!rowRefreshing[item.order.id]}
+                                      title={isAr ? 'تحديث تصميم هذا السطر فقط' : 'Refresh design for this row only'}
+                                      className="absolute -top-1 right-1 w-6 h-6 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 shadow-sm flex items-center justify-center hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-200 dark:hover:border-emerald-800/40 hover:text-emerald-600 transition-all z-20 opacity-0 group-hover/row:opacity-100 focus:opacity-100 disabled:opacity-50"
+                                    >
+                                      <RefreshCw size={11} className={`${rowRefreshing[item.order.id] ? 'animate-spin text-emerald-500' : 'text-gray-400 group-hover/row:text-gray-600'}`} />
+                                    </button>
+                                    {hasMergedCurrent && mergedElement ? (
+                                      <div
+                                        onClick={() => setSelectedMeta(item)}
+                                        style={{ left: `${leftPercent}%`, transform: 'translateX(-50%)', top: '4px' }}
+                                        className={`absolute z-10 h-6 rounded-full border bg-white dark:bg-gray-800 shadow-sm hover:shadow-md hover:scale-[1.02] transition-all cursor-pointer flex items-center gap-1 pl-1 pr-2 whitespace-nowrap ${accentColor} ${sc.pill} backdrop-blur-sm`}
+                                      >
+                                        <span className="flex items-center -space-x-1">
+                                          {mergedElement.nodes.filter((n:any)=> n.status !== st).slice(0,2).map((node:any, idx:number) => {
+                                            const Ic = ICON_MAP[node.status] || Clock;
+                                            const sc2 = STATUS_STYLE[node.status] || STATUS_STYLE.pending;
+                                            return <span key={idx} className={`w-4 h-4 rounded-full border flex items-center justify-center ${sc2.pill}`}><Ic size={8} className={sc2.iconColor} /></span>;
+                                          })}
+                                        </span>
+                                        <span className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${st==='pending'?'bg-amber-100 dark:bg-amber-900/40 text-amber-600':st==='confirmed'?'bg-blue-100 dark:bg-blue-900/40 text-blue-600':st==='processing'?'bg-violet-100 dark:bg-violet-900/40 text-violet-600':'bg-red-100 dark:bg-red-900/40 text-red-600'}`}>
+                                          {st === 'pending' && <Clock size={10} className="animate-pulse" />}
+                                          {st === 'confirmed' && <CheckCircle2 size={10} />}
+                                          {st === 'processing' && <RefreshCw size={10} className="animate-spin" />}
+                                          {st === 'cancelled' && <XCircle size={10} />}
+                                        </span>
+                                        <span className="font-bold text-[10px] tracking-wide text-gray-900 dark:text-white">#{orderIdStr}</span>
+                                        <span className={`w-1.5 h-1.5 rounded-full ${dotColor} animate-pulse shadow-sm`} />
+                                      </div>
+                                    ) : !hideCurrentPill && (
+                                      <div
+                                        onClick={() => setSelectedMeta(item)}
+                                        style={{ left: `${leftPercent}%`, transform: 'translateX(-50%)', top: '4px' }}
+                                        className={`absolute z-10 h-6 rounded-full border bg-white dark:bg-gray-800 shadow-sm hover:shadow-md hover:scale-[1.02] transition-all cursor-pointer flex items-center gap-1.5 pl-1 pr-2.5 whitespace-nowrap ${accentColor} ${sc.pill} backdrop-blur-sm`}
+                                      >
+                                        <span className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 -ml-0.5 ${st==='pending'?'bg-amber-100 dark:bg-amber-900/40 text-amber-600':st==='confirmed'?'bg-blue-100 dark:bg-blue-900/40 text-blue-600':st==='processing'?'bg-violet-100 dark:bg-violet-900/40 text-violet-600':'bg-red-100 dark:bg-red-900/40 text-red-600'}`}>
+                                          {st === 'pending' && <Clock size={10} className="animate-pulse" />}
+                                          {st === 'confirmed' && <CheckCircle2 size={10} />}
+                                          {st === 'processing' && <RefreshCw size={10} className="animate-spin" />}
+                                          {st === 'cancelled' && <XCircle size={10} />}
+                                        </span>
+                                        <span className="font-bold text-[10px] tracking-wide text-gray-900 dark:text-white">#{orderIdStr}</span>
+                                        <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300">{statusAbbr}</span>
+                                        <span className={`w-1.5 h-1.5 rounded-full ${dotColor} animate-pulse shadow-sm`} />
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            }
+                            const pillH = slaBarH;
+                            return (
+                              <div key={`${item.order.id}-${rowRefreshTick[item.order.id]||0}`} className={`flex w-full relative group/row ${rowRefreshing[item.order.id] ? 'bg-emerald-50/20 dark:bg-emerald-900/5' : ''}`}>
+                                <div className={`w-44 shrink-0 text-[11px] font-semibold pl-3 pr-2 truncate sticky left-0 z-30 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-white/10 flex items-center ${rowHNonShipped} pb-2.5`}>
                                   <span className={technicalColor}>#{orderIdStr}</span> <span className="text-gray-400 mx-1">•</span> <span className="text-gray-700 dark:text-gray-200 font-bold">{item.eventTimeStr}</span>
                                 </div>
+                                <div className={`flex-1 relative ${rowHNonShipped} pb-2.5`}>
+                                  {renderLifecycleCircles()}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); handleRowRefresh(item.order.id); }}
+                                    disabled={!!rowRefreshing[item.order.id]}
+                                    title={isAr ? 'تحديث تصميم هذا السطر فقط' : 'Refresh design for this row only'}
+                                    className="absolute -top-1 right-1 w-6 h-6 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 shadow-sm flex items-center justify-center hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-200 dark:hover:border-emerald-800/40 hover:text-emerald-600 transition-all z-20 opacity-0 group-hover/row:opacity-100 focus:opacity-100 disabled:opacity-50"
+                                  >
+                                    <RefreshCw size={11} className={`${rowRefreshing[item.order.id] ? 'animate-spin text-emerald-500' : 'text-gray-400 group-hover/row:text-gray-600'}`} />
+                                  </button>
+                                  {!hideCurrentPill && (
+                                    <div
+                                      onClick={() => setSelectedMeta(item)}
+                                      style={{ left: `${leftPercent}%`, transform: 'translateX(-50%)', top: '2px' }}
+                                      className={`absolute z-10 ${pillH} rounded-full border px-3 flex items-center gap-1.5 text-xs font-extrabold shadow-md cursor-pointer hover:scale-105 transition-all whitespace-nowrap ${sc.pill}`}
+                                    >
+                                      {st === 'pending' && <Clock size={13} className="text-amber-500 animate-pulse shrink-0" />}
+                                      {st === 'confirmed' && <CheckCircle2 size={13} className="text-blue-500 shrink-0" />}
+                                      {st === 'processing' && <RefreshCw size={13} className="text-violet-500 animate-spin shrink-0" />}
+                                      {st === 'cancelled' && <XCircle size={13} className="text-red-500 shrink-0" />}
+                                      <span className="font-bold text-[11px]">#{orderIdStr}</span>
+                                      <span className="text-[10px] opacity-60 font-semibold">({item.eventTimeStr})</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          }
 
-                                <div className="flex-1 relative h-[46px] pb-2.5 overflow-hidden">
+                          // ── BRANCH: Shipped / Delivered → density-aware (comfortable=full bar, compact=thinner, dense=dot)
+
+                          // Dense: premium compact — tiny pill with refined design, still scannable for ~18 orders — delivery header always shows 1-2 additional icons
+                          if (isDense) {
+                            const isShippedDense = !item.isCompleted;
+                            const scDense = item.isCompleted ? STATUS_STYLE.delivered : STATUS_STYLE.shipped;
+                            const slaDot = item.slaState==='overdue'?'bg-rose-500':item.slaState==='critical'?'bg-red-500':item.slaState==='warning'?'bg-amber-500':'bg-emerald-500';
+                            const slaBg = item.slaState==='overdue'?'bg-rose-50 dark:bg-rose-900/20 border-rose-200':item.slaState==='critical'?'bg-red-50 dark:bg-red-900/20 border-red-200':item.slaState==='warning'?'bg-amber-50 dark:bg-amber-900/20 border-amber-200':item.isCompleted?'bg-gray-50 dark:bg-gray-800 border-gray-200':'bg-sky-50 dark:bg-sky-900/20 border-sky-200';
+                            return (
+                              <div key={`${item.order.id}-${rowRefreshTick[item.order.id]||0}`} className={`flex w-full relative group/row hover:bg-gray-50/50 dark:hover:bg-white/[0.03] transition-colors ${rowRefreshing[item.order.id] ? 'bg-emerald-50/30 dark:bg-emerald-900/10' : ''}`}>
+                                <div className={`w-44 shrink-0 text-xs font-bold pl-3 pr-2 truncate sticky left-0 z-30 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-white/10 flex items-center ${rowHShipped} pb-2.5 group-hover/row:bg-gray-50/50 dark:group-hover/row:bg-white/[0.03]`}>
+                                  <span className={`w-1 h-4 rounded-full mr-2 ${isShippedDense? slaDot : 'bg-gray-300'} opacity-70 ${rowRefreshing[item.order.id] ? 'animate-pulse' : ''}`} />
+                                  <span className={technicalColor}>#{orderIdStr}</span>
+                                  <span className="ml-1 text-[10px] font-normal text-gray-400 hidden sm:inline">{item.isCompleted ? '✓' : `${item.progress}%`}</span>
+                                </div>
+                                <div className={`flex-1 relative ${rowHShipped} pb-2.5`}>
+                                  {renderLifecycleCircles({ excludeMerged: !!hasMergedCurrent })}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); handleRowRefresh(item.order.id); }}
+                                    disabled={!!rowRefreshing[item.order.id]}
+                                    title={isAr ? 'تحديث تصميم هذا السطر فقط' : 'Refresh design for this row only'}
+                                    className="absolute -top-1 right-1 w-6 h-6 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 shadow-sm flex items-center justify-center hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-200 dark:hover:border-emerald-800/40 hover:text-emerald-600 transition-all z-20 opacity-0 group-hover/row:opacity-100 focus:opacity-100 disabled:opacity-50"
+                                  >
+                                    <RefreshCw size={11} className={`${rowRefreshing[item.order.id] ? 'animate-spin text-emerald-500' : 'text-gray-400 group-hover/row:text-gray-600'}`} />
+                                  </button>
                                   <div
                                     onClick={() => setSelectedMeta(item)}
-                                    style={{
-                                      left: `${leftPercent}%`,
-                                      transform: 'translateX(-50%)',
-                                      top: '2px', // Centered in the 36px content height (46 - 10 padding = 36. 36 - 32 pill = 4. 4/2 = 2px)
-                                    }}
-                                    className={`absolute z-10 h-8 rounded-full border px-3 flex items-center gap-1.5 text-xs font-extrabold shadow-md cursor-pointer hover:scale-105 transition-all whitespace-nowrap ${
-                                      st === 'pending'
-                                        ? 'bg-amber-50 dark:bg-amber-950/80 border-amber-300 dark:border-amber-500 text-amber-700 dark:text-amber-200'
-                                        : st === 'confirmed'
-                                        ? 'bg-blue-50 dark:bg-blue-950/80 border-blue-300 dark:border-blue-500 text-blue-700 dark:text-blue-200'
-                                        : st === 'processing'
-                                        ? 'bg-violet-50 dark:bg-violet-950/80 border-violet-300 dark:border-violet-500 text-violet-700 dark:text-violet-200'
-                                        : 'bg-gray-100 dark:bg-red-950/60 border-gray-300 dark:border-red-700 text-gray-500 dark:text-red-300 line-through opacity-60'
-                                    }`}
+                                    style={{ left: `${startPercent}%`, transform: 'translateX(-50%)', top: '4px' }}
+                                    className={`absolute z-10 h-6 rounded-full border bg-white dark:bg-gray-800 shadow-sm hover:shadow-md hover:scale-[1.02] transition-all cursor-pointer flex items-center gap-1 pl-1 pr-2 whitespace-nowrap ${hasMergedCurrent ? 'ring-2 ring-violet-300 border-violet-300' : slaBg} backdrop-blur-sm`}
                                   >
-                                    {st === 'pending' && <Clock size={13} className="text-amber-500 animate-pulse shrink-0" />}
-                                    {st === 'confirmed' && <CheckCircle2 size={13} className="text-blue-500 shrink-0" />}
-                                    {st === 'processing' && <RefreshCw size={13} className="text-violet-500 animate-spin shrink-0" />}
-                                    {st === 'cancelled' && <XCircle size={13} className="text-red-500 shrink-0" />}
-
-                                    <span className="font-bold text-[11px]">#{orderIdStr}</span>
-                                    <span className="text-[10px] opacity-60 font-semibold">({item.eventTimeStr})</span>
+                                    <span className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${isShippedDense ? (item.slaState==='overdue'?'bg-rose-100 dark:bg-rose-900/40 text-rose-600':item.slaState==='critical'?'bg-red-100 dark:bg-red-900/40 text-red-600':item.slaState==='warning'?'bg-amber-100 dark:bg-amber-900/40 text-amber-600':'bg-sky-100 dark:bg-sky-900/40 text-sky-600') : 'bg-gray-100 dark:bg-gray-700 text-gray-500'}`}>
+                                      {hasMergedCurrent && mergedElement ? (
+                                        <span className="flex -space-x-1">
+                                          {mergedElement.nodes.slice(0,3).map((node: any, idx: number) => {
+                                            const Ic: any = ICON_MAP[node.status] || Clock;
+                                            return <span key={idx} className="w-3.5 h-3.5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 flex items-center justify-center shadow-sm"><Ic size={7} className={STATUS_STYLE[node.status]?.iconColor || 'text-gray-400'} /></span>;
+                                          })}
+                                        </span>
+                                      ) : recentForHeader.length > 0 ? (
+                                        <span className="flex -space-x-1">
+                                          {recentForHeader.map((node: any, idx: number) => {
+                                            const Ic: any = ICON_MAP[node.status] || Clock;
+                                            return <span key={idx} className="w-3.5 h-3.5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 flex items-center justify-center shadow-sm"><Ic size={7} className={STATUS_STYLE[node.status]?.iconColor || 'text-gray-400'} /></span>;
+                                          })}
+                                          <span className="w-3.5 h-3.5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 flex items-center justify-center shadow-sm"><Truck size={7} className="text-sky-600" /></span>
+                                        </span>
+                                      ) : isShippedDense ? (
+                                        <Truck size={9} className="animate-pulse" />
+                                      ) : (
+                                        <CheckCircle2 size={9} />
+                                      )}
+                                    </span>
+                                    <span className="font-bold text-[10px] tracking-wide text-gray-900 dark:text-white">#{orderIdStr}</span>
+                                    <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-white/20" />
+                                    <span className={`w-1.5 h-1.5 rounded-full ${slaDot} animate-pulse shadow-sm`} />
                                   </div>
                                 </div>
                               </div>
                             );
                           }
 
-                          // Shipped / Delivered -> Continuous SLA Duration Capsule Bar
-                          const startPercent = item.shippedAtMs ? calcPercentFromTimestamp(item.shippedAtMs, viewportStartMs, viewportDurationMs) : leftPercent;
-                          const endPercent = item.deadlineMs ? calcPercentFromTimestamp(item.deadlineMs, viewportStartMs, viewportDurationMs) : leftPercent + 15;
-                          const widthPercent = Math.max(3, endPercent - startPercent);
-
                           return (
-                            <div key={item.order.id} className="flex w-full relative">
-                              {/* Sticky label column — fully opaque + right border */}
-                              <div className="w-44 shrink-0 text-xs font-bold pl-3 pr-2 truncate sticky left-0 z-30 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-white/10 flex items-center h-[50px] pb-2.5">
+                            <div key={`${item.order.id}-${rowRefreshTick[item.order.id]||0}`} className={`flex w-full relative group/row ${rowRefreshing[item.order.id] ? 'bg-emerald-50/20 dark:bg-emerald-900/5' : ''}`}>
+                              <div className={`w-44 shrink-0 text-xs font-bold pl-3 pr-2 truncate sticky left-0 z-30 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-white/10 flex items-center ${rowHShipped} pb-2.5`}>
                                 <span className={technicalColor}>#{orderIdStr}</span>
                               </div>
-
-                              <div className="flex-1 relative h-[50px] pb-2.5 overflow-hidden">
+                              <div className={`flex-1 relative ${rowHShipped} pb-2.5`}>
+                                {renderLifecycleCircles({ excludeMerged: !!hasMergedCurrent })}
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); handleRowRefresh(item.order.id); }}
+                                  disabled={!!rowRefreshing[item.order.id]}
+                                  title={isAr ? 'تحديث تصميم هذا السطر فقط' : 'Refresh design for this row only'}
+                                  className="absolute -top-1 right-1 w-6 h-6 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 shadow-sm flex items-center justify-center hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-200 dark:hover:border-emerald-800/40 hover:text-emerald-600 transition-all z-20 opacity-0 group-hover/row:opacity-100 focus:opacity-100 disabled:opacity-50"
+                                >
+                                  <RefreshCw size={11} className={`${rowRefreshing[item.order.id] ? 'animate-spin text-emerald-500' : 'text-gray-400 group-hover/row:text-gray-600'}`} />
+                                </button>
                                 <div
                                   onClick={() => setSelectedMeta(item)}
-                                  style={{
-                                    left: `${startPercent}%`,
-                                    width: `${widthPercent}%`,
-                                  }}
-                                  className={`absolute z-10 top-[4px] h-8 rounded-full ${item.lightBg} border p-0.5 flex items-center justify-between shadow-md hover:shadow-lg hover:scale-[1.01] transition-all cursor-pointer group overflow-hidden`}
+                                  style={{ left: `${startPercent}%`, width: `${widthPercent}%` }}
+                                  className={`absolute z-10 top-[4px] ${slaBarH} rounded-full ${item.lightBg} border p-0.5 flex items-center justify-between shadow-md hover:shadow-lg hover:scale-[1.01] transition-all cursor-pointer group overflow-hidden ${isCompact ? 'p-0.5' : ''}`}
                                 >
-                                  {/* Left Head Capsule */}
-                                  <div className={`h-full rounded-full ${item.isCompleted ? 'bg-gray-400 dark:bg-gray-600' : `bg-gradient-to-r ${item.badgeBg}`} text-white px-3 flex items-center gap-1.5 shrink-0`}>
+                                  {/* Historical icons at START/LEFT of state column, before order info, NOT inside darker pill */}
+                                  {(hasMergedCurrent && mergedElement ? mergedElement.nodes.filter((n:any)=> n.status !== st).slice(0,2) : recentForHeader.slice(0,2)).length > 0 && (
+                                    <span className="flex items-center gap-1 pl-1 shrink-0">
+                                      {(hasMergedCurrent && mergedElement ? mergedElement.nodes.filter((n:any)=> n.status !== st).slice(0,2) : recentForHeader.slice(0,2)).map((node: any, idx: number) => {
+                                        const Ic: any = ICON_MAP[node.status] || Clock;
+                                        const sc2: any = STATUS_STYLE[node.status] || STATUS_STYLE.pending;
+                                        return (
+                                          <span key={idx} className={`w-6 h-6 rounded-full border flex items-center justify-center shadow-sm ${sc2.pill}`}>
+                                            <Ic size={11} className={`${sc2.iconColor} ${sc2.anim} shrink-0`} />
+                                          </span>
+                                        );
+                                      })}
+                                    </span>
+                                  )}
+                                  <div className={`h-full rounded-full ${item.isCompleted ? 'bg-gray-400 dark:bg-gray-600' : `bg-gradient-to-r ${item.badgeBg}`} text-white ${isCompact?'px-2 gap-1':'px-2.5 gap-1'} flex items-center shrink-0`}>
                                     {item.isCompleted ? (
-                                      <CheckCircle2 size={13} className="text-white shrink-0" />
+                                      <CheckCircle2 size={isCompact?11:13} className="text-white shrink-0" />
                                     ) : (
-                                      <Truck size={13} className="text-white animate-bounce shrink-0" />
+                                      <Truck size={isCompact?11:13} className="text-white animate-bounce shrink-0" />
                                     )}
-                                    <span className="text-xs font-bold tracking-wide">#{orderIdStr}</span>
-                                    <span className="text-[10px] opacity-80 font-normal">({item.eventTimeStr})</span>
+                                    <span className={`font-bold tracking-wide ${isCompact?'text-[10px]':'text-xs'}`}>#{orderIdStr}</span>
+                                    {!isCompact && <span className="text-[10px] opacity-80 font-normal">({item.eventTimeStr})</span>}
+                                    {isCompact && <span className="w-1 h-1 rounded-full bg-white/60" />}
                                   </div>
-
-                                  {/* Right SLA Progress / Countdown Badge */}
-                                  <div className="flex items-center gap-1.5 pl-2 pr-1 shrink-0">
+                                  <div className={`flex items-center gap-1 pl-2 pr-1 shrink-0 ${isCompact?'gap-1 pl-1':'gap-1.5 pl-2'}`}>
                                     {item.slaState === 'overdue' ? (
-                                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white animate-pulse border border-rose-400">
-                                        {item.remainingFormatted}
-                                      </span>
+                                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white animate-pulse border border-rose-400 ${isCompact?'px-1.5 text-[9px]':''}`}>{item.remainingFormatted}</span>
                                     ) : item.slaState === 'critical' ? (
-                                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-red-600 text-white animate-pulse border border-red-400">
-                                        {item.remainingFormatted}
-                                      </span>
+                                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black bg-red-600 text-white animate-pulse border border-red-400 ${isCompact?'px-1.5 text-[9px]':''}`}>{item.remainingFormatted}</span>
                                     ) : item.slaState === 'warning' ? (
-                                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-white border border-amber-400">
-                                        {item.remainingFormatted}
-                                      </span>
+                                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-white border border-amber-400 ${isCompact?'px-1.5 text-[9px]':''}`}>{item.remainingFormatted}</span>
                                     ) : item.isCompleted ? (
-                                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/20 text-white">
-                                        {isAr ? 'تم التسليم' : 'Delivered'}
-                                      </span>
+                                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/20 text-white ${isCompact?'hidden sm:inline-flex':''}`}>{isAr ? 'تم التسليم' : 'Delivered'}</span>
                                     ) : (
-                                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-white/20 text-white">
-                                        {item.progress}%
-                                      </span>
+                                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black bg-white/20 text-white ${isCompact?'text-[9px] px-1.5':''}`}>{item.progress}%</span>
                                     )}
-                                    <ChevronRight size={14} className={`${item.arrowColor} group-hover:translate-x-0.5 transition-transform shrink-0`} />
+                                    {!isCompact && <ChevronRight size={14} className={`${item.arrowColor} group-hover:translate-x-0.5 transition-transform shrink-0`} />}
                                   </div>
                                 </div>
                               </div>

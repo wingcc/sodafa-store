@@ -80,6 +80,13 @@ export async function POST(request: Request) {
         });
       }
 
+      // Create initial timeline event for pending
+      await repo.addTimelineEvent({
+        order_id: order.id,
+        status: 'pending' as any,
+        note: null,
+      });
+
       // Create notification for new order
       await notificationService.notifyNewOrder(
         order.id,

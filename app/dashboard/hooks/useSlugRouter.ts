@@ -17,12 +17,19 @@ const VALID_PAGES: Record<string, PageSection> = {
   shipping: 'shipping',
   payments: 'payments',
   analytics: 'analytics',
+  logs: 'logs',
   notifications: 'notifications',
   settings: 'settings',
   store: 'store',
   'store-homepage': 'store-homepage',
+  'store-homepage-content': 'store-homepage-content',
+  'store-reviews': 'store-reviews',
+  'store-settings': 'store-settings',
+  'store-seo': 'store-seo',
   'store-banners': 'store-banners',
   'store-content': 'store-content',
+  // legacy alias for direct URL /dashboard/store-featured (maps to same as store-banners/content if needed)
+  'store-featured': 'store-banners' as PageSection,
 };
 
 /**

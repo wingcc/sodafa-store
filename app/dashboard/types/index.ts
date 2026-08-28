@@ -106,6 +106,13 @@ export interface Order {
   };
   trackingNumber?: string;
   shippingProvider?: string;
+  deliveryMethod?: string;
+  shippedAt?: string;
+  deliveredAt?: string;
+  confirmedAt?: string;
+  processingStartedAt?: string;
+  cancelledAt?: string;
+  refundedAt?: string;
   notes?: string;
   couponCode?: string;
   createdAt: string;

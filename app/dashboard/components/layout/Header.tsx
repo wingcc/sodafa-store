@@ -151,9 +151,10 @@ const Header: React.FC = () => {
   // Accent color helper — uses palette accent instead of hardcoded gold
   const accentColor = `var(--color-accent-${theme === 'dark' ? 'dark' : 'light'}, #d97706)`;
 
-  // Shared visuals — header uses solid bg + white icon, same hue as Center
-  const getNotifIcon = (type: string) => getHeaderIcon(type, 15);
-  const getNotifBg = (type: string) => getHeaderBg(type);
+  // Shared visuals — header uses subtle bg + dark icon, same hue as Center.
+  // Now supports order status-change: pass whole notification so delivered/cancelled etc get distinct icons.
+  const getNotifIcon = (type: string, notification?: any) => getHeaderIcon(type, 15, notification);
+  const getNotifBg = (type: string, notification?: any) => getHeaderBg(type, notification);
   const getTypeLabel = (type: string) => {
     const map: Record<string, string> = {
       order: 'Orders', review: 'Reviews', product: 'Products', payment: 'Payments',
@@ -380,8 +381,8 @@ const Header: React.FC = () => {
                         style={!notif.read ? { background: `color-mix(in srgb, ${accentColor} 5%, transparent)` } : {}}
                       >
                         <div className="flex items-start gap-3">
-                          <div className={`w-8 h-8 rounded-xl ${getNotifBg(notif.type)} flex items-center justify-center flex-shrink-0 mt-0.5 border shadow-sm`}>
-                            {getNotifIcon(notif.type)}
+                          <div className={`w-8 h-8 rounded-xl ${getNotifBg(notif.type, notif as any)} flex items-center justify-center flex-shrink-0 mt-0.5 border shadow-sm`}>
+                            {getNotifIcon(notif.type, notif as any)}
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center justify-between gap-2">

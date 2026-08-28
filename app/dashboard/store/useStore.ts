@@ -175,7 +175,7 @@ function mapOrder(row: ApiRow): Order {
     couponCode: row.coupon_code ? String(row.coupon_code) : undefined,
     createdAt: String(row.created_at ?? ''),
     updatedAt: String(row.updated_at ?? ''),
-    timeline: Array.isArray(row.timeline) ? row.timeline : [],
+    timeline: Array.isArray(row.timeline) ? row.timeline : Array.isArray((row as any).order_timeline) ? (row as any).order_timeline : [],
   };
 }
 

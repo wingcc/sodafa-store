@@ -94,19 +94,15 @@ export default function StoreManagerOverview() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {sections.map((section) => (
-          <div
+          <SectionCard
             key={section.id}
+            icon={section.icon}
+            label={section.label}
+            description={section.description}
+            href="#"
+            color={section.color}
             onClick={() => setCurrentPage(section.page)}
-            className="cursor-pointer"
-          >
-            <SectionCard
-              icon={section.icon}
-              label={section.label}
-              description={section.description}
-              href="#" // لن نستخدم الرابط، سنعتمد على onClick
-              color={section.color}
-            />
-          </div>
+          />
         ))}
       </div>
     </div>

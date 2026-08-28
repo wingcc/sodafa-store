@@ -10,6 +10,7 @@ import type { Order, OrderStatus } from '../../types';
 import { useTranslation } from '../../i18n/useTranslation';
 import { useStore } from '../../store/useStore';
 import { calculateOrderSla, isValidStatusTransition } from './timeline/deliverySlaService';
+import { normalizeHistory } from './timeline/timelineController';
 
 interface TimelineOrderMeta {
   order: Order;
@@ -37,30 +38,68 @@ const ORDER_STATUS_STEPS: { id: OrderStatus; labelEn: string; labelAr: string }[
 const OrderTimelineModal: React.FC<Props> = ({ data, onClose }) => {
   const { language } = useTranslation();
   const isAr = language === 'ar';
-  const { setCurrentPage, updateOrderStatus } = useStore();
+  const { setCurrentPage, updateOrderStatus, orders } = useStore();
   const [mounted, setMounted] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [statusError, setStatusError] = useState<string | null>(null);
+  const [pendingSkippedStatuses, setPendingSkippedStatuses] = useState<OrderStatus[] | null>(null);
+  const [pendingTargetStatus, setPendingTargetStatus] = useState<OrderStatus | null>(null);
+  const [timelineExpanded, setTimelineExpanded] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    if (!data) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [data, onClose]);
+
   if (!data || !mounted) return null;
 
-  const { order } = data;
+  // Use live order from store (updates after status change)
+  const liveOrder = orders.find(o => o.id === data.order.id) || data.order;
+  const order = liveOrder;
   const currentStatus = order.orderStatus || 'pending';
   const sla = calculateOrderSla(order, new Date(), isAr);
+  // Timeline for modal — same source as Orders page View Details (order_timeline), fallback to Real-Time Controller derived history
+  const displayTimeline = (() => {
+    const raw = (order as any).timeline;
+    if (Array.isArray(raw) && raw.length > 0) return raw;
+    try {
+      const hist = normalizeHistory(order as any);
+      return hist.map(n => ({ status: n.status, timestamp: new Date(n.timestampMs).toISOString(), note: (n as any).note || null }));
+    } catch {
+      return [];
+    }
+  })();
 
   const handleNavigateToOrder = () => {
     setCurrentPage('orders');
     onClose();
   };
 
+  const ORDER_FLOW: OrderStatus[] = ['pending', 'confirmed', 'processing', 'shipped', 'delivered'];
+
   const handleStatusChange = async (targetStatus: OrderStatus) => {
     setStatusError(null);
     if (targetStatus === currentStatus) return;
 
+    // Calculate skipped statuses (statuses between current and target)
+    const curIdx = ORDER_FLOW.indexOf(currentStatus as OrderStatus);
+    const tgtIdx = ORDER_FLOW.indexOf(targetStatus);
+
+    // If target is a future status (not just one step ahead), calculate skipped
+    if (tgtIdx > curIdx + 1) {
+      const skipped = ORDER_FLOW.slice(curIdx + 1, tgtIdx); // all between current and target (exclusive)
+      setPendingSkippedStatuses(skipped);
+      setPendingTargetStatus(targetStatus);
+      return; // wait for confirmation
+    }
+
+    // Single-step valid transition or backward transition
     if (!isValidStatusTransition(currentStatus, targetStatus)) {
       setStatusError(
         isAr
@@ -74,14 +113,36 @@ const OrderTimelineModal: React.FC<Props> = ({ data, onClose }) => {
     try {
       if (updateOrderStatus) {
         await updateOrderStatus(order.id, targetStatus);
-      } else {
-        order.orderStatus = targetStatus;
       }
     } catch (err) {
       console.error('Failed to update order status:', err);
     } finally {
       setIsUpdatingStatus(false);
     }
+  };
+
+  const confirmSkipStatuses = async () => {
+    if (!pendingSkippedStatuses || !pendingTargetStatus) return;
+    const allStatuses = [...pendingSkippedStatuses, pendingTargetStatus];
+    setPendingSkippedStatuses(null);
+    setPendingTargetStatus(null);
+    setIsUpdatingStatus(true);
+    try {
+      for (const status of allStatuses) {
+        if (updateOrderStatus) {
+          await updateOrderStatus(order.id, status);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to update order statuses:', err);
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
+  const cancelSkipStatuses = () => {
+    setPendingSkippedStatuses(null);
+    setPendingTargetStatus(null);
   };
 
   return createPortal(
@@ -154,8 +215,11 @@ const OrderTimelineModal: React.FC<Props> = ({ data, onClose }) => {
           {/* Compact Step Progression */}
           <div className="grid grid-cols-5 gap-1 pt-1">
             {ORDER_STATUS_STEPS.map(step => {
+              const orderFlow: OrderStatus[] = ['pending','confirmed','processing','shipped','delivered'];
+              const curIdx = orderFlow.indexOf(currentStatus as OrderStatus);
+              const stepIdx = orderFlow.indexOf(step.id);
               const isActive = currentStatus === step.id;
-              const isPast = ['confirmed', 'processing', 'shipped', 'delivered'].indexOf(currentStatus) >= ['confirmed', 'processing', 'shipped', 'delivered'].indexOf(step.id);
+              const isPast = curIdx > stepIdx && stepIdx !== -1 && curIdx !== -1;
 
               return (
                 <button
@@ -195,6 +259,54 @@ const OrderTimelineModal: React.FC<Props> = ({ data, onClose }) => {
             <div className="p-2.5 rounded-xl bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800/60 text-xs font-bold text-red-700 dark:text-red-300 flex items-center gap-2">
               <AlertTriangle size={15} className="shrink-0" />
               <span>{statusError}</span>
+            </div>
+          )}
+
+          {/* Skip Confirmation */}
+          {pendingSkippedStatuses && pendingTargetStatus && (
+            <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-700/50 space-y-2.5">
+              <div className="text-xs font-bold text-amber-800 dark:text-amber-200 flex items-start gap-2">
+                <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+                <span>
+                  {isAr
+                    ? `سيتم تخطي المراحل التالية وتحديثها تلقائياً:`
+                    : `The following stages will be skipped and auto-updated:`}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {pendingSkippedStatuses.map((s) => {
+                  const step = ORDER_STATUS_STEPS.find((st) => st.id === s);
+                  return (
+                    <span key={s} className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-100 border border-amber-300 dark:border-amber-700">
+                      {isAr ? step?.labelAr : step?.labelEn}
+                    </span>
+                  );
+                })}
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-200 dark:bg-emerald-800 text-emerald-800 dark:text-emerald-100 border border-emerald-300 dark:border-emerald-700">
+                  → {isAr ? ORDER_STATUS_STEPS.find((st) => st.id === pendingTargetStatus)?.labelAr : ORDER_STATUS_STEPS.find((st) => st.id === pendingTargetStatus)?.labelEn}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  onClick={confirmSkipStatuses}
+                  disabled={isUpdatingStatus}
+                  className="px-3 py-1.5 rounded-xl text-[11px] font-extrabold text-white bg-emerald-600 hover:bg-emerald-700 shadow-md hover:shadow-lg transition-all flex items-center gap-1"
+                >
+                  {isUpdatingStatus ? (
+                    <RefreshCw size={12} className="animate-spin" />
+                  ) : (
+                    <CheckCircle2 size={12} />
+                  )}
+                  {isAr ? 'تأكيد وتنفيذ' : 'Confirm & Execute'}
+                </button>
+                <button
+                  onClick={cancelSkipStatuses}
+                  disabled={isUpdatingStatus}
+                  className="px-3 py-1.5 rounded-xl text-[11px] font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                >
+                  {isAr ? 'إلغاء' : 'Cancel'}
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -250,6 +362,85 @@ const OrderTimelineModal: React.FC<Props> = ({ data, onClose }) => {
           </div>
         )}
 
+        {/* Order Timeline — same design as Orders → View Details — collapsed by default */}
+        <div className="space-y-3">
+          <button
+            type="button"
+            onClick={() => setTimelineExpanded(v => !v)}
+            className="w-full flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors group"
+            aria-expanded={timelineExpanded}
+          >
+            <Clock size={12} className="text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors" />
+            <span>{isAr ? 'سجل حالة الطلب' : 'Order Timeline'}</span>
+            {displayTimeline.length ? (
+              <span className="ml-2 text-[10px] font-normal bg-gray-100 dark:bg-white/10 px-1.5 py-0.5 rounded-full border border-gray-200 dark:border-white/10 normal-case">
+                {displayTimeline.length} {isAr ? 'حدث' : 'events'}
+              </span>
+            ) : null}
+            <span className="ml-auto flex items-center gap-1.5 text-[11px] font-semibold normal-case">
+              <span className="hidden sm:inline">{timelineExpanded ? (isAr ? 'إخفاء' : 'Hide') : (isAr ? 'عرض' : 'Show')}</span>
+              <span className={`w-6 h-6 rounded-full border bg-white dark:bg-white/10 flex items-center justify-center transition-transform ${timelineExpanded ? 'rotate-180' : ''}`}>
+                <ChevronRight size={12} className="rotate-90" />
+              </span>
+            </span>
+          </button>
+          <div className={`grid transition-all duration-300 ease-in-out ${timelineExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+            <div className="overflow-hidden">
+              {displayTimeline.length === 0 ? (
+                <div className="text-center py-6 text-gray-400 text-sm bg-gray-50/50 dark:bg-white/[0.03] rounded-2xl border border-dashed border-gray-200 dark:border-white/10">
+                  {isAr ? 'لا يوجد سجل بعد' : 'No timeline events yet'}
+                </div>
+              ) : (
+                <div className="relative bg-gray-50/50 dark:bg-white/[0.03] rounded-2xl p-4 border border-gray-100 dark:border-white/5">
+                  {displayTimeline.map((event: any, index: number) => {
+                const isLast = index === displayTimeline.length - 1;
+                const iconMap: Record<string, React.ReactNode> = {
+                  pending: <Clock size={12} />,
+                  confirmed: <CheckCircle2 size={12} />,
+                  processing: <Package size={12} />,
+                  shipped: <Truck size={12} />,
+                  delivered: <CheckCircle2 size={12} />,
+                  cancelled: <XCircle size={12} />,
+                  refunded: <RefreshCw size={12} />,
+                };
+                const colorMap: Record<string, string> = {
+                  pending: 'bg-amber-100 text-amber-700 border-amber-200',
+                  confirmed: 'bg-blue-100 text-blue-700 border-blue-200',
+                  processing: 'bg-purple-100 text-purple-700 border-purple-200',
+                  shipped: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+                  delivered: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+                  cancelled: 'bg-red-100 text-red-700 border-red-200',
+                  refunded: 'bg-gray-100 text-gray-700 border-gray-200',
+                };
+                return (
+                  <div key={index} className="flex items-start gap-3 relative">
+                    {!isLast && <div className="absolute left-[15px] top-[32px] w-0.5 h-[calc(100%-8px)] bg-gray-200 dark:bg-white/10" />}
+                    <div className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center border-2 flex-shrink-0 ${isLast ? 'bg-[#0a2c23] text-white border-[#0a2c23] shadow-md' : colorMap[event.status] || 'bg-gray-100 text-gray-400 border-gray-200'}`}>
+                      {iconMap[event.status] || <Clock size={12} />}
+                    </div>
+                    <div className="pb-4 flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white capitalize">{event.status}</p>
+                        {isLast && <span className="px-1.5 py-0.5 text-[10px] font-medium bg-[#0a2c23] text-white rounded-md">Latest</span>}
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        {new Date(event.timestamp).toLocaleDateString(isAr ? 'ar-MA' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                      {event.note && (
+                        <div className="mt-1.5 px-2.5 py-1.5 rounded-lg bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10">
+                          <p className="text-xs text-gray-600 dark:text-gray-300">{event.note}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+            </div>
+          </div>
+        </div>
+
         {/* Customer Information & Quick Call Action */}
         <div className="space-y-2">
           <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 flex items-center gap-1">
@@ -291,17 +482,17 @@ const OrderTimelineModal: React.FC<Props> = ({ data, onClose }) => {
 
           <div className="max-h-28 overflow-y-auto space-y-1.5 pr-1 text-xs">
             {order.items && order.items.length > 0 ? (
-              order.items.map((item, idx) => (
+              order.items.map((item: any, idx: number) => (
                 <div
                   key={idx}
                   className="flex items-center justify-between p-2 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5"
                 >
                   <div className="flex items-center gap-2 truncate">
                     <Package size={14} className="text-gray-400 shrink-0" />
-                    <span className="font-semibold text-gray-800 dark:text-gray-200 truncate">{item.productName}</span>
+                    <span className="font-semibold text-gray-800 dark:text-gray-200 truncate">{item.productName || item.name || 'Product'}</span>
                   </div>
                   <div className="text-gray-500 dark:text-gray-400 font-semibold shrink-0">
-                    x{item.quantity} • {item.total} MAD
+                    x{item.quantity} • {item.total ?? item.price * item.quantity} MAD
                   </div>
                 </div>
               ))

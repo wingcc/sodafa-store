@@ -1,25 +1,18 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { CalendarDays } from 'lucide-react';
 import { useTranslation } from '../../i18n/useTranslation';
 import RefreshButton from '../../components/ui/RefreshButton';
-import TimePeriodSelector from '../../components/ui/TimePeriodSelector';
-import type { Period } from '../Analytic/types';
 
 interface Props {
   onRefresh: () => Promise<void>;
   isLoading: boolean;
-  period?: Period;
-  setPeriod?: (p: Period) => void;
 }
 
-const DashboardHeader: React.FC<Props> = ({ onRefresh, isLoading, period = '7d', setPeriod }) => {
+const DashboardHeader: React.FC<Props> = ({ onRefresh, isLoading }) => {
   const { t, isRTL, language } = useTranslation();
   const isAr = language === 'ar';
-  const [internalPeriod, setInternalPeriod] = useState<Period>(period);
-  const activePeriod = setPeriod ? period : internalPeriod;
-  const handleSetPeriod = setPeriod || setInternalPeriod;
 
   const today = new Date().toLocaleDateString(isRTL ? 'ar-MA' : 'en-GB', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
 
@@ -37,7 +30,6 @@ const DashboardHeader: React.FC<Props> = ({ onRefresh, isLoading, period = '7d',
       </div>
 
       <div className="flex items-center gap-3 shrink-0 self-start xl:self-auto flex-wrap">
-        <TimePeriodSelector period={activePeriod} setPeriod={handleSetPeriod} />
         <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100/80 dark:bg-white/5 border border-gray-200/50 dark:border-white/5 text-xs font-medium text-gray-600 dark:text-gray-300">
           <CalendarDays size={14} className="text-[var(--color-darkGreen,#047857)]" />
           <span>{today}</span>

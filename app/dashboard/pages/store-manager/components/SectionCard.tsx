@@ -12,6 +12,7 @@ interface SectionCardProps {
   description: string;
   href: string;
   color: Color;
+  onClick?: () => void;
 }
 
 const colorMap: Record<Color, string> = {
@@ -30,12 +31,10 @@ export default function SectionCard({
   description,
   href,
   color,
+  onClick,
 }: SectionCardProps) {
-  return (
-    <Link
-      href={href}
-      className={`group flex items-center justify-between p-6 rounded-2xl border-2 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${colorMap[color]}`}
-    >
+  const inner = (
+    <>
       <div className="flex items-start gap-4">
         <div className="p-3 rounded-xl bg-white shadow-sm group-hover:shadow transition-all">
           <Icon size={24} strokeWidth={1.8} />
@@ -49,6 +48,24 @@ export default function SectionCard({
         size={20}
         className="text-gray-400 group-hover:text-gray-600 transition-colors"
       />
+    </>
+  );
+
+  const className = `group flex items-center justify-between p-6 rounded-2xl border-2 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 w-full text-left ${colorMap[color]}`;
+
+  // If onClick provided (used by Overview.tsx via setCurrentPage), render as button
+  // to avoid Next.js Link navigation interfering with Zustand routing (href="#" bug).
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={className}>
+        {inner}
+      </button>
+    );
+  }
+
+  return (
+    <Link href={href} className={className}>
+      {inner}
     </Link>
   );
 }

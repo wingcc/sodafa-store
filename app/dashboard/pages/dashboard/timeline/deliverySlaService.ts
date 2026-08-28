@@ -34,22 +34,65 @@ export function getSlaDurationMs(deliveryMethod?: string): number {
   return 24 * 3600 * 1000;
 }
 
+function getTimelineTimestampForStatus(order: any, status: string): number | null {
+  const tl = Array.isArray((order as any).timeline) ? (order as any).timeline : Array.isArray((order as any).order_timeline) ? (order as any).order_timeline : null;
+  if (tl && tl.length) {
+    const matches = (tl as any[]).filter((e: any) => e.status === status);
+    if (matches.length) {
+      // Use latest timestamp for that status (in case of multiple)
+      const sorted = matches
+        .map((e: any) => new Date(e.timestamp ?? e.created_at ?? e.time).getTime())
+        .filter((t: number) => !Number.isNaN(t))
+        .sort((a: number, b: number) => b - a);
+      if (sorted.length) return sorted[0];
+    }
+  }
+  return null;
+}
+
 export function getShippedTimestamp(order: any): number {
-  if (order.shippedAt) return new Date(order.shippedAt).getTime();
-  if (order.updatedAt && order.orderStatus === 'shipped') return new Date(order.updatedAt).getTime();
-  const created = new Date(order.createdAt || Date.now()).getTime();
-  return created;
+  const fromTimeline = getTimelineTimestampForStatus(order, 'shipped');
+  if (fromTimeline !== null) return fromTimeline;
+  if (order.shippedAt) {
+    const t = new Date(order.shippedAt).getTime();
+    if (!Number.isNaN(t)) return t;
+  }
+  if ((order as any).shipped_at) {
+    const t = new Date((order as any).shipped_at).getTime();
+    if (!Number.isNaN(t)) return t;
+  }
+  if (order.updatedAt && order.orderStatus === 'shipped') {
+    const t = new Date(order.updatedAt).getTime();
+    if (!Number.isNaN(t)) return t;
+  }
+  const created = new Date(order.createdAt || (order as any).created_at || Date.now()).getTime();
+  return Number.isNaN(created) ? Date.now() : created;
 }
 
 export function getOrderTimestampForStatus(order: any): number {
   const st = order.orderStatus;
-  if (st === 'shipped' && order.shippedAt) return new Date(order.shippedAt).getTime();
-  if (st === 'delivered' && order.deliveredAt) return new Date(order.deliveredAt).getTime();
-  if (st === 'confirmed' && order.confirmedAt) return new Date(order.confirmedAt).getTime();
-  if (st === 'processing' && order.processingStartedAt) return new Date(order.processingStartedAt).getTime();
-  if (st === 'cancelled' && order.cancelledAt) return new Date(order.cancelledAt).getTime();
+  const safe = (v: any) => {
+    const t = new Date(v).getTime();
+    return Number.isNaN(t) ? null : t;
+  };
+  // First, try timeline (source of truth) — ensures pending/processing respect actual time
+  const tlTs = getTimelineTimestampForStatus(order, st);
+  if (tlTs !== null) return tlTs;
 
-  return new Date(order.createdAt || Date.now()).getTime();
+  if (st === 'shipped' && order.shippedAt) return safe(order.shippedAt) ?? new Date(order.createdAt || (order as any).created_at || Date.now()).getTime();
+  if (st === 'shipped' && (order as any).shipped_at) return safe((order as any).shipped_at) ?? new Date(order.createdAt || (order as any).created_at || Date.now()).getTime();
+  if (st === 'delivered' && order.deliveredAt) return safe(order.deliveredAt) ?? safe(order.shippedAt) ?? new Date(order.createdAt || (order as any).created_at || Date.now()).getTime();
+  if (st === 'delivered' && (order as any).delivered_at) return safe((order as any).delivered_at) ?? safe((order as any).shipped_at) ?? new Date(order.createdAt || (order as any).created_at || Date.now()).getTime();
+  if (st === 'delivered' && order.shippedAt) return safe(order.shippedAt) ?? new Date(order.createdAt || (order as any).created_at || Date.now()).getTime();
+  if (st === 'confirmed' && order.confirmedAt) return safe(order.confirmedAt) ?? new Date(order.createdAt || (order as any).created_at || Date.now()).getTime();
+  if (st === 'confirmed' && (order as any).confirmed_at) return safe((order as any).confirmed_at) ?? new Date(order.createdAt || (order as any).created_at || Date.now()).getTime();
+  if (st === 'processing' && order.processingStartedAt) return safe(order.processingStartedAt) ?? new Date(order.createdAt || (order as any).created_at || Date.now()).getTime();
+  if (st === 'processing' && (order as any).processing_started_at) return safe((order as any).processing_started_at) ?? new Date(order.createdAt || (order as any).created_at || Date.now()).getTime();
+  if (st === 'cancelled' && order.cancelledAt) return safe(order.cancelledAt) ?? new Date(order.createdAt || (order as any).created_at || Date.now()).getTime();
+  if (st === 'cancelled' && (order as any).cancelled_at) return safe((order as any).cancelled_at) ?? new Date(order.createdAt || (order as any).created_at || Date.now()).getTime();
+  if (st === 'refunded' && (order as any).refundedAt) return safe((order as any).refundedAt) ?? new Date(order.createdAt || (order as any).created_at || Date.now()).getTime();
+  if (st === 'refunded' && (order as any).refunded_at) return safe((order as any).refunded_at) ?? new Date(order.createdAt || (order as any).created_at || Date.now()).getTime();
+  return new Date(order.createdAt || (order as any).created_at || Date.now()).getTime();
 }
 
 export function calcPercentFromTimestamp(ts: number, viewportStart: number, viewportDuration: number): number {
@@ -68,14 +111,18 @@ export function formatDurationMs(ms: number, isAr: boolean = false): string {
 
   let str = '';
   if (days > 0) {
-    str = isAr ? `${days} يوم ${remHours} س` : `${days}d ${remHours}h`;
+    if (remHours > 0 || mins > 0) {
+      str = isAr ? `${days} يوم ${remHours} س ${mins} د` : `${days}d ${remHours}h ${mins}m`;
+    } else {
+      str = isAr ? `${days} يوم` : `${days}d`;
+    }
   } else if (hours > 0) {
     str = isAr ? `${hours} س ${mins} د` : `${hours}h ${mins}m`;
   } else {
     str = isAr ? `${mins} دقيقة` : `${mins}m`;
   }
 
-  return isNegative ? (isAr ? `تأخير -${str}` : `-${str}`) : str;
+  return isNegative ? (isAr ? `تأخير ${str}` : `-${str}`) : str;
 }
 
 export function calculateOrderSla(order: Order, now: Date = new Date(), isAr: boolean = false): SlaInfo {
@@ -92,7 +139,7 @@ export function calculateOrderSla(order: Order, now: Date = new Date(), isAr: bo
       remainingMs: 0,
       remainingFormatted: '--',
       slaPercent: 100,
-      state: status === 'delivered' ? 'delivered' : 'none',
+      state: 'none',
     };
   }
 
@@ -100,7 +147,10 @@ export function calculateOrderSla(order: Order, now: Date = new Date(), isAr: bo
   const deadline = shippedAt + slaDurationMs;
 
   if (status === 'delivered') {
-    const deliveredAt = (order as any).deliveredAt ? new Date((order as any).deliveredAt).getTime() : deadline - 2 * 3600 * 1000;
+    const rawDelivered = (order as any).deliveredAt || (order as any).updatedAt || order.updatedAt;
+    let deliveredAt = rawDelivered ? new Date(rawDelivered).getTime() : NaN;
+    if (Number.isNaN(deliveredAt)) deliveredAt = Date.now();
+    if (deliveredAt < shippedAt) deliveredAt = shippedAt;
     const actualDuration = deliveredAt - shippedAt;
     const diff = slaDurationMs - actualDuration;
     const isEarly = diff >= 0;
