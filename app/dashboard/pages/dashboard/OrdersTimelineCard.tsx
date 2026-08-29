@@ -4,7 +4,8 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import {
   Truck, Clock, AlertTriangle, Phone, ChevronRight, Sparkles, Filter, CheckCircle2, Radio,
   ZoomIn, ZoomOut, RotateCcw, PackageCheck, RefreshCw, XCircle, AlertCircle, Search,
-  ShieldAlert, Layers, ChevronLeft, Calendar, Maximize2, Minimize2, X, HelpCircle, Hourglass
+  ShieldAlert, Layers, ChevronLeft, Calendar, Maximize2, Minimize2, X, HelpCircle,
+  Target, ChevronsLeft, ChevronsRight
 } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from '../../i18n/useTranslation';
@@ -18,49 +19,35 @@ import {
   calculateOrderSla, checkAndTriggerSlaNotifications,
   getOrderTimestampForStatus, calcPercentFromTimestamp
 } from './timeline/deliverySlaService';
-import { normalizeHistory, buildAccurateTimeline, GROUP_THRESHOLD_MS, type TimelineElement } from './timeline/timelineController';
+import {
+  normalizeHistory, type TimelineElement,
+  computeFitCenterMs, getOffViewportSummary,
+} from './timeline/timelineController';
+import {
+  buildTimelineElements,
+  formatDurationMs,
+  formatDateTime,
+  type TimelineNode,
+} from './timeline/services/timelineService';
+import {
+  TimelineConnector,
+  TimelineCircle,
+  TimelineGroup,
+  TimelineMerged,
+  TimelineGapAnnotations,
+  StatusPill,
+  STATUS_STYLE,
+  ICON_MAP,
+  DENSITY_CONFIG,
+  type DensityKey,
+} from './timeline';
 import type { Order, OrderStatus } from '../../types';
 
-// ── Lifecycle helpers (kept for style mapping) ──
+// ── Lifecycle helpers ──
 const LIFECYCLE_ORDER: OrderStatus[] = ['pending','confirmed','processing','shipped','delivered','cancelled','refunded'];
 
-// ── Shared state style constants (used by both render branches) ──
-const STATUS_STYLE: Record<string, { bg: string; border: string; iconColor: string; pill: string; anim: string }> = {
-  pending:    { bg: 'bg-amber-50 dark:bg-amber-950/80',  border: 'border-amber-300 dark:border-amber-600',  iconColor: 'text-amber-500',  pill: 'bg-amber-50 dark:bg-amber-950/80 border-amber-300 dark:border-amber-500 text-amber-700 dark:text-amber-200', anim: 'animate-pulse' },
-  confirmed:  { bg: 'bg-blue-50 dark:bg-blue-950/80',    border: 'border-blue-300 dark:border-blue-600',    iconColor: 'text-blue-500',    pill: 'bg-blue-50 dark:bg-blue-950/80 border-blue-300 dark:border-blue-500 text-blue-700 dark:text-blue-200', anim: '' },
-  processing: { bg: 'bg-violet-50 dark:bg-violet-950/80', border: 'border-violet-300 dark:border-violet-600', iconColor: 'text-violet-500', pill: 'bg-violet-50 dark:bg-violet-950/80 border-violet-300 dark:border-violet-500 text-violet-700 dark:text-violet-200', anim: 'animate-spin' },
-  shipped:    { bg: 'bg-emerald-50 dark:bg-emerald-950/80', border: 'border-emerald-300 dark:border-emerald-600', iconColor: 'text-emerald-500', pill: '', anim: '' },
-  delivered:  { bg: 'bg-gray-100 dark:bg-gray-800/60',   border: 'border-gray-300 dark:border-gray-600',    iconColor: 'text-gray-400',    pill: 'bg-gray-100 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 grayscale-[30%]', anim: '' },
-  cancelled:  { bg: 'bg-red-50 dark:bg-red-950/80',      border: 'border-red-300 dark:border-red-600',      iconColor: 'text-red-500',     pill: 'bg-gray-100 dark:bg-red-950/60 border-gray-300 dark:border-red-700 text-gray-500 dark:text-red-300 line-through opacity-60', anim: '' },
-  refunded:   { bg: 'bg-gray-100 dark:bg-gray-800/60',   border: 'border-gray-300 dark:border-gray-600',    iconColor: 'text-gray-400',    pill: 'bg-gray-100 dark:bg-gray-800/60 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400', anim: '' },
-};
-const ICON_MAP: Record<string, any> = { pending: Clock, confirmed: CheckCircle2, processing: RefreshCw, shipped: Truck, delivered: CheckCircle2, cancelled: XCircle, refunded: XCircle };
-// ── Real-Time Controller delegation ──
-// getLifecycleHistory and buildTimeline now delegate to timelineController.ts
-// which enforces time-respect (chronological sort), 2-4h grouping, and merge rules.
-// The old pixel-based threshold (44px / pxPerMs) is replaced by fixed 4h (GROUP_THRESHOLD_MS)
-// to guarantee same result at any zoom and correct day column placement.
-
-function getLifecycleHistory(order: any): { status: OrderStatus; timestampMs: number; timeStr: string }[] {
-  // Delegate to centralized controller — ensures every call respects actual timestamp
+function getLifecycleHistory(order: any): TimelineNode[] {
   return normalizeHistory(order);
-}
-
-type TimelineNode = { status: OrderStatus; timestampMs: number; timeStr: string };
-
-function buildTimeline(
-  lifecycleHistory: TimelineNode[],
-  currentStatus: string,
-  viewportStartMs: number,
-  viewportDurationMs: number,
-  zoomLevel: number,
-  currentPct: number,
-): { elements: TimelineElement[]; connectors: { from: number; to: number }[] } {
-  // Re-derive currentTimestamp from currentPct for accurate time-based controller
-  const currentTimestamp = viewportStartMs + (currentPct / 100) * viewportDurationMs;
-  const result = buildAccurateTimeline(lifecycleHistory, currentStatus, viewportStartMs, viewportDurationMs, zoomLevel, currentTimestamp);
-  // Preserve 'merged' type for new rendering (shows 3 icons in same shipping column)
-  return { elements: result.elements as any, connectors: result.connectors };
 }
 const DensityHelpButton: React.FC<{ isAr: boolean }> = ({ isAr }) => {
   const [open, setOpen] = useState(false);
@@ -369,6 +356,40 @@ const OrdersTimelineCard: React.FC = () => {
     setCenterDate(new Date());
   };
 
+  // ── Editor tool: "Fit to Data" / "Zoom to Fit" ──
+  // Jumps the viewport to the timestamp that best centers ALL of the current
+  // orders' real event history, instead of forcing the user to page ±3 days
+  // at a time to find where their data actually lives.
+  const handleFitToData = useCallback(() => {
+    const centerMs = computeFitCenterMs(orders);
+    if (centerMs !== null) setCenterDate(new Date(centerMs));
+  }, [orders]);
+
+  // ── Editor tool: "Jump to Date" — direct navigation via a date input,
+  // a standard control in professional timeline/Gantt editors.
+  const handleJumpToDate = (dateStr: string) => {
+    if (!dateStr) return;
+    const [y, m, d] = dateStr.split('-').map(Number);
+    if (!y || !m || !d) return;
+    setCenterDate(new Date(y, m - 1, d));
+  };
+
+  // ── Editor tool: keyboard shortcuts (←/→ page days, Home = today, +/- zoom) ──
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const typing = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+      if (typing) return;
+      if (e.key === 'ArrowLeft') { e.preventDefault(); handlePrevDays(); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); handleNextDays(); }
+      else if (e.key === 'Home') { e.preventDefault(); handleGoToday(); }
+      else if (e.key === '+' || e.key === '=') { e.preventDefault(); handleZoomIn(); }
+      else if (e.key === '-' || e.key === '_') { e.preventDefault(); handleZoomOut(); }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
   const handleRefreshTimeline = async () => {
     setIsRefreshing(true);
     try {
@@ -517,11 +538,10 @@ const OrdersTimelineCard: React.FC = () => {
 
   // Memoized timeline cache per order — avoids rebuilding 20+ rows on every render (2.1)
   const timelineCache = useMemo(() => {
-    const cache = new Map<string, ReturnType<typeof buildTimeline>>();
+    const cache = new Map<string, ReturnType<typeof buildTimelineElements>>();
     for (const item of timelineData) {
       const hist = (item.lifecycleHistory as any[]).filter((n: any) => n.status !== item.orderStatus);
-      const leftPct = calcPercentFromTimestamp(item.eventTimestamp, viewportStartMs, viewportDurationMs);
-      const result = buildTimeline(hist as any, item.orderStatus, viewportStartMs, viewportDurationMs, zoomLevel, leftPct);
+      const result = buildTimelineElements(hist as any, item.orderStatus, item.eventTimestamp, viewportStartMs, viewportDurationMs, zoomLevel);
       cache.set(item.order.id, result as any);
     }
     return cache;
@@ -530,6 +550,16 @@ const OrdersTimelineCard: React.FC = () => {
   const alertOrder = useMemo(() => {
     return timelineData.find(d => d.slaState === 'critical' || d.slaState === 'warning' || d.slaState === 'overdue');
   }, [timelineData]);
+
+  // ── Editor tool: off-viewport awareness ──
+  // Orders whose real event time falls outside the current 7-day window would
+  // previously render pinned at the 0%/100% edge (clamped by calcPercentFromTimestamp),
+  // which looks like a positioning bug. We now surface them as explicit,
+  // clickable "N earlier / N later" indicators instead of silently mis-placing them.
+  const offViewportSummary = useMemo(
+    () => getOffViewportSummary(timelineData, viewportStartMs, viewportEndMs),
+    [timelineData, viewportStartMs, viewportEndMs],
+  );
 
   // Filtered dataset
   const filteredData = useMemo(() => {
@@ -729,30 +759,78 @@ const OrdersTimelineCard: React.FC = () => {
         {/* Bottom Row: Date Nav & Filter Pills */}
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3 pt-3 border-t border-gray-200 dark:border-white/10">
           {/* Date Navigation Controls */}
-          <div className="flex items-center gap-1 bg-white dark:bg-gray-900 rounded-xl p-1 border border-gray-200/80 dark:border-white/10 shadow-2xs shrink-0">
-            <button
-              onClick={handlePrevDays}
-              title={isAr ? 'الأيام السابقة' : 'Previous Days'}
-              className="p-1 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 transition-all"
-            >
-              <ChevronLeft size={15} />
-            </button>
+          <div className="flex items-center gap-2 shrink-0 flex-wrap">
+            {/* "N earlier" jump chip — replaces silent edge-clamping of off-viewport orders */}
+            {offViewportSummary.beforeCount > 0 && (
+              <button
+                onClick={() => offViewportSummary.nearestBeforeMs !== null && setCenterDate(new Date(offViewportSummary.nearestBeforeMs))}
+                title={isAr ? 'القفز إلى أقرب طلب أقدم من نافذة العرض' : 'Jump to nearest order before this view'}
+                className="px-2 py-1 rounded-lg text-[11px] font-black text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/40 flex items-center gap-1 hover:bg-amber-100 dark:hover:bg-amber-900/60 transition-all"
+              >
+                <ChevronsLeft size={12} />
+                {offViewportSummary.beforeCount} {isAr ? 'أقدم' : 'earlier'}
+              </button>
+            )}
 
-            <button
-              onClick={handleGoToday}
-              className="px-2.5 py-1 text-xs font-black text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 rounded-lg shadow-sm flex items-center gap-1.5 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-all border border-emerald-200 dark:border-emerald-800/40"
-            >
-              <Calendar size={12} />
-              <span>{isAr ? 'اليوم' : 'Today'}</span>
-            </button>
+            <div className="flex items-center gap-1 bg-white dark:bg-gray-900 rounded-xl p-1 border border-gray-200/80 dark:border-white/10 shadow-2xs">
+              <button
+                onClick={handlePrevDays}
+                title={isAr ? 'الأيام السابقة (←)' : 'Previous Days (←)'}
+                className="p-1 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 transition-all"
+              >
+                <ChevronLeft size={15} />
+              </button>
 
-            <button
-              onClick={handleNextDays}
-              title={isAr ? 'الأيام القادمة' : 'Next Days'}
-              className="p-1 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 transition-all"
-            >
-              <ChevronRight size={15} />
-            </button>
+              <button
+                onClick={handleGoToday}
+                title={isAr ? 'اليوم (Home)' : 'Today (Home)'}
+                className="px-2.5 py-1 text-xs font-black text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 rounded-lg shadow-sm flex items-center gap-1.5 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-all border border-emerald-200 dark:border-emerald-800/40"
+              >
+                <Calendar size={12} />
+                <span>{isAr ? 'اليوم' : 'Today'}</span>
+              </button>
+
+              {/* "Fit to Data" / "Zoom to Fit" — professional timeline-editor tool:
+                  centers the view on where the orders' real history actually is,
+                  instead of paging manually 3 days at a time. */}
+              <button
+                onClick={handleFitToData}
+                title={isAr ? 'ملاءمة تلقائية — التمركز حول بيانات الطلبات الفعلية' : 'Fit to Data — center on actual order history'}
+                className="px-2.5 py-1 text-xs font-black text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 rounded-lg shadow-sm flex items-center gap-1.5 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition-all border border-indigo-200 dark:border-indigo-800/40"
+              >
+                <Target size={12} />
+                <span>{isAr ? 'ملاءمة' : 'Fit'}</span>
+              </button>
+
+              {/* "Jump to Date" — direct navigation input, standard in Gantt/timeline editors */}
+              <input
+                type="date"
+                title={isAr ? 'الانتقال إلى تاريخ محدد' : 'Jump to a specific date'}
+                value={`${centerDate.getFullYear()}-${String(centerDate.getMonth() + 1).padStart(2, '0')}-${String(centerDate.getDate()).padStart(2, '0')}`}
+                onChange={e => handleJumpToDate(e.target.value)}
+                className="text-[11px] font-bold bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/10 rounded-lg px-1.5 py-1 text-gray-700 dark:text-gray-200 cursor-pointer"
+              />
+
+              <button
+                onClick={handleNextDays}
+                title={isAr ? 'الأيام القادمة (→)' : 'Next Days (→)'}
+                className="p-1 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 transition-all"
+              >
+                <ChevronRight size={15} />
+              </button>
+            </div>
+
+            {/* "N later" jump chip */}
+            {offViewportSummary.afterCount > 0 && (
+              <button
+                onClick={() => offViewportSummary.nearestAfterMs !== null && setCenterDate(new Date(offViewportSummary.nearestAfterMs))}
+                title={isAr ? 'القفز إلى أقرب طلب بعد نافذة العرض' : 'Jump to nearest order after this view'}
+                className="px-2 py-1 rounded-lg text-[11px] font-black text-sky-700 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/40 flex items-center gap-1 hover:bg-sky-100 dark:hover:bg-sky-900/60 transition-all"
+              >
+                {offViewportSummary.afterCount} {isAr ? 'أحدث' : 'later'}
+                <ChevronsRight size={12} />
+              </button>
+            )}
           </div>
 
           {/* Unified KPI Filter Pills */}
@@ -1037,190 +1115,135 @@ const OrdersTimelineCard: React.FC = () => {
                           const isShippedBranch = st === 'shipped' || st === 'delivered';
                           const pillPct = isShippedBranch ? startPercent : leftPercent;
 
-                          // Helper: format duration between two timestamps
-                          const fmtDur = (aMs: number, bMs: number) => {
-                            const diff = Math.abs(bMs - aMs);
-                            const m = Math.floor(diff / 60000);
-                            if (m < 60) return `${m}m`;
-                            return `${Math.floor(m / 60)}h ${m % 60}m`;
+                          // Build timeline using new service (with cache support)
+                          const buildTimelineResult = () => {
+                            const cachedBuild = timelineCache.get(item.order.id);
+                            if (cachedBuild) return cachedBuild;
+                            
+                            return buildTimelineElements(
+                              lifecycleNodes as any,
+                              st,
+                              item.eventTimestamp,
+                              viewportStartMs,
+                              viewportDurationMs,
+                              zoomLevel
+                            );
                           };
-
-                          // Helper: format full date string
-                          const fmtDate = (ts: number) => {
-                            return new Date(ts).toLocaleDateString(isAr ? 'ar-MA' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + ' — ' + new Date(ts).toLocaleTimeString(isAr ? 'ar-MA' : 'en-GB', { hour: '2-digit', minute: '2-digit' });
-                          };
-
-                          // Pre-compute accurate timeline via Real-Time Controller — use cache when available (2.1)
-                          const cachedBuild = timelineCache.get(item.order.id);
-                          const timelineBuild = cachedBuild ?? buildTimeline(
-                            lifecycleNodes, st, viewportStartMs, viewportDurationMs, zoomLevel, leftPercent,
-                          );
-                          const hasMergedCurrent = (timelineBuild.elements as any).some((el: any) => el.type === 'merged' && el.nodes.some((n: any) => n.status === st));
-                          const mergedElement = (timelineBuild.elements as any).find((el: any) => el.type === 'merged') as any;
+                          
+                          const { elements, connectors } = buildTimelineResult();
+                          const hasMergedCurrent = elements.some((el: any) => el.type === 'merged' && el.nodes.some((n: any) => n.status === st));
+                          const mergedElement = elements.find((el: any) => el.type === 'merged') as any;
                           const recentForHeader = [...lifecycleNodes].sort((a:any,b:any)=> b.timestampMs - a.timestampMs).slice(0,2).reverse();
 
-                          const renderLifecycleCircles = (opts?: { excludeMerged?: boolean }) => {
-                            if (!lifecycleNodes.length) return null;
+                          // Handlers for hover
+                          const handleNodeHover = (node: TimelineNode, element: HTMLElement) => {
+                            const rect = element.getBoundingClientRect();
+                            setHoveredNode({ node, element, status: node.status });
+                            setHoverRect(rect);
+                            if (headerRef.current) setHeaderBottom(headerRef.current.getBoundingClientRect().bottom);
+                          };
+                          const handleNodeLeave = () => { setHoveredNode(null); setHoverRect(null); };
 
-                            let { elements, connectors } = timelineBuild as any;
-                            if (opts?.excludeMerged) {
-                              elements = elements.filter((el: any) => el.type !== 'merged');
-                              // recompute connectors without merged element
-                              connectors = connectors.filter((c: any) => {
-                                // keep connectors that don't involve merged pct
+                          // Render lifecycle elements using new components
+                          const renderLifecycleElements = (opts?: { excludeMerged?: boolean }) => {
+                            if (!elements.length) return null;
+
+                            let filteredElements = elements;
+                            let filteredConnectors = connectors;
+                            
+                            if (opts?.excludeMerged && mergedElement) {
+                              filteredElements = elements.filter((el: any) => el.type !== 'merged');
+                              filteredConnectors = connectors.filter((c: any) => {
                                 if (mergedElement && (Math.abs(c.from - mergedElement.pct) < 0.01 || Math.abs(c.to - mergedElement.pct) < 0.01)) return false;
                                 return true;
                               });
                             }
-                            if (elements.length === 0 && !opts?.excludeMerged) return null;
-                            if (opts?.excludeMerged && elements.length === 0) return null;
-
-                            if (elements.length === 0) return null;
+                            
+                            if (!filteredElements.length) return null;
 
                             return (
                               <>
                                 {/* Connectors */}
-                                {connectors.map((c: { from: number; to: number }, ci: number) => (
-                                  <div
-                                    key={`conn-${ci}`}
-                                    className="absolute z-[5] lifecycle-dash-x"
-                                    style={{ left: `${c.from}%`, width: `${Math.max(0, c.to - c.from)}%`, top: `${centerY - 1}px` }}
-                                  />
+                                {filteredConnectors.map((c: { from: number; to: number }, ci: number) => (
+                                  <TimelineConnector key={`conn-${ci}`} from={c.from} to={c.to} top={centerY - 1} />
                                 ))}
 
                                 {/* Smart Annotations — Time Gaps >8h */}
-                                {(() => {
-                                  const gaps = [];
-                                  const allHist = (item.lifecycleHistory || []) as any[];
-                                  const sorted = [...allHist].sort((a:any,b:any)=> a.timestampMs - b.timestampMs);
-                                  for (let i=1; i<sorted.length; i++) {
-                                    const prev = sorted[i-1];
-                                    const curr = sorted[i];
-                                    const gapMs = curr.timestampMs - prev.timestampMs;
-                                    if (gapMs > 8*3600*1000) {
-                                      const midPct = (calcPercentFromTimestamp(prev.timestampMs, viewportStartMs, viewportDurationMs) + calcPercentFromTimestamp(curr.timestampMs, viewportStartMs, viewportDurationMs)) / 2;
-                                      const hours = Math.round(gapMs / 3600000);
-                                      gaps.push({ midPct, gapMs, hours, fromStatus: prev.status, toStatus: curr.status });
-                                    }
-                                  }
-                                  return gaps.map((g, idx) => (
-                                    <div key={`gap-${idx}`} className="absolute z-[7] flex flex-col items-center opacity-0 group-hover/row:opacity-100 transition-opacity duration-200 pointer-events-none group-hover/row:pointer-events-auto" style={{ left: `${g.midPct}%`, transform: 'translateX(-50%)', top: `${centerY - 28}px` }}>
-                                      <span className="w-5 h-5 rounded-full bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-600 flex items-center justify-center text-amber-600 dark:text-amber-400 shadow-sm cursor-help" title={`${isAr ? 'تأخر داخلي' : 'Internal delay'} ${g.hours}h ${isAr ? 'عن المتوسط' : 'above average'} — ${g.fromStatus} → ${g.toStatus}`}>
-                                        <Hourglass size={10} />
-                                      </span>
-                                      <span className="text-[8px] font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 px-1 py-0.5 rounded-full border border-amber-200 dark:border-amber-700 mt-0.5 whitespace-nowrap">
-                                        {g.hours}h
-                                      </span>
-                                    </div>
-                                  ));
-                                })()}
+                                <TimelineGapAnnotations
+                                  lifecycleHistory={item.lifecycleHistory as any}
+                                  viewportStartMs={viewportStartMs}
+                                  viewportDurationMs={viewportDurationMs}
+                                  centerY={centerY}
+                                  isAr={isAr}
+                                  top={-28}
+                                />
 
                                 {/* Visual elements — time-respect, merged shows same-column */}
-                                {elements.map((el: TimelineElement, ei: number) => {
-                                  const nextEl = elements[ei + 1];
+                                {filteredElements.map((el: TimelineElement, ei: number) => {
+                                  const nextEl = filteredElements[ei + 1];
                                   const nextFirstNode = nextEl ? (nextEl.type === 'circle' ? (nextEl as any).node : (nextEl as any).nodes[0]) : null;
-                                  const nextPct = nextEl?.pct ?? leftPercent;
+                                  const nextTimestamp = nextFirstNode?.timestampMs ?? item.eventTimestamp;
 
                                   if ((el as any).type === 'merged') {
                                     const m = el as any;
-                                    // Merged: historical + current in same shipping column — show as separate circles at same x, no bending group
                                     return (
-                                      <React.Fragment key={`merged-${ei}`}>
-                                        <div
-                                          style={{ left: `${m.pct}%`, transform: 'translateX(-50%)', top: `${nodeY}px` }}
-                                          className="absolute z-10 flex items-center gap-1"
-                                        >
-                                          {m.nodes.map((node: any, ni: number) => {
-                                            const Ic2: any = ICON_MAP[node.status] || Clock;
-                                            const sc2: any = STATUS_STYLE[node.status] || STATUS_STYLE.pending;
-                                            return (
-                                              <div key={`m-${ni}`} className={`w-8 h-8 rounded-full border flex items-center justify-center shadow-md ${sc2.pill}`}>
-                                                <Ic2 size={nodeIconSize} className={`${sc2.iconColor} ${sc2.anim} shrink-0`} />
-                                              </div>
-                                            );
-                                          })}
-                                        </div>
-                                      </React.Fragment>
+                                      <TimelineMerged
+                                        key={`merged-${ei}`}
+                                        nodes={m.nodes}
+                                        currentStatus={st}
+                                        pct={m.pct}
+                                        top={nodeY}
+                                        iconSize={nodeIconSize}
+                                        orderId={orderIdStr}
+                                        isAr={isAr}
+                                        onNodeHover={handleNodeHover}
+                                        onNodeLeave={handleNodeLeave}
+                                        formatDuration={formatDurationMs}
+                                        formatDate={formatDateTime}
+                                        eventTimestamp={item.eventTimestamp}
+                                        onClick={() => setSelectedMeta(item)}
+                                      />
                                     );
                                   }
 
                                   if (el.type === 'circle') {
                                     const node = el.node;
-                                    const sc = STATUS_STYLE[node.status] || STATUS_STYLE.pending;
-                                    const Ic = ICON_MAP[node.status] || Clock;
-                                    const durStr = nextFirstNode
-                                      ? fmtDur(node.timestampMs, nextFirstNode.timestampMs)
-                                      : fmtDur(node.timestampMs, item.eventTimestamp);
                                     return (
-                                      <React.Fragment key={`lc-${node.status}-${ei}`}>
-                                        <div
-                                          onMouseEnter={(e) => {
-                                            const rect = e.currentTarget.getBoundingClientRect();
-                                            setHoveredNode({ node, element: e.currentTarget as HTMLElement, status: node.status });
-                                            setHoverRect(rect);
-                                            if (headerRef.current) setHeaderBottom(headerRef.current.getBoundingClientRect().bottom);
-                                          }}
-                                          onMouseLeave={() => { setHoveredNode(null); setHoverRect(null); }}
-                                          style={{ left: `${el.pct}%`, transform: 'translateX(-50%)', top: `${nodeY}px` }}
-                                          className={`absolute z-10 h-8 w-8 rounded-full border flex items-center justify-center shadow-md cursor-pointer group/lc transition-all hover:scale-125 hover:shadow-lg hover:z-[60] whitespace-nowrap ${sc.pill}`}
-                                        >
-                                          <Ic size={nodeIconSize} className={`${sc.iconColor} ${sc.anim} shrink-0`} />
-                                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/lc:block z-[9999] pointer-events-none">
-                                            <div className="bg-gray-900 dark:bg-gray-800 text-white text-[10px] rounded-lg px-2.5 py-1.5 shadow-xl border border-gray-700 whitespace-nowrap">
-                                              <div className="font-bold capitalize">{node.status}</div>
-                                              <div className="opacity-70">#{orderIdStr}</div>
-                                              <div className="opacity-70">{fmtDate(node.timestampMs)}</div>
-                                              {durStr && <div className="text-emerald-400 mt-0.5">{isAr ? 'المدة:' : 'Duration:'} {durStr}</div>}
-                                              <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900 dark:border-t-gray-800" />
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </React.Fragment>
+                                      <TimelineCircle
+                                        key={`lc-${node.status}-${ei}`}
+                                        node={node}
+                                        pct={el.pct}
+                                        top={nodeY}
+                                        height={nodeH}
+                                        iconSize={nodeIconSize}
+                                        orderId={orderIdStr}
+                                        isAr={isAr}
+                                        onNodeHover={handleNodeHover}
+                                        onNodeLeave={handleNodeLeave}
+                                        formatDuration={formatDurationMs}
+                                        formatDate={formatDateTime}
+                                        nextTimestamp={nextTimestamp}
+                                      />
                                     );
                                   }
 
                                   // Group
                                   return (
-                                    <React.Fragment key={`lg-${ei}`}>
-                                      <div
-                                        style={{ left: `${el.pct}%`, transform: 'translateX(-4px)', top: `${nodeY}px` }}
-                                        className={`absolute z-10 h-8 rounded-full border p-0.5 flex items-center gap-1 shadow-md cursor-pointer transition-all hover:shadow-lg hover:scale-[1.01] hover:z-[60] whitespace-nowrap ${STATUS_STYLE[el.nodes[0].status]?.pill || STATUS_STYLE.pending.pill}`}
-                                      >
-                                        {(el as any).nodes.map((node: any, ni: number) => {
-                                          const Ic = ICON_MAP[node.status] || Clock;
-                                          const nextNodeInGroup = el.nodes[ni + 1];
-                                          const durStr = nextNodeInGroup
-                                            ? fmtDur(node.timestampMs, nextNodeInGroup.timestampMs)
-                                            : fmtDur(node.timestampMs, item.eventTimestamp);
-                                          return (
-                                            <div
-                                              key={`gn-${ni}`}
-                                              onMouseEnter={(e) => {
-                                                const rect = e.currentTarget.getBoundingClientRect();
-                                                setHoveredNode({ node, element: e.currentTarget as HTMLElement, status: node.status });
-                                                setHoverRect(rect);
-                                                if (headerRef.current) setHeaderBottom(headerRef.current.getBoundingClientRect().bottom);
-                                              }}
-                                              onMouseLeave={() => { setHoveredNode(null); setHoverRect(null); }}
-                                              className="relative group/lc cursor-pointer"
-                                            >
-                                              <div className={`w-6 h-6 rounded-full border flex items-center justify-center shadow-sm transition-all hover:scale-125 ${STATUS_STYLE[node.status]?.pill || STATUS_STYLE.pending.pill}`}>
-                                                <Ic size={nodeIconSize - 1} className={`${STATUS_STYLE[node.status]?.iconColor || STATUS_STYLE.pending.iconColor} ${STATUS_STYLE[node.status]?.anim || ''} shrink-0`} />
-                                              </div>
-                                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/lc:block z-[9999] pointer-events-none">
-                                                <div className="bg-gray-900 dark:bg-gray-800 text-white text-[10px] rounded-lg px-2.5 py-1.5 shadow-xl border border-gray-700 whitespace-nowrap">
-                                                  <div className="font-bold capitalize">{node.status}</div>
-                                                  <div className="opacity-70">#{orderIdStr}</div>
-                                                  <div className="opacity-70">{fmtDate(node.timestampMs)}</div>
-                                                  {durStr && <div className="text-emerald-400 mt-0.5">{isAr ? 'المدة:' : 'Duration:'} {durStr}</div>}
-                                                  <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900 dark:border-t-gray-800" />
-                                                </div>
-                                              </div>
-                                            </div>
-                                          );
-                                        })}
-                                      </div>
-                                    </React.Fragment>
+                                    <TimelineGroup
+                                      key={`lg-${ei}`}
+                                      nodes={el.nodes}
+                                      pctStart={el.pct}
+                                      pctEnd={el.endPct}
+                                      top={nodeY}
+                                      height={nodeH}
+                                      iconSize={nodeIconSize}
+                                      orderId={orderIdStr}
+                                      isAr={isAr}
+                                      onNodeHover={handleNodeHover}
+                                      onNodeLeave={handleNodeLeave}
+                                      formatDuration={formatDurationMs}
+                                      formatDate={formatDateTime}
+                                    />
                                   );
                                 })}
                               </>
@@ -1243,7 +1266,7 @@ const OrdersTimelineCard: React.FC = () => {
                                     <span className={technicalColor}>#{orderIdStr}</span> <span className="text-gray-400 mx-1">•</span> <span className="text-gray-700 dark:text-gray-200 font-bold">{item.eventTimeStr}</span>
                                   </div>
                                   <div className={`flex-1 relative ${rowHNonShipped} pb-2.5`}>
-                                    {renderLifecycleCircles()}
+                                    {renderLifecycleElements()}
                                     {/* Per-row refresh — top of line only */}
                                     <button
                                       type="button"
@@ -1307,9 +1330,9 @@ const OrdersTimelineCard: React.FC = () => {
                                 <div className={`w-44 shrink-0 text-[11px] font-semibold pl-3 pr-2 truncate sticky left-0 z-30 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-white/10 flex items-center ${rowHNonShipped} pb-2.5`}>
                                   <span className={technicalColor}>#{orderIdStr}</span> <span className="text-gray-400 mx-1">•</span> <span className="text-gray-700 dark:text-gray-200 font-bold">{item.eventTimeStr}</span>
                                 </div>
-                                <div className={`flex-1 relative ${rowHNonShipped} pb-2.5`}>
-                                  {renderLifecycleCircles()}
-                                  <button
+<div className={`flex-1 relative ${rowHNonShipped} pb-2.5`}>
+                                   {renderLifecycleElements()}
+                                   <button
                                     type="button"
                                     onClick={(e) => { e.stopPropagation(); handleRowRefresh(item.order.id); }}
                                     disabled={!!rowRefreshing[item.order.id]}
@@ -1355,7 +1378,7 @@ const OrdersTimelineCard: React.FC = () => {
                                   <span className="ml-1 text-[10px] font-normal text-gray-400 hidden sm:inline">{item.isCompleted ? '✓' : `${item.progress}%`}</span>
                                 </div>
                                 <div className={`flex-1 relative ${rowHShipped} pb-2.5`}>
-                                  {renderLifecycleCircles({ excludeMerged: !!hasMergedCurrent })}
+                                  {renderLifecycleElements({ excludeMerged: !!hasMergedCurrent })}
                                   <button
                                     type="button"
                                     onClick={(e) => { e.stopPropagation(); handleRowRefresh(item.order.id); }}
@@ -1409,7 +1432,7 @@ const OrdersTimelineCard: React.FC = () => {
                                 <span className={technicalColor}>#{orderIdStr}</span>
                               </div>
                               <div className={`flex-1 relative ${rowHShipped} pb-2.5`}>
-                                {renderLifecycleCircles({ excludeMerged: !!hasMergedCurrent })}
+                                {renderLifecycleElements({ excludeMerged: !!hasMergedCurrent })}
                                 <button
                                   type="button"
                                   onClick={(e) => { e.stopPropagation(); handleRowRefresh(item.order.id); }}

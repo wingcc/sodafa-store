@@ -406,11 +406,28 @@ export const useStore = create<AppState>((set) => ({
     }
   },
   updateOrderStatus: async (id, status) => {
-    // Optimistic local state update
+    const nowIso = new Date().toISOString();
+    // Optimistic local state update — also add timeline entry so normalizeHistory
+    // immediately reflects the new status (fixes broken connector line on real-time updates)
     set((state) => ({
-      orders: state.orders.map((o) =>
-        o.id === id ? { ...o, orderStatus: status, updatedAt: new Date().toISOString(), shippedAt: status === 'shipped' ? new Date().toISOString() : (o as any).shippedAt, deliveredAt: status === 'delivered' ? new Date().toISOString() : (o as any).deliveredAt } : o
-      ),
+      orders: state.orders.map((o) => {
+        if (o.id !== id) return o;
+        const existingTimeline = Array.isArray((o as any).timeline) ? (o as any).timeline : Array.isArray((o as any).order_timeline) ? (o as any).order_timeline : [];
+        const newTimelineEntry = { status, timestamp: nowIso, note: `Status updated to ${status}` };
+        const updatedTimeline = [...existingTimeline, newTimelineEntry];
+        return {
+          ...o,
+          orderStatus: status,
+          updatedAt: nowIso,
+          timeline: updatedTimeline,
+          order_timeline: updatedTimeline, // keep both fields in sync
+          shippedAt: status === 'shipped' ? nowIso : (o as any).shippedAt,
+          deliveredAt: status === 'delivered' ? nowIso : (o as any).deliveredAt,
+          confirmedAt: status === 'confirmed' ? nowIso : (o as any).confirmedAt,
+          processingStartedAt: status === 'processing' ? nowIso : (o as any).processingStartedAt,
+          cancelledAt: status === 'cancelled' ? nowIso : (o as any).cancelledAt,
+        };
+      }),
     }));
 
     try {
