@@ -333,6 +333,7 @@
   background-repeat: repeat-x;
   height: 2px;
   animation: dashFlowX 1s linear infinite;
+  animation-play-state: paused;
   opacity: 0.95;
 }
 .dashboard-root .lifecycle-dash-y {
@@ -341,10 +342,12 @@
   background-repeat: repeat-y;
   width: 2px;
   animation: dashFlowY 1s linear infinite;
+  animation-play-state: paused;
   opacity: 0.95;
 }
-/* Subtle hover boost */
+/* Animate only on hover — always visible per requirement */
 .group\/row:hover .lifecycle-dash-x,
 .group\/row:hover .lifecycle-dash-y {
+  animation-play-state: running;
   filter: brightness(1.15);
 }

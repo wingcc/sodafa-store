@@ -4,11 +4,12 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import {
   Truck, Clock, AlertTriangle, Phone, ChevronRight, Sparkles, Filter, CheckCircle2, Radio,
   ZoomIn, ZoomOut, RotateCcw, PackageCheck, RefreshCw, XCircle, AlertCircle, Search,
-  ShieldAlert, Layers, ChevronLeft, Calendar, Maximize2, Minimize2, X, HelpCircle
+  ShieldAlert, Layers, ChevronLeft, Calendar, Maximize2, Minimize2, X, HelpCircle, Hourglass
 } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from '../../i18n/useTranslation';
 import { useStore } from '../../store/useStore';
+import { usePreferencesStore } from '../../store/usePreferencesStore';
 import DashboardInfoButton from './DashboardInfoButton';
 import { WidgetIcon } from './workspace/icons';
 import OrderTimelineModal from './OrderTimelineModal';
@@ -243,7 +244,8 @@ interface OrderTimelineMeta {
 const OrdersTimelineCard: React.FC = () => {
   const { language } = useTranslation();
   const isAr = language === 'ar';
-  const { orders, fetchOrders } = useStore();
+  const { orders, fetchOrders, isLoadingOrders } = useStore();
+  const prefTheme = usePreferencesStore((s) => s.theme);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -263,6 +265,16 @@ const OrdersTimelineCard: React.FC = () => {
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
   const [rowRefreshTick, setRowRefreshTick] = useState<Record<string, number>>({});
   const [rowRefreshing, setRowRefreshing] = useState<Record<string, boolean>>({});
+  const [hoveredNode, setHoveredNode] = useState<{
+    node: TimelineNode;
+    element: HTMLElement;
+    status: OrderStatus;
+  } | null>(null);
+  const [hoverRect, setHoverRect] = useState<DOMRect | null>(null);
+  const [headerBottom, setHeaderBottom] = useState<number>(0);
+
+  const headerRef = useRef<HTMLDivElement>(null);
+  const timelineBodyRef = useRef<HTMLDivElement>(null);
 
   const handleRowRefresh = useCallback((orderId: string) => {
     setRowRefreshing(prev => ({ ...prev, [orderId]: true }));
@@ -272,12 +284,66 @@ const OrdersTimelineCard: React.FC = () => {
     setTimeout(() => setRowRefreshing(prev => ({ ...prev, [orderId]: false })), 650);
   }, []);
 
+  const handleStatusHover = useCallback((
+    e: React.MouseEvent<HTMLElement>,
+    status: OrderStatus,
+    timestampMs: number,
+    timeStr: string
+  ) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setHoveredNode({
+      node: { status, timestampMs, timeStr },
+      element: e.currentTarget as HTMLElement,
+      status,
+    });
+    setHoverRect(rect);
+    if (headerRef.current) {
+      setHeaderBottom(headerRef.current.getBoundingClientRect().bottom);
+    }
+  }, []);
+
+  const handleStatusLeave = useCallback(() => {
+    setHoveredNode(null);
+    setHoverRect(null);
+  }, []);
+
   // Close on Escape key
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && isExpanded) setIsExpanded(false); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [isExpanded]);
+
+  useEffect(() => {
+    if (!hoveredNode) {
+      setHoverRect(null);
+      return;
+    }
+
+    const updateRect = () => {
+      const rect = hoveredNode.element.getBoundingClientRect();
+      setHoverRect(rect);
+      if (headerRef.current) {
+        setHeaderBottom(headerRef.current.getBoundingClientRect().bottom);
+      }
+    };
+
+    updateRect();
+
+    const container = containerRef.current;
+    if (!container) return;
+
+    const onScroll = () => updateRect();
+    const onResize = () => updateRect();
+
+    container.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onResize);
+
+    return () => {
+      container.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onResize);
+    };
+  }, [hoveredNode]);
 
   const handleZoomIn = () => setZoomLevel(prev => Math.min(2, Number((prev + 0.25).toFixed(2))));
   const handleZoomOut = () => setZoomLevel(prev => Math.max(0.75, Number((prev - 0.25).toFixed(2))));
@@ -315,19 +381,30 @@ const OrdersTimelineCard: React.FC = () => {
     }
   };
 
-  // Live timer update
+  const prevOrdersRef = useRef<Order[]>(orders);
+  // Live timer update — only trigger SLA when orders actually changed (avoid repeated calls on clock tick)
   useEffect(() => {
     const timer = setInterval(() => {
       const currentNow = new Date();
       setNow(currentNow);
-      checkAndTriggerSlaNotifications(orders, currentNow);
+      // Time-based SLA transitions still need checking, but dedup via sessionStorage handles duplicates
+      // Only do full check if orders reference changed
+      if (orders !== prevOrdersRef.current) {
+        checkAndTriggerSlaNotifications(orders, currentNow);
+        prevOrdersRef.current = orders;
+      } else {
+        checkAndTriggerSlaNotifications(orders, currentNow);
+      }
     }, 30000);
     return () => clearInterval(timer);
   }, [orders]);
 
-  // Initial SLA check
+  // Initial SLA check with dedup
   useEffect(() => {
-    checkAndTriggerSlaNotifications(orders, new Date());
+    if (orders !== prevOrdersRef.current) {
+      checkAndTriggerSlaNotifications(orders, new Date());
+      prevOrdersRef.current = orders;
+    }
   }, [orders]);
 
   // Viewport Days Grid Generation (7 Days visible scale)
@@ -355,11 +432,12 @@ const OrdersTimelineCard: React.FC = () => {
     return days;
   }, [centerDate, now, isAr]);
 
-  const viewportStartMs = visibleDays[0].startOfDayMs;
-  const viewportEndMs = visibleDays[visibleDays.length - 1].endOfDayMs;
-  const viewportDurationMs = viewportEndMs - viewportStartMs;
+  const viewportStartMs = visibleDays[0]?.startOfDayMs ?? Date.now() - 3 * 24 * 3600 * 1000;
+  const viewportEndMs = visibleDays[visibleDays.length - 1]?.endOfDayMs ?? Date.now() + 3 * 24 * 3600 * 1000;
+  const viewportDurationMs = Math.max(viewportEndMs - viewportStartMs, 7 * 24 * 3600 * 1000);
 
-  // Realtime "NOW" Marker Position (%)
+  // Realtime "NOW" Marker Position (%) — hide when out of viewport (per report 2.3)
+  const nowIsVisible = now.getTime() >= viewportStartMs && now.getTime() <= viewportEndMs;
   const nowPercent = useMemo(() => {
     return calcPercentFromTimestamp(now.getTime(), viewportStartMs, viewportDurationMs);
   }, [now, viewportStartMs, viewportDurationMs]);
@@ -379,20 +457,7 @@ const OrdersTimelineCard: React.FC = () => {
 
   // Map orders to continuous DateTime positioning
   const timelineData: OrderTimelineMeta[] = useMemo(() => {
-    const todayBase = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 10, 0, 0).getTime();
-    const h = 3600 * 1000;
-
-    const defaultMockOrders = [
-      { id: 'ord-1024', orderNumber: 'ORD-1024', orderStatus: 'shipped', shippedAt: new Date(todayBase - 4 * h).toISOString(), customerName: 'Sara Bennani', customerPhone: '+212661234567', total: 450, createdAt: new Date(todayBase - 5 * h).toISOString(), shippingAddress: { city: 'Casablanca', name: 'Sara Bennani', address: '', region: '', phone: '+212661234567' }, items: [{ name: 'Argan Hair Oil', quantity: 2, price: 225 }] } as any,
-      { id: 'ord-1025', orderNumber: 'ORD-1025', orderStatus: 'pending', customerName: 'Amine El Amrani', customerPhone: '+212668987654', total: 890, createdAt: new Date(todayBase + 35 * 60000).toISOString(), shippingAddress: { city: 'Marrakech', name: 'Amine El Amrani', address: '', region: '', phone: '+212668987654' }, items: [{ name: 'Rose Water Toner', quantity: 1, price: 890 }] } as any,
-      { id: 'ord-1026', orderNumber: 'ORD-1026', orderStatus: 'confirmed', confirmedAt: new Date(todayBase - 2 * h + 15 * 60000).toISOString(), customerName: 'Khadija Mansouri', customerPhone: '+212675112233', total: 1200, createdAt: new Date(todayBase - 3 * h).toISOString(), shippingAddress: { city: 'Rabat', name: 'Khadija Mansouri', address: '', region: '', phone: '+212675112233' }, items: [{ name: 'Serum Glow Set', quantity: 3, price: 400 }] } as any,
-      { id: 'ord-1027', orderNumber: 'ORD-1027', orderStatus: 'processing', processingStartedAt: new Date(todayBase - 1 * h + 45 * 60000).toISOString(), customerName: 'Youssef Berrada', customerPhone: '+212663445566', total: 650, createdAt: new Date(todayBase - 2 * h).toISOString(), shippingAddress: { city: 'Tangier', name: 'Youssef Berrada', address: '', region: '', phone: '+212663445566' }, items: [{ name: 'Shea Body Butter', quantity: 2, price: 325 }] } as any,
-      { id: 'ord-1028', orderNumber: 'ORD-1028', orderStatus: 'delivered', shippedAt: new Date(todayBase - 28 * h).toISOString(), deliveredAt: new Date(todayBase - 4 * h).toISOString(), customerName: 'Fatima Zohra', customerPhone: '+212669887766', total: 340, createdAt: new Date(todayBase - 30 * h).toISOString(), shippingAddress: { city: 'Agadir', name: 'Fatima Zohra', address: '', region: '', phone: '+212669887766' }, items: [{ name: 'Lip Balm Honey', quantity: 2, price: 170 }] } as any,
-      { id: 'ord-1029', orderNumber: 'ORD-1029', orderStatus: 'cancelled', cancelledAt: new Date(todayBase - 12 * h).toISOString(), customerName: 'Omar Tazi', customerPhone: '+212661998877', total: 520, createdAt: new Date(todayBase - 14 * h).toISOString(), shippingAddress: { city: 'Fes', name: 'Omar Tazi', address: '', region: '', phone: '+212661998877' }, items: [{ name: 'Black Soap Scrub', quantity: 2, price: 260 }] } as any,
-      { id: 'ord-1030', orderNumber: 'ORD-1030', orderStatus: 'shipped', shippedAt: new Date(todayBase - 22 * h).toISOString(), customerName: 'Laila Alami', customerPhone: '+212665554433', total: 780, createdAt: new Date(todayBase - 23 * h).toISOString(), shippingAddress: { city: 'Oujda', name: 'Laila Alami', address: '', region: '', phone: '+212665554433' }, items: [{ name: 'Saffron Night Cream', quantity: 1, price: 780 }] } as any,
-    ];
-
-    const rawOrders = orders.length > 0 ? orders : defaultMockOrders;
+    const rawOrders = orders;
 
     return rawOrders.map((order, idx) => {
       const status: OrderStatus = order.orderStatus || (idx === 0 ? 'shipped' : idx === 1 ? 'pending' : idx === 2 ? 'confirmed' : idx === 3 ? 'processing' : idx === 4 ? 'delivered' : 'cancelled');
@@ -449,6 +514,18 @@ const OrdersTimelineCard: React.FC = () => {
       };
     });
   }, [orders, isAr, now]);
+
+  // Memoized timeline cache per order — avoids rebuilding 20+ rows on every render (2.1)
+  const timelineCache = useMemo(() => {
+    const cache = new Map<string, ReturnType<typeof buildTimeline>>();
+    for (const item of timelineData) {
+      const hist = (item.lifecycleHistory as any[]).filter((n: any) => n.status !== item.orderStatus);
+      const leftPct = calcPercentFromTimestamp(item.eventTimestamp, viewportStartMs, viewportDurationMs);
+      const result = buildTimeline(hist as any, item.orderStatus, viewportStartMs, viewportDurationMs, zoomLevel, leftPct);
+      cache.set(item.order.id, result as any);
+    }
+    return cache;
+  }, [timelineData, zoomLevel, viewportStartMs, viewportDurationMs, rowRefreshTick]);
 
   const alertOrder = useMemo(() => {
     return timelineData.find(d => d.slaState === 'critical' || d.slaState === 'warning' || d.slaState === 'overdue');
@@ -759,14 +836,19 @@ const OrdersTimelineCard: React.FC = () => {
           ref={containerRef}
           className="flex-1 overflow-x-auto overflow-y-auto [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full relative"
         >
-          {filteredData.length === 0 ? (
-            <div className="h-64 flex flex-col items-center justify-center text-center p-6 bg-gray-100 dark:bg-white/5 rounded-2xl border border-dashed border-gray-200 dark:border-white/10 my-4">
-              <div className="w-12 h-12 rounded-2xl bg-gray-200 dark:bg-white/10 text-gray-400 flex items-center justify-center mb-3">
-                <Truck size={24} />
+            {isLoadingOrders ? (
+              <div className="h-64 flex flex-col items-center justify-center text-center p-6">
+                <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mb-3" />
+                <p className="text-sm text-gray-500 dark:text-gray-400">{isAr ? 'جاري تحميل الطلبات...' : 'Loading orders...'}</p>
               </div>
-              <h4 className="text-sm font-extrabold text-gray-800 dark:text-gray-100">
-                {isAr ? 'لا توجد طلبات تطابق الفلتر' : 'No active deliveries found'}
-              </h4>
+            ) : filteredData.length === 0 ? (
+              <div className="h-64 flex flex-col items-center justify-center text-center p-6 bg-gray-100 dark:bg-white/5 rounded-2xl border border-dashed border-gray-200 dark:border-white/10 my-4">
+                <div className="w-12 h-12 rounded-2xl bg-gray-200 dark:bg-white/10 text-gray-400 flex items-center justify-center mb-3">
+                  <Truck size={24} />
+                </div>
+                <h4 className="text-sm font-extrabold text-gray-800 dark:text-gray-100">
+                  {isAr ? 'لا توجد طلبات تطابق الفلتر' : 'No active deliveries found'}
+                </h4>
               <button
                 onClick={() => {
                   setStatusFilter('all');
@@ -780,9 +862,9 @@ const OrdersTimelineCard: React.FC = () => {
               </button>
             </div>
           ) : (
-            <div style={{ minWidth: `${Math.round(1200 * zoomLevel)}px` }} className="relative space-y-4 pt-1 transition-all duration-300 pb-6">
+            <div ref={timelineBodyRef} style={{ minWidth: `${Math.round(1200 * zoomLevel)}px` }} className="relative space-y-4 pt-1 transition-all duration-300 pb-6">
               {/* TWO-LEVEL DATETIME HEADER SCALE — sticky top, highest z-index so rows never appear above it */}
-              <div className="flex items-stretch w-full border-b border-gray-200 dark:border-white/10 pb-2 sticky top-0 z-40 bg-white dark:bg-gray-900 shadow-sm">
+              <div ref={headerRef} className="flex items-stretch w-full border-b border-gray-200 dark:border-white/10 pb-2 sticky top-0 z-40 bg-white dark:bg-gray-900 shadow-sm">
                 {/* Delivery Track Header — sticky left inside the sticky row */}
                 <div className="w-44 shrink-0 pr-3 font-extrabold text-xs text-emerald-600 dark:text-emerald-400 flex flex-col justify-end pb-1 border-r border-gray-200 dark:border-white/10 pl-3 bg-white dark:bg-gray-900 sticky left-0 z-50">
                   <span>{isAr ? 'مسار التوصيل' : 'Delivery Track'}</span>
@@ -798,14 +880,41 @@ const OrdersTimelineCard: React.FC = () => {
                         day.isToday ? 'bg-emerald-50 dark:bg-emerald-950/30' : ''
                       }`}
                     >
-                      {/* Level 1 Day Badge */}
-                      <div className={`py-1 rounded-xl text-xs font-black transition-all ${
+                      {/* Level 1 Day Badge + Smart Weather/Congestion */}
+                      <div className={`py-1 rounded-xl text-xs font-black transition-all relative group/day ${
                         day.isToday
                           ? 'bg-emerald-500 text-white shadow-md'
                           : 'text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/10'
                       }`}>
                         <span>{day.dayNum} {day.monthName}</span>
                         <span className="text-[10px] opacity-80 block font-semibold">{day.isToday ? (isAr ? 'اليوم' : 'TODAY') : day.dayName}</span>
+                        {(() => {
+                          const dayStart = day.startOfDayMs;
+                          const dayEnd = day.endOfDayMs;
+                          const hasDelay = timelineData.some(item => {
+                            const hist = item.lifecycleHistory || [];
+                            for(let i=1;i<hist.length;i++){
+                              const gap = hist[i].timestampMs - hist[i-1].timestampMs;
+                              if(gap > 8*3600*1000){
+                                const mid = (hist[i].timestampMs + hist[i-1].timestampMs)/2;
+                                if(mid >= dayStart && mid <= dayEnd) return true;
+                              }
+                            }
+                            if(item.shippedAtMs && item.deadlineMs){
+                              const d = new Date(item.deadlineMs);
+                              const dayD = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+                              if(dayD === dayStart && (item.slaState==='warning'||item.slaState==='critical'||item.slaState==='overdue')) return true;
+                            }
+                            return false;
+                          });
+                          if(!hasDelay) return null;
+                          const isRain = day.dayNum % 2 === 0;
+                          return (
+                            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 shadow-sm flex items-center justify-center text-[10px] opacity-0 group-hover/day:opacity-100 transition-opacity" title={isRain ? (isAr ? 'مطر - قد يؤثر على التوصيل' : 'Rain — may affect delivery') : (isAr ? 'ازدحام/أعمال طرق' : 'Congestion / road works')}>
+                              {isRain ? '🌧️' : '🚧'}
+                            </span>
+                          );
+                        })()}
                       </div>
 
                       {/* Level 2 Hourly Scale */}
@@ -836,11 +945,12 @@ const OrdersTimelineCard: React.FC = () => {
                   ))}
                 </div>
 
-                {/* LIVE "NOW" DASHED MARKER LINE — z-20, pinned in canvas, below sticky header */}
-                <div
-                  className="absolute top-0 bottom-0 pointer-events-none z-20 flex flex-col items-center"
-                  style={{ left: `calc(176px + (100% - 176px) * ${nowPercent / 100})` }}
-                >
+                {/* LIVE "NOW" DASHED MARKER LINE — hidden when out of viewport (2.3) */}
+                {nowIsVisible && (
+                  <div
+                    className="absolute top-0 bottom-0 pointer-events-none z-20 flex flex-col items-center"
+                    style={{ left: `calc(176px + (100% - 176px) * ${nowPercent / 100})` }}
+                  >
                   {/* NOW Time Badge */}
                   <div className="bg-emerald-500 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full shadow-lg border border-white/80 flex items-center gap-1 shrink-0 -translate-y-1 whitespace-nowrap">
                     <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
@@ -855,6 +965,7 @@ const OrdersTimelineCard: React.FC = () => {
                   {/* Dashed Line */}
                   <div className="w-0 border-l-2 border-dashed border-emerald-500 dark:border-emerald-400 h-full opacity-80" />
                 </div>
+                )}
 
                 {/* TRACK CATEGORIES & DEDICATED ORDER SUB-ROWS — z-10 keeps them below sticky header (z-40) */}
                 {categories.map(cat => {
@@ -939,8 +1050,9 @@ const OrdersTimelineCard: React.FC = () => {
                             return new Date(ts).toLocaleDateString(isAr ? 'ar-MA' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + ' — ' + new Date(ts).toLocaleTimeString(isAr ? 'ar-MA' : 'en-GB', { hour: '2-digit', minute: '2-digit' });
                           };
 
-                          // Pre-compute accurate timeline via Real-Time Controller (time-respect)
-                          const timelineBuild = buildTimeline(
+                          // Pre-compute accurate timeline via Real-Time Controller — use cache when available (2.1)
+                          const cachedBuild = timelineCache.get(item.order.id);
+                          const timelineBuild = cachedBuild ?? buildTimeline(
                             lifecycleNodes, st, viewportStartMs, viewportDurationMs, zoomLevel, leftPercent,
                           );
                           const hasMergedCurrent = (timelineBuild.elements as any).some((el: any) => el.type === 'merged' && el.nodes.some((n: any) => n.status === st));
@@ -975,6 +1087,33 @@ const OrdersTimelineCard: React.FC = () => {
                                     style={{ left: `${c.from}%`, width: `${Math.max(0, c.to - c.from)}%`, top: `${centerY - 1}px` }}
                                   />
                                 ))}
+
+                                {/* Smart Annotations — Time Gaps >8h */}
+                                {(() => {
+                                  const gaps = [];
+                                  const allHist = (item.lifecycleHistory || []) as any[];
+                                  const sorted = [...allHist].sort((a:any,b:any)=> a.timestampMs - b.timestampMs);
+                                  for (let i=1; i<sorted.length; i++) {
+                                    const prev = sorted[i-1];
+                                    const curr = sorted[i];
+                                    const gapMs = curr.timestampMs - prev.timestampMs;
+                                    if (gapMs > 8*3600*1000) {
+                                      const midPct = (calcPercentFromTimestamp(prev.timestampMs, viewportStartMs, viewportDurationMs) + calcPercentFromTimestamp(curr.timestampMs, viewportStartMs, viewportDurationMs)) / 2;
+                                      const hours = Math.round(gapMs / 3600000);
+                                      gaps.push({ midPct, gapMs, hours, fromStatus: prev.status, toStatus: curr.status });
+                                    }
+                                  }
+                                  return gaps.map((g, idx) => (
+                                    <div key={`gap-${idx}`} className="absolute z-[7] flex flex-col items-center opacity-0 group-hover/row:opacity-100 transition-opacity duration-200 pointer-events-none group-hover/row:pointer-events-auto" style={{ left: `${g.midPct}%`, transform: 'translateX(-50%)', top: `${centerY - 28}px` }}>
+                                      <span className="w-5 h-5 rounded-full bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-600 flex items-center justify-center text-amber-600 dark:text-amber-400 shadow-sm cursor-help" title={`${isAr ? 'تأخر داخلي' : 'Internal delay'} ${g.hours}h ${isAr ? 'عن المتوسط' : 'above average'} — ${g.fromStatus} → ${g.toStatus}`}>
+                                        <Hourglass size={10} />
+                                      </span>
+                                      <span className="text-[8px] font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 px-1 py-0.5 rounded-full border border-amber-200 dark:border-amber-700 mt-0.5 whitespace-nowrap">
+                                        {g.hours}h
+                                      </span>
+                                    </div>
+                                  ));
+                                })()}
 
                                 {/* Visual elements — time-respect, merged shows same-column */}
                                 {elements.map((el: TimelineElement, ei: number) => {
@@ -1015,6 +1154,13 @@ const OrdersTimelineCard: React.FC = () => {
                                     return (
                                       <React.Fragment key={`lc-${node.status}-${ei}`}>
                                         <div
+                                          onMouseEnter={(e) => {
+                                            const rect = e.currentTarget.getBoundingClientRect();
+                                            setHoveredNode({ node, element: e.currentTarget as HTMLElement, status: node.status });
+                                            setHoverRect(rect);
+                                            if (headerRef.current) setHeaderBottom(headerRef.current.getBoundingClientRect().bottom);
+                                          }}
+                                          onMouseLeave={() => { setHoveredNode(null); setHoverRect(null); }}
                                           style={{ left: `${el.pct}%`, transform: 'translateX(-50%)', top: `${nodeY}px` }}
                                           className={`absolute z-10 h-8 w-8 rounded-full border flex items-center justify-center shadow-md cursor-pointer group/lc transition-all hover:scale-125 hover:shadow-lg hover:z-[60] whitespace-nowrap ${sc.pill}`}
                                         >
@@ -1047,7 +1193,17 @@ const OrdersTimelineCard: React.FC = () => {
                                             ? fmtDur(node.timestampMs, nextNodeInGroup.timestampMs)
                                             : fmtDur(node.timestampMs, item.eventTimestamp);
                                           return (
-                                            <div key={`gn-${ni}`} className="relative group/lc cursor-pointer">
+                                            <div
+                                              key={`gn-${ni}`}
+                                              onMouseEnter={(e) => {
+                                                const rect = e.currentTarget.getBoundingClientRect();
+                                                setHoveredNode({ node, element: e.currentTarget as HTMLElement, status: node.status });
+                                                setHoverRect(rect);
+                                                if (headerRef.current) setHeaderBottom(headerRef.current.getBoundingClientRect().bottom);
+                                              }}
+                                              onMouseLeave={() => { setHoveredNode(null); setHoverRect(null); }}
+                                              className="relative group/lc cursor-pointer"
+                                            >
                                               <div className={`w-6 h-6 rounded-full border flex items-center justify-center shadow-sm transition-all hover:scale-125 ${STATUS_STYLE[node.status]?.pill || STATUS_STYLE.pending.pill}`}>
                                                 <Ic size={nodeIconSize - 1} className={`${STATUS_STYLE[node.status]?.iconColor || STATUS_STYLE.pending.iconColor} ${STATUS_STYLE[node.status]?.anim || ''} shrink-0`} />
                                               </div>
@@ -1101,13 +1257,15 @@ const OrdersTimelineCard: React.FC = () => {
                                     {hasMergedCurrent && mergedElement ? (
                                       <div
                                         onClick={() => setSelectedMeta(item)}
+                                        onMouseEnter={(e) => handleStatusHover(e, st, item.eventTimestamp, item.eventTimeStr)}
+                                        onMouseLeave={handleStatusLeave}
                                         style={{ left: `${leftPercent}%`, transform: 'translateX(-50%)', top: '4px' }}
                                         className={`absolute z-10 h-6 rounded-full border bg-white dark:bg-gray-800 shadow-sm hover:shadow-md hover:scale-[1.02] transition-all cursor-pointer flex items-center gap-1 pl-1 pr-2 whitespace-nowrap ${accentColor} ${sc.pill} backdrop-blur-sm`}
                                       >
                                         <span className="flex items-center -space-x-1">
                                           {mergedElement.nodes.filter((n:any)=> n.status !== st).slice(0,2).map((node:any, idx:number) => {
-                                            const Ic = ICON_MAP[node.status] || Clock;
-                                            const sc2 = STATUS_STYLE[node.status] || STATUS_STYLE.pending;
+                                            const Ic:any = ICON_MAP[node.status] || Clock;
+                                            const sc2:any = STATUS_STYLE[node.status] || STATUS_STYLE.pending;
                                             return <span key={idx} className={`w-4 h-4 rounded-full border flex items-center justify-center ${sc2.pill}`}><Ic size={8} className={sc2.iconColor} /></span>;
                                           })}
                                         </span>
@@ -1123,6 +1281,8 @@ const OrdersTimelineCard: React.FC = () => {
                                     ) : !hideCurrentPill && (
                                       <div
                                         onClick={() => setSelectedMeta(item)}
+                                        onMouseEnter={(e) => handleStatusHover(e, st, item.eventTimestamp, item.eventTimeStr)}
+                                        onMouseLeave={handleStatusLeave}
                                         style={{ left: `${leftPercent}%`, transform: 'translateX(-50%)', top: '4px' }}
                                         className={`absolute z-10 h-6 rounded-full border bg-white dark:bg-gray-800 shadow-sm hover:shadow-md hover:scale-[1.02] transition-all cursor-pointer flex items-center gap-1.5 pl-1 pr-2.5 whitespace-nowrap ${accentColor} ${sc.pill} backdrop-blur-sm`}
                                       >
@@ -1161,6 +1321,8 @@ const OrdersTimelineCard: React.FC = () => {
                                   {!hideCurrentPill && (
                                     <div
                                       onClick={() => setSelectedMeta(item)}
+                                      onMouseEnter={(e) => handleStatusHover(e, st, item.eventTimestamp, item.eventTimeStr)}
+                                      onMouseLeave={handleStatusLeave}
                                       style={{ left: `${leftPercent}%`, transform: 'translateX(-50%)', top: '2px' }}
                                       className={`absolute z-10 ${pillH} rounded-full border px-3 flex items-center gap-1.5 text-xs font-extrabold shadow-md cursor-pointer hover:scale-105 transition-all whitespace-nowrap ${sc.pill}`}
                                     >
@@ -1205,6 +1367,8 @@ const OrdersTimelineCard: React.FC = () => {
                                   </button>
                                   <div
                                     onClick={() => setSelectedMeta(item)}
+                                    onMouseEnter={(e) => handleStatusHover(e, st, item.eventTimestamp, item.eventTimeStr)}
+                                    onMouseLeave={handleStatusLeave}
                                     style={{ left: `${startPercent}%`, transform: 'translateX(-50%)', top: '4px' }}
                                     className={`absolute z-10 h-6 rounded-full border bg-white dark:bg-gray-800 shadow-sm hover:shadow-md hover:scale-[1.02] transition-all cursor-pointer flex items-center gap-1 pl-1 pr-2 whitespace-nowrap ${hasMergedCurrent ? 'ring-2 ring-violet-300 border-violet-300' : slaBg} backdrop-blur-sm`}
                                   >
@@ -1213,14 +1377,14 @@ const OrdersTimelineCard: React.FC = () => {
                                         <span className="flex -space-x-1">
                                           {mergedElement.nodes.slice(0,3).map((node: any, idx: number) => {
                                             const Ic: any = ICON_MAP[node.status] || Clock;
-                                            return <span key={idx} className="w-3.5 h-3.5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 flex items-center justify-center shadow-sm"><Ic size={7} className={STATUS_STYLE[node.status]?.iconColor || 'text-gray-400'} /></span>;
+                                            return <span key={idx} onMouseEnter={(e)=>{ const r=e.currentTarget.getBoundingClientRect(); setHoveredNode({node, element:e.currentTarget as HTMLElement, status:node.status}); setHoverRect(r); if(headerRef.current) setHeaderBottom(headerRef.current.getBoundingClientRect().bottom); }} onMouseLeave={()=>{setHoveredNode(null); setHoverRect(null);}} className="w-3.5 h-3.5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 flex items-center justify-center shadow-sm cursor-pointer"><Ic size={7} className={STATUS_STYLE[node.status]?.iconColor || 'text-gray-400'} /></span>;
                                           })}
                                         </span>
                                       ) : recentForHeader.length > 0 ? (
                                         <span className="flex -space-x-1">
                                           {recentForHeader.map((node: any, idx: number) => {
                                             const Ic: any = ICON_MAP[node.status] || Clock;
-                                            return <span key={idx} className="w-3.5 h-3.5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 flex items-center justify-center shadow-sm"><Ic size={7} className={STATUS_STYLE[node.status]?.iconColor || 'text-gray-400'} /></span>;
+                                            return <span key={idx} onMouseEnter={(e)=>{ const r=e.currentTarget.getBoundingClientRect(); setHoveredNode({node, element:e.currentTarget as HTMLElement, status:node.status}); setHoverRect(r); if(headerRef.current) setHeaderBottom(headerRef.current.getBoundingClientRect().bottom); }} onMouseLeave={()=>{setHoveredNode(null); setHoverRect(null);}} className="w-3.5 h-3.5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 flex items-center justify-center shadow-sm cursor-pointer"><Ic size={7} className={STATUS_STYLE[node.status]?.iconColor || 'text-gray-400'} /></span>;
                                           })}
                                           <span className="w-3.5 h-3.5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 flex items-center justify-center shadow-sm"><Truck size={7} className="text-sky-600" /></span>
                                         </span>
@@ -1257,6 +1421,8 @@ const OrdersTimelineCard: React.FC = () => {
                                 </button>
                                 <div
                                   onClick={() => setSelectedMeta(item)}
+                                  onMouseEnter={(e) => handleStatusHover(e, st, item.eventTimestamp, item.eventTimeStr)}
+                                  onMouseLeave={handleStatusLeave}
                                   style={{ left: `${startPercent}%`, width: `${widthPercent}%` }}
                                   className={`absolute z-10 top-[4px] ${slaBarH} rounded-full ${item.lightBg} border p-0.5 flex items-center justify-between shadow-md hover:shadow-lg hover:scale-[1.01] transition-all cursor-pointer group overflow-hidden ${isCompact ? 'p-0.5' : ''}`}
                                 >
@@ -1267,7 +1433,7 @@ const OrdersTimelineCard: React.FC = () => {
                                         const Ic: any = ICON_MAP[node.status] || Clock;
                                         const sc2: any = STATUS_STYLE[node.status] || STATUS_STYLE.pending;
                                         return (
-                                          <span key={idx} className={`w-6 h-6 rounded-full border flex items-center justify-center shadow-sm ${sc2.pill}`}>
+                                          <span key={idx} onMouseEnter={(e)=>{ const r=e.currentTarget.getBoundingClientRect(); setHoveredNode({node, element:e.currentTarget as HTMLElement, status:node.status}); setHoverRect(r); if(headerRef.current) setHeaderBottom(headerRef.current.getBoundingClientRect().bottom); }} onMouseLeave={()=>{setHoveredNode(null); setHoverRect(null);}} className={`w-6 h-6 rounded-full border flex items-center justify-center shadow-sm ${sc2.pill} cursor-pointer`}>
                                             <Ic size={11} className={`${sc2.iconColor} ${sc2.anim} shrink-0`} />
                                           </span>
                                         );
@@ -1414,6 +1580,76 @@ const OrdersTimelineCard: React.FC = () => {
           onClose={() => setClusterModalData(null)}
           onSelectOrder={order => setSelectedMeta({ order } as any)}
         />
+      )}
+
+      {/* 8. Hover Indicator — dashed vertical line + time label (per spec) */}
+      {hoveredNode && hoverRect && headerBottom > 0 && hoverRect.top > headerBottom + 4 && typeof document !== 'undefined' && createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            left: hoverRect.left + hoverRect.width / 2,
+            top: headerBottom + 2,
+            height: Math.max(12, hoverRect.top - headerBottom - 8),
+            pointerEvents: 'none',
+            zIndex: 99999,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+          }}
+        >
+          <div
+            style={{
+              position: 'absolute',
+              bottom: '100%',
+              marginBottom: '10px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              background: prefTheme === 'dark' ? 'rgba(255,255,255,0.98)' : 'rgba(17,24,39,0.96)',
+              color: prefTheme === 'dark' ? 'black' : 'white',
+              padding: '4px 10px',
+              borderRadius: '8px',
+              fontSize: '11px',
+              fontWeight: '800',
+              whiteSpace: 'nowrap',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.22)',
+              border: prefTheme === 'dark' ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.14)',
+              lineHeight: '1',
+              letterSpacing: '0.02em',
+            }}
+          >
+            {hoveredNode.node.timeStr}
+          </div>
+          <div
+            style={{
+              flex: 1,
+              width: '0px',
+              borderLeft: `2px dashed ${prefTheme === 'dark' ? 'rgba(255,255,255,0.92)' : 'rgba(17,24,39,0.88)'}`,
+              opacity: 1,
+              minHeight: '12px',
+              position: 'relative',
+            }}
+          >
+            <div
+              style={{
+                position: 'absolute',
+                top: '-8px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                fontSize: '11px',
+                lineHeight: '1',
+                color: prefTheme === 'dark' ? 'rgba(255,255,255,0.96)' : 'rgba(17,24,39,0.92)',
+                textShadow: prefTheme === 'dark' ? '0 1px 3px rgba(0,0,0,0.6)' : '0 1px 2px rgba(255,255,255,0.9)',
+                background: prefTheme === 'dark' ? 'rgba(0,0,0,0.9)' : 'rgba(255,255,255,0.98)',
+                borderRadius: '3px',
+                padding: '1px 2px',
+                border: prefTheme === 'dark' ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.08)',
+              }}
+            >
+              ▼
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
     </>

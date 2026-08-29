@@ -80,8 +80,6 @@ export function normalizeHistory(order: any): TimelineNode[] {
   }
 
   // ── Strict chronological sort (time-respect) ──
-  // Previously sorted by LIFECYCLE_ORDER, which caused 26 Aug → 27 Aug misplacement.
-  // Now sort purely by timestamp; lifecycle order only breaks ties (same minute).
   nodes.sort((a, b) => {
     if (a.timestampMs !== b.timestampMs) return a.timestampMs - b.timestampMs;
     return LIFECYCLE_ORDER.indexOf(a.status) - LIFECYCLE_ORDER.indexOf(b.status);
@@ -186,24 +184,29 @@ export function buildAccurateTimeline(
   // Sort elements by time (pct)
   elements.sort((a, b) => a.pct - b.pct);
 
-  // ── Build connectors — per new rule: FIRST Pending → LAST/current, ONE continuous dashed line ──
-  // - If only Pending (single status) → NO line
-  // - If 2+ statuses → ALWAYS connect FIRST (Pending) to LAST, regardless of distance/grouping
-  // - Intermediate statuses/groups sit on same line and appear connected automatically
-  // - Line stays vertically centered (centerY)
+  // ─── CONNECTOR LOGIC (FIXED) ──────────────────────────────────────────
+  // Rule:
+  //   - If only one status (Pending) → no connector.
+  //   - If 2+ statuses → ALWAYS connect the FIRST status (Pending) to the LAST/current status.
+  //   - Intermediate statuses sit on the same horizontal path; the connector line
+  //     spans from the first node to the current position.
+  //   - The line is continuous and vertically centered (handled by CSS).
   const connectors: { from: number; to: number }[] = [];
-  // lifecycleHistory contains ALL statuses chronologically, first is always Pending per rule
+
+  // Find the first status – always Pending per business rule.
+  const firstNode = lifecycleHistory.find(n => n.status === 'pending') || lifecycleHistory[0];
+  // The last/current position is the current status timestamp.
+  const lastPct = currentPct;
+
+  // Only draw a connector if there are at least two distinct statuses.
   if (lifecycleHistory.length >= 2) {
-    const firstNode = lifecycleHistory.find(n => n.status === 'pending') || lifecycleHistory[0];
     const firstPct = calcPct(firstNode.timestampMs);
-    const lastPct = currentPct; // current/last status position
-    if (lastPct > firstPct + 0.01) {
-      connectors.push({ from: firstPct, to: lastPct });
-    } else if (lastPct > firstPct) {
-      // Very close (<0.01% ≈ 1 min) — still draw minimal visible segment to satisfy "always connected"
-      connectors.push({ from: firstPct, to: firstPct + MIN_CONNECTOR_PCT });
-    }
+    // Ensure the connector goes from first to last, with a minimum width for visibility.
+    const width = Math.max(lastPct - firstPct, MIN_CONNECTOR_PCT);
+    // If width is extremely small, we still draw a minimal line.
+    connectors.push({ from: firstPct, to: firstPct + width });
   }
+  // ────────────────────────────────────────────────────────────────────────
 
   return { elements, connectors, merged };
 }

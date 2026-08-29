@@ -116,6 +116,7 @@ const OrderTimelineModal: React.FC<Props> = ({ data, onClose }) => {
       }
     } catch (err) {
       console.error('Failed to update order status:', err);
+      setStatusError(err instanceof Error ? err.message : 'Failed to update status. Please try again.');
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -127,14 +128,21 @@ const OrderTimelineModal: React.FC<Props> = ({ data, onClose }) => {
     setPendingSkippedStatuses(null);
     setPendingTargetStatus(null);
     setIsUpdatingStatus(true);
+    setStatusError(null);
     try {
+      // Sequential updates with per-step error handling — ensures consistency
       for (const status of allStatuses) {
         if (updateOrderStatus) {
-          await updateOrderStatus(order.id, status);
+          try {
+            await updateOrderStatus(order.id, status);
+          } catch (stepErr) {
+            throw new Error(`Failed at ${status}: ${stepErr instanceof Error ? stepErr.message : String(stepErr)}`);
+          }
         }
       }
     } catch (err) {
       console.error('Failed to update order statuses:', err);
+      setStatusError(err instanceof Error ? err.message : 'Failed to update statuses. Please try again.');
     } finally {
       setIsUpdatingStatus(false);
     }

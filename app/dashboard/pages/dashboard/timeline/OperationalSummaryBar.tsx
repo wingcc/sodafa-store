@@ -24,9 +24,11 @@ const OperationalSummaryBar: React.FC<OperationalSummaryBarProps> = ({
   const { language } = useTranslation();
   const isAr = language === 'ar';
   const now = new Date();
+  const nowTime = now.getTime();
 
-  // Compute metrics dynamically from store orders
+  // Compute metrics dynamically from store orders — use nowTime for stable memoization (3.1)
   const metrics = React.useMemo(() => {
+    const nowDate = new Date(nowTime);
     let activeCount = 0;
     let shippingCount = 0;
     let warningCount = 0;
@@ -34,7 +36,7 @@ const OperationalSummaryBar: React.FC<OperationalSummaryBarProps> = ({
     let overdueCount = 0;
     let deliveredTodayCount = 0;
 
-    const todayStr = now.toDateString();
+    const todayStr = nowDate.toDateString();
 
     for (const order of orders) {
       const st = order.orderStatus;
@@ -44,7 +46,7 @@ const OperationalSummaryBar: React.FC<OperationalSummaryBarProps> = ({
 
       if (st === 'shipped') {
         shippingCount++;
-        const sla = calculateOrderSla(order, now);
+        const sla = calculateOrderSla(order, nowDate);
         if (sla.state === 'warning') warningCount++;
         if (sla.state === 'critical') criticalCount++;
         if (sla.state === 'overdue') overdueCount++;
@@ -66,7 +68,7 @@ const OperationalSummaryBar: React.FC<OperationalSummaryBarProps> = ({
       overdueCount: overdueCount || 1,
       deliveredTodayCount: deliveredTodayCount || 4,
     };
-  }, [orders, now]);
+  }, [orders, nowTime]);
 
   const cards = [
     {
