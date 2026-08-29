@@ -79,6 +79,11 @@ export function getOrderTimestampForStatus(order: any): number {
   const tlTs = getTimelineTimestampForStatus(order, st);
   if (tlTs !== null) return tlTs;
 
+  // Explicit handling for pending - always use createdAt
+  if (st === 'pending') {
+    return safe(order.createdAt ?? order.created_at) ?? Date.now();
+  }
+
   if (st === 'shipped' && order.shippedAt) return safe(order.shippedAt) ?? new Date(order.createdAt || (order as any).created_at || Date.now()).getTime();
   if (st === 'shipped' && (order as any).shipped_at) return safe((order as any).shipped_at) ?? new Date(order.createdAt || (order as any).created_at || Date.now()).getTime();
   if (st === 'delivered' && order.deliveredAt) return safe(order.deliveredAt) ?? safe(order.shippedAt) ?? new Date(order.createdAt || (order as any).created_at || Date.now()).getTime();

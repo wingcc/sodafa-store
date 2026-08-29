@@ -940,11 +940,11 @@ const OrdersTimelineCard: React.FC = () => {
               </button>
             </div>
           ) : (
-            <div ref={timelineBodyRef} style={{ minWidth: `${Math.round(1200 * zoomLevel)}px` }} className="relative space-y-4 pt-1 transition-all duration-300 pb-6">
+            <div ref={timelineBodyRef} dir="ltr" style={{ minWidth: `${Math.round(1200 * zoomLevel)}px` }} className="relative space-y-4 pt-1 transition-all duration-300 pb-6">
               {/* TWO-LEVEL DATETIME HEADER SCALE — sticky top, highest z-index so rows never appear above it */}
               <div ref={headerRef} className="flex items-stretch w-full border-b border-gray-200 dark:border-white/10 pb-2 sticky top-0 z-40 bg-white dark:bg-gray-900 shadow-sm">
                 {/* Delivery Track Header — sticky left inside the sticky row */}
-                <div className="w-44 shrink-0 pr-3 font-extrabold text-xs text-emerald-600 dark:text-emerald-400 flex flex-col justify-end pb-1 border-r border-gray-200 dark:border-white/10 pl-3 bg-white dark:bg-gray-900 sticky left-0 z-50">
+                <div className={`w-44 shrink-0 pr-3 font-extrabold text-xs text-emerald-600 dark:text-emerald-400 flex flex-col justify-end pb-1 ${isAr ? 'border-l' : 'border-r'} border-gray-200 dark:border-white/10 pl-3 bg-white dark:bg-gray-900 sticky ${isAr ? 'right-0' : 'left-0'} z-50`}>
                   <span>{isAr ? 'مسار التوصيل' : 'Delivery Track'}</span>
                   <span className="text-[10px] text-gray-400 font-semibold">{isAr ? 'ساعات + دقائق' : 'Continuous Scale'}</span>
                 </div>
@@ -954,9 +954,7 @@ const OrdersTimelineCard: React.FC = () => {
                   {visibleDays.map(day => (
                     <div
                       key={day.id}
-                      className={`border-r border-gray-200 dark:border-white/10 px-1 py-1 text-center transition-all ${
-                        day.isToday ? 'bg-emerald-50 dark:bg-emerald-950/30' : ''
-                      }`}
+                      className={`border-r border-gray-200 dark:border-white/10 px-1 py-1 text-center transition-all ${day.isToday ? 'bg-emerald-50 dark:bg-emerald-950/30' : ''}`}
                     >
                       {/* Level 1 Day Badge + Smart Weather/Congestion */}
                       <div className={`py-1 rounded-xl text-xs font-black transition-all relative group/day ${
@@ -1013,9 +1011,7 @@ const OrdersTimelineCard: React.FC = () => {
                 {/* Background Grid Lines */}
                 <div className="absolute inset-y-0 left-44 right-0 grid grid-cols-7 gap-0 pointer-events-none z-0">
                   {visibleDays.map(day => (
-                    <div key={day.id} className={`col-span-1 border-r border-gray-200 dark:border-white/10 h-full grid grid-cols-6 gap-0 ${
-                      day.isToday ? 'bg-emerald-50/40 dark:bg-emerald-950/10' : ''
-                    }`}>
+                    <div key={day.id} className="col-span-1 border-r border-gray-200 dark:border-white/10 h-full grid grid-cols-6 gap-0 ${day.isToday ? 'bg-emerald-50/40 dark:bg-emerald-950/10' : ''}">
                       {hourlyScaleTicks.map((_, hIdx) => (
                         <div key={hIdx} className="border-r border-dashed border-gray-200 dark:border-white/10 h-full" />
                       ))}
@@ -1497,7 +1493,7 @@ const OrdersTimelineCard: React.FC = () => {
                       {/* Spacer row to replace pb-4 padding and draw the bottom border. 
                           Includes the solid sticky background on the left to prevent transparent gaps! */}
                       <div className="flex w-full relative border-b border-gray-200 dark:border-white/10">
-                        <div className="w-44 shrink-0 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-white/10 sticky left-0 z-30 h-[16px]" />
+                        <div className={`w-44 shrink-0 bg-white dark:bg-gray-900 ${isAr ? 'border-l' : 'border-r'} border-gray-200 dark:border-white/10 ${isAr ? 'sticky right-0' : 'sticky left-0'} z-30 h-[16px]`} />
                         <div className="flex-1 h-[16px]" />
                       </div>
                     </div>
@@ -1506,7 +1502,7 @@ const OrdersTimelineCard: React.FC = () => {
 
                 {/* SOLID FILLER: Covers any remaining vertical space if there are only 1-2 orders */}
                 <div className="flex-1 flex w-full relative pointer-events-none">
-                  <div className="w-44 shrink-0 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-white/10 sticky left-0 z-30" />
+                  <div className={`w-44 shrink-0 bg-white dark:bg-gray-900 ${isAr ? 'border-l' : 'border-r'} border-gray-200 dark:border-white/10 ${isAr ? 'sticky right-0' : 'sticky left-0'} z-30`} />
                 </div>
               </div>
             </div>
