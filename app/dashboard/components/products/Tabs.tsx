@@ -2,7 +2,7 @@
 
 import React from 'react';
 
-type TabId = 'general' | 'pricing' | 'media' | 'seo' | 'advanced';
+type TabId = 'general' | 'pricing' | 'media' | 'seo' | 'more-info' | 'advanced';
 
 interface Tab {
   id: TabId;
@@ -19,6 +19,7 @@ const tabs: Tab[] = [
   { id: 'pricing', label: 'Pricing & Inventory' },
   { id: 'media', label: 'Media' },
   { id: 'seo', label: 'SEO' },
+  { id: 'more-info', label: 'More info' },
   { id: 'advanced', label: 'Advanced' },
 ];
 

@@ -114,6 +114,34 @@ export default function ProductDetailClient({ product: initialProduct }: Product
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
   const [activeTab, setActiveTab] = useState<'description' | 'ingredients' | 'reviews' | 'shipping'>('description');
 
+  const productBenefits = (product.moreInfo?.benefits && product.moreInfo.benefits.length > 0)
+    ? product.moreInfo.benefits
+    : (product.tags ?? []);
+
+  const productIngredients = (product.moreInfo?.ingredients && product.moreInfo.ingredients.length > 0)
+    ? product.moreInfo.ingredients
+    : [
+        isAr ? 'زيت الأرغان' : 'Argan Oil',
+        isAr ? 'زيت الأوكي' : 'Prickly Pear Oil',
+        isAr ? 'خلاصة الصبار' : 'Aloe Vera Extract',
+        isAr ? 'فيتامين E' : 'Vitamin E',
+      ];
+
+  const fullIngredients = product.moreInfo?.ingredientsFull ||
+    (isAr
+      ? 'Argania Spinosa Kernel Oil, Opuntia Ficus-Indica Seed Oil, Tocopherol, Aloe Barbadensis Leaf Extract, Sodium Hyaluronate, Citrus Aurantium Bergamia Fruit Oil, Rosmarinus Officinalis Leaf Extract.'
+      : 'Argania Spinosa Kernel Oil, Opuntia Ficus-Indica Seed Oil, Tocopherol, Aloe Barbadensis Leaf Extract, Sodium Hyaluronate, Citrus Aurantium Bergamia Fruit Oil, Rosmarinus Officinalis Leaf Extract.');
+
+  const howToUseText = product.moreInfo?.howToUse ||
+    (isAr
+      ? 'ضعي 3-4 قطرات على بشرة نظيفة وجافة كل صباح قبل المرطب. تبعيه بواقي شمس SPF 30+ خلال النهار. للحصول على أفضل النتائج، استخدميه بانتظام لمدة 4-8 أسابيع.'
+      : 'Apply 3-4 drops to clean, dry skin every morning before moisturizer. Follow with SPF 30+ during the day. For best results, use consistently for 4-8 weeks.');
+
+  const shoppingInfo = product.moreInfo?.shoppingInfo ||
+    (isAr
+      ? 'تستخدم هذه التركيبة من قبل العناية اليومية مع روتين البشرة. يتم شحن الطلب خلال 24-48 ساعة داخل المدن الكبرى.'
+      : 'Use this formula as part of your daily skincare routine. Orders are shipped within 24-48 hours in major cities.');
+
   const stock = product?.stock ?? 0;
   const maxQty = stock > 0 ? stock : 1;
 
@@ -323,6 +351,7 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                 : [];
               return {
                 id: String(row.id ?? ''),
+                slug: row.slug ? String(row.slug).trim() : undefined,
                 name: String(row.name ?? ''),
                 price,
                 originalPrice,
@@ -341,7 +370,7 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                 images: imageSrcs.map((src) => ({ src })),
                 isOffer: Boolean(row.IsOffer ?? row.isOffer ?? false),
                 offerTime: row.OfferTime ? String(row.OfferTime) : row.offerTime ? String(row.offerTime) : undefined,
-              };
+              } as Product;
             });
           setRelatedProducts(related);
         }
@@ -848,19 +877,13 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                     <h3 className="text-xl font-extrabold text-stone-900 mb-4">{isAr ? 'الفوائد الرئيسية' : 'Key Benefits'}</h3>
                     <ul className="space-y-3">
                       {(() => {
-                        const benefits: string[] = [];
-                        if (product.tags && product.tags.length > 0) {
-                          product.tags.forEach((t) => benefits.push(t));
-                        }
-                        if (benefits.length === 0) {
-                          benefits.push(
-                            isAr ? '100% مكونات طبيعية' : '100% Natural Botanical Extract',
-                            isAr ? 'يغذي ويرطب البشرة بعمق' : 'Deeply nourishes & hydrates skin',
-                            isAr ? 'خالٍ من البارابين والسلفات' : 'Paraben & Sulfate Free',
-                            isAr ? 'اختُبر طبياً ومناسب لجميع أنواع البشرة' : 'Dermatologically Tested',
-                            isAr ? 'يُ民航ر ظهور التجاعيد والخطوط الدقيقة' : 'Reduces appearance of fine lines',
-                          );
-                        }
+                        const benefits: string[] = productBenefits.length > 0 ? productBenefits : [
+                          isAr ? '100% مكونات طبيعية' : '100% Natural Botanical Extract',
+                          isAr ? 'يغذي ويرطب البشرة بعمق' : 'Deeply nourishes & hydrates skin',
+                          isAr ? 'خالٍ من البارابين والسلفات' : 'Paraben & Sulfate Free',
+                          isAr ? 'اختُبر طبياً ومناسب لجميع أنواع البشرة' : 'Dermatologically Tested',
+                          isAr ? 'يُقلل ظهور التجاعيد والخطوط الدقيقة' : 'Reduces appearance of fine lines',
+                        ];
                         return benefits.slice(0, 6);
                       })().map((b, i) => (
                         <li key={i} className="flex items-start gap-3">
@@ -875,12 +898,9 @@ export default function ProductDetailClient({ product: initialProduct }: Product
 
                   <div>
                     <h3 className="text-xl font-extrabold text-stone-900 mb-4">{isAr ? 'طريقة الاستعمال' : 'How to Use'}</h3>
-                    <p className="text-sm text-stone-600 leading-relaxed">
-                      {isAr
-                        ? 'ضعي 3-4 قطرات على بشرة نظيفة وجافة كل صباح قبل المرطب. تبعيه بواقي شمس SPF 30+ خلال النهار. للحصول على أفضل النتائج، استخدميه بانتظام لمدة 4-8 أسابيع.'
-                        : 'Apply 3-4 drops to clean, dry skin every morning before moisturizer. Follow with SPF 30+ during the day. For best results, use consistently for 4-8 weeks.'}
-                    </p>
+                    <p className="text-sm text-stone-600 leading-relaxed">{howToUseText}</p>
                   </div>
+
                 </div>
               )}
 
@@ -890,38 +910,15 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                   <div>
                     <h3 className="text-xl font-extrabold text-stone-900 mb-4">{isAr ? 'المكونات الرئيسية' : 'Key Ingredients'}</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {[
-                        {
-                          name: isAr ? 'زيت الأرغان' : 'Argan Oil',
-                          desc: isAr ? 'غني بفيتامين E والأحماض الدهنية الأساسية لتغذية البشرة بعمق' : 'Rich in Vitamin E & essential fatty acids for deep nourishment',
-                        },
-                        {
-                          name: isAr ? 'زيت الأogui' : 'Prickly Pear Oil',
-                          desc: isAr ? 'مرطب طبيعي مضاد للأكسدة لبشرة ناعمة ومتلألئة' : 'Natural moisturizing antioxidant for smooth, radiant skin',
-                        },
-                        {
-                          name: isAr ? 'مسحوق الأركان' : 'Argan Powder',
-                          desc: isAr ? 'مُолод للبشرة ومُحسّن لمرونتها' : 'Skin revitalizing and elasticity enhancer',
-                        },
-                        {
-                          name: isAr ? 'خلاصة الصبار' : 'Aloe Vera Extract',
-                          desc: isAr ? 'يهدئ ويُرطب البشرة بعمق' : 'Soothes and hydrates skin deeply',
-                        },
-                        {
-                          name: isAr ? 'فيتامين E' : 'Vitamin E',
-                          desc: isAr ? 'مضاد أكسدة قوي يحمي البشرة من الشيخوخة المبكرة' : 'Powerful antioxidant protecting skin from premature aging',
-                        },
-                        {
-                          name: isAr ? 'حمض الهيالورونيك' : 'Hyaluronic Acid',
-                          desc: isAr ? 'يحتشد الرطوبة ويُحسّن ملمس البشرة' : 'Locks in moisture and improves skin texture',
-                        },
-                      ].map((ingredient, i) => (
-                        <div key={i} className="p-4 rounded-xl bg-stone-50 border border-stone-100">
+                      {productIngredients.map((ingredient, i) => (
+                        <div key={`${ingredient}-${i}`} className="p-4 rounded-xl bg-stone-50 border border-stone-100">
                           <div className="flex items-center gap-2 mb-2">
                             <Droplet className="w-4 h-4 text-emerald-700" />
-                            <h4 className="text-sm font-bold text-stone-900">{ingredient.name}</h4>
+                            <h4 className="text-sm font-bold text-stone-900">{ingredient}</h4>
                           </div>
-                          <p className="text-xs text-stone-600">{ingredient.desc}</p>
+                          <p className="text-xs text-stone-600">
+                            {isAr ? 'مكون أساسي للعناية اليومية بالبشرة' : 'Essential daily skincare ingredient'}
+                          </p>
                         </div>
                       ))}
                     </div>
@@ -929,12 +926,9 @@ export default function ProductDetailClient({ product: initialProduct }: Product
 
                   <div className="p-4 rounded-xl bg-stone-50 border border-stone-100">
                     <h4 className="text-sm font-bold text-stone-900 mb-2">{isAr ? 'التركيبة الكاملة' : 'Full Ingredients List'}</h4>
-                    <p className="text-xs text-stone-500 leading-relaxed">
-                      {isAr
-                        ? 'Argania Spinosa Kernel Oil, Opuntia Ficus-Indica Seed Oil, Tocopherol, Aloe Barbadensis Leaf Extract, Sodium Hyaluronate, Citrus Aurantium Bergamia Fruit Oil, Rosmarinus Officinalis Leaf Extract.'
-                        : 'Argania Spinosa Kernel Oil, Opuntia Ficus-Indica Seed Oil, Tocopherol, Aloe Barbadensis Leaf Extract, Sodium Hyaluronate, Citrus Aurantium Bergamia Fruit Oil, Rosmarinus Officinalis Leaf Extract.'}
-                    </p>
+                    <p className="text-xs text-stone-500 leading-relaxed">{fullIngredients}</p>
                   </div>
+
                 </div>
               )}
 
@@ -1102,13 +1096,15 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                 </div>
               )}
 
-              {/* Shipping Tab */}
+              {/* Shipping Tab — DB-driven via more_info.shoppingInfo */}
               {activeTab === 'shipping' && (
                 <div className="space-y-6">
                   <div>
                     <h3 className="text-xl font-extrabold text-stone-900 mb-2">{isAr ? 'معلومات الشحن' : 'Shipping Information'}</h3>
                     <p className="text-sm text-stone-600">
-                      {isAr ? 'نقدم شحن سريع وموثوق في جميع أنحاء المغرب مع خيارات توصيل متعددة تناسب احتياجاتك.' : 'We offer fast, reliable shipping across Morocco with multiple delivery options to suit your needs.'}
+                      {shoppingInfo && shoppingInfo.trim().length > 0
+                        ? shoppingInfo
+                        : (isAr ? 'نقدم شحن سريع وموثوق في جميع أنحاء المغرب مع خيارات توصيل متعددة تناسب احتياجاتك.' : 'We offer fast, reliable shipping across Morocco with multiple delivery options to suit your needs.')}
                     </p>
                   </div>
 
@@ -1202,13 +1198,14 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                   const rpId = typeof rp.id === 'string' || typeof rp.id === 'number' ? rp.id : '';
                   const rpName = typeof rp.name === 'string' ? rp.name : '';
                   const rpPrice = typeof rp.price === 'number' ? rp.price : 0;
+                  const rpSlug = (rp as any).slug ? String((rp as any).slug) : undefined;
 
                   return (
                     <div key={rpId} className="w-52 sm:w-60 flex-shrink-0">
                       <ProductCard
                         product={rp}
                         variant="compact"
-                        href={`/store/${rpId}`}
+                        href={`/store/${encodeURIComponent(rpSlug || String(rpId))}`}
                         onAddToCart={() => {
                           addToCart({ id: rpId, name: rpName, price: rpPrice, image: rpImageSrc }, 1);
                           openCart();

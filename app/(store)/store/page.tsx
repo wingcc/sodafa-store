@@ -3,6 +3,7 @@ import type { Product } from '../../types/product';
 import StoreClient from './components/StoreClient';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { mapProductRow } from '@/lib/product-mapper';
+import { loadPublicConfig } from '@/lib/public-content';
 
 export const metadata = {
   title: 'WellnessMarket Store — Shop Body Wellness Products',
@@ -10,6 +11,8 @@ export const metadata = {
 };
 
 export default async function StorePage() {
+  const publicConfig = await loadPublicConfig();
+
   // Fetch products from Supabase on the server (admin client safe in server components)
   let products: Product[] = [];
 
@@ -41,5 +44,5 @@ export default async function StorePage() {
     console.error('Failed to fetch products:', err);
   }
 
-  return <StoreClient initialProducts={products} />;
+  return <StoreClient initialProducts={products} initialTrust={publicConfig.trust ?? []} />;
 }

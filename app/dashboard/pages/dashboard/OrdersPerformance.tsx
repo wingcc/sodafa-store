@@ -8,7 +8,7 @@ import { getOrderStatusCounts, sparklinePath, buildOrdersSparkline } from './uti
 import type { Order } from '../../types';
 import { WidgetIcon } from './workspace/icons';
 
-const OrdersPerformance: React.FC<{ orders: Order[]; onExpand?: () => void }> = ({ orders, onExpand }) => {
+const OrdersPerformance: React.FC<{ orders: Order[]; onExpand?: () => void; isExpanded?: boolean }> = ({ orders, onExpand, isExpanded = false }) => {
   const { language } = useTranslation();
   const isAr = language === 'ar';
   const counts = getOrderStatusCounts(orders);
@@ -33,6 +33,69 @@ const OrdersPerformance: React.FC<{ orders: Order[]; onExpand?: () => void }> = 
     { label: isAr ? 'ملغي' : 'Cancelled', value: cancelled, icon: <XCircle size={14} className="text-red-600" />, color: 'bg-red-500' },
     { label: isAr ? 'مرتجع' : 'Returned', value: returned, icon: <RotateCcw size={14} className="text-orange-600" />, color: 'bg-orange-500' },
   ];
+
+  if (isExpanded) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/10 flex items-center justify-center"><WidgetIcon id="orders-performance" /></div>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{isAr ? 'أداء الطلبات — تفصيلي' : 'Orders Performance — Detailed'}</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{total.toLocaleString()} {isAr ? 'طلب' : 'orders'} • {completed} {isAr ? 'مكتمل' : 'completed'}</p>
+          </div>
+        </div>
+
+        <div className="rounded-2xl bg-white dark:bg-white/[0.04] border border-gray-100 dark:border-white/5 p-6">
+          <div className="flex items-end justify-between">
+            <div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{isAr ? 'الإجمالي' : 'Total Orders'}</p>
+              <p className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white mt-1">{total.toLocaleString()}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 flex items-center gap-1.5">
+                {growth >= 0 ? <TrendingUp size={14} className="text-emerald-500" /> : <TrendingDown size={14} className="text-red-500" />}
+                <span className={growth >= 0 ? 'text-emerald-600 font-bold' : 'text-red-600 font-bold'}>{growth >= 0 ? '+' : ''}{growth}%</span>
+                <span>{isAr ? 'مقابل 7 أيام' : 'vs last 7d'}</span>
+              </p>
+            </div>
+            <div className="w-[160px] h-[48px]">
+              <svg viewBox="0 0 100 28" className="w-full h-full">
+                <path d={sparklinePath(spark, 100, 28)} fill="none" stroke="var(--color-darkGreen, #047857)" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {items.map(it => (
+            <div key={it.label} className="rounded-2xl bg-white dark:bg-white/[0.04] border border-gray-100 dark:border-white/5 p-5 text-center">
+              <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-center mx-auto">{it.icon}</div>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-300 mt-3">{it.label}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{it.value}</p>
+              <p className="text-xs text-gray-500 dark:text-white/40 mt-1">{total ? Math.round((it.value / total) * 100) : 0}% {isAr ? 'من الإجمالي' : 'of total'}</p>
+              <div className="mt-3 h-2 rounded-full bg-gray-100 dark:bg-white/10 overflow-hidden"><div className={`h-full ${it.color}`} style={{ width: `${total ? Math.round((it.value / total) * 100) : 0}%` }} /></div>
+            </div>
+          ))}
+        </div>
+
+        <div className="rounded-2xl bg-white dark:bg-white/[0.04] border border-gray-100 dark:border-white/5 p-5">
+          <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{isAr ? 'التوزيع' : 'Distribution'}</h4>
+          <div className="flex gap-1.5 h-4 rounded-full overflow-hidden bg-gray-100 dark:bg-white/10 p-1">
+            {items.map(it => (
+              <div key={it.label} className={`${it.color} rounded-full`} style={{ width: `${total ? (it.value / total) * 100 : 0}%` }} title={`${it.label}: ${it.value}`} />
+            ))}
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+            {items.map(it => (
+              <div key={it.label} className="flex items-center gap-2 text-sm">
+                <span className={`w-3 h-3 rounded-full ${it.color} shrink-0`} />
+                <span className="text-gray-700 dark:text-gray-300">{it.label}</span>
+                <span className="ml-auto font-bold text-gray-900 dark:text-white">{it.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5 h-full flex flex-col min-h-0 overflow-hidden">

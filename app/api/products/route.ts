@@ -74,6 +74,13 @@ export async function POST(request: Request) {
       seo_description: body.seoDescription ?? null,
       seo_slug: body.seoSlug ?? null,
       seo_keywords: body.seoKeywords ?? [],
+      more_info: body.moreInfo ?? {
+        ingredients: [],
+        ingredientsFull: '',
+        benefits: [],
+        howToUse: '',
+        shoppingInfo: '',
+      },
     });
 
     if (error) throw error;

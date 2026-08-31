@@ -9,13 +9,64 @@ import DashboardInfoButton from './DashboardInfoButton';
 import type { Product } from '../../types';
 import { WidgetIcon } from './workspace/icons';
 
-const LowStockAlertsCard: React.FC<{ products: Product[] }> = ({ products }) => {
+const LowStockAlertsCard: React.FC<{ products: Product[]; isExpanded?: boolean }> = ({ products, isExpanded = false }) => {
   const { t, language } = useTranslation();
   const { setCurrentPage } = useStore();
   const isAr = language === 'ar';
   const low = products.filter(p => p.stock > 0 && p.stock <= p.lowStockThreshold).slice(0, 3);
   const out = products.filter(p => p.stock === 0).slice(0, 3);
   const list = [...low, ...out].slice(0, 5);
+  if (isExpanded) {
+    const lowAll = products.filter(p => p.stock > 0 && p.stock <= p.lowStockThreshold);
+    const outAll = products.filter(p => p.stock === 0);
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/10 flex items-center justify-center"><WidgetIcon id="low-stock" /></div>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{isAr ? 'تنبيهات المخزون — تفصيلي' : 'Stock Alerts — Detailed'}</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{outAll.length} {isAr ? 'نافد' : 'out'} • {lowAll.length} {isAr ? 'منخفض' : 'low'} • {products.length} {isAr ? 'منتج' : 'products'}</p>
+          </div>
+          <button onClick={() => setCurrentPage('inventory')} className="ml-auto text-sm font-medium flex items-center gap-1 px-3 py-1.5 rounded-full bg-[var(--color-darkGreen)] text-white hover:opacity-90">
+            {t('dashboard.manage')} <ArrowRight size={14} className={isAr ? 'rotate-180' : ''} />
+          </button>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="rounded-2xl bg-red-50/50 dark:bg-red-500/5 border border-red-100 dark:border-red-500/15 p-5">
+            <h4 className="text-sm font-semibold text-red-800 dark:text-red-200 flex items-center gap-2"><AlertTriangle size={16} />{isAr ? 'نافد من المخزون' : 'Out of Stock'} • {outAll.length}</h4>
+            <div className="mt-3 space-y-2 max-h-[380px] overflow-y-auto pr-1">
+              {outAll.length ? outAll.slice(0, 15).map(p => (
+                <div key={p.id} className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-white/[0.06] border border-red-100 dark:border-red-500/10">
+                  <img src={p.images[0]} alt={p.name} className="w-12 h-12 rounded-xl object-cover bg-white shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{p.name}</p>
+                    <p className="text-xs text-red-600 dark:text-red-400">{isAr ? 'نافد' : 'Out of stock'} • {p.categoryName || ''}</p>
+                  </div>
+                  <Badge variant="danger" size="sm" dot>{t('dashboard.outOfStockBadge')}</Badge>
+                </div>
+              )) : <p className="text-sm text-gray-400 text-center py-8">{isAr ? 'لا يوجد نافد' : 'No out of stock'}</p>}
+            </div>
+          </div>
+          <div className="rounded-2xl bg-amber-50/50 dark:bg-amber-500/5 border border-amber-100 dark:border-amber-500/15 p-5">
+            <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-200 flex items-center gap-2"><AlertTriangle size={16} />{isAr ? 'مخزون منخفض' : 'Low Stock'} • {lowAll.length}</h4>
+            <div className="mt-3 space-y-2 max-h-[380px] overflow-y-auto pr-1">
+              {lowAll.length ? lowAll.slice(0, 15).map(p => (
+                <div key={p.id} className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-white/[0.06] border border-amber-100 dark:border-amber-500/10">
+                  <img src={p.images[0]} alt={p.name} className="w-12 h-12 rounded-xl object-cover bg-white shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{p.name}</p>
+                    <p className="text-xs text-amber-600 dark:text-amber-400">{t('dashboard.onlyLeft', { count: String(p.stock) })} • {p.stock}/{p.lowStockThreshold}</p>
+                  </div>
+                  <Badge variant="warning" size="sm" dot>{t('dashboard.lowStock')}</Badge>
+                </div>
+              )) : <p className="text-sm text-gray-400 text-center py-8">{isAr ? 'لا يوجد منخفض' : 'No low stock'}</p>}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-white/10 h-full flex flex-col min-h-0 overflow-hidden">
       <div className="flex items-center justify-between mb-4 shrink-0">

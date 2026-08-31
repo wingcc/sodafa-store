@@ -4,9 +4,11 @@ import React, { useState, useMemo } from 'react';
 import {
   Settings2, RotateCcw, Plus, Eye, EyeOff, LayoutGrid,
   Sparkles, Grid3X3, Undo2, Redo2, MoreHorizontal, X, Check,
+  Download, Upload,
 } from 'lucide-react';
 import type { WidgetMeta } from './types';
 import type { WidgetLayout } from '../../../store/useWorkspaceStore';
+import { useWorkspaceStore } from '../../../store/useWorkspaceStore';
 import { useTranslation } from '../../../i18n/useTranslation';
 import { WidgetIcon } from './icons';
 
@@ -74,6 +76,55 @@ const WorkspaceToolbar: React.FC<Props> = ({
     });
     return Array.from(map.entries());
   }, [hiddenMetas]);
+
+  // ─── Save / Load ────────────────────────────────────────────
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const importWorkspace = useWorkspaceStore(s => s.importWorkspace);
+
+  const handleSave = () => {
+    const data = {
+      workspace,
+      exportedAt: new Date().toISOString(),
+      version: 1,
+      layouts,
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${workspace === 'dashboard' ? 'Dashboard Layout' : 'Analytics Layout'}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleLoadFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result as string);
+        let imported: WidgetLayout[] = Array.isArray(parsed) ? parsed : parsed.layouts ?? parsed.data ?? [];
+        if (!Array.isArray(imported) || imported.length === 0) throw new Error(isAr ? 'ملف تخطيط غير صالح' : 'Invalid layout file');
+        if (parsed.workspace && parsed.workspace !== workspace) {
+          const msg = isAr
+            ? `هذا الملف مخصص لـ "${parsed.workspace}" بينما أنت في "${workspace}". هل تريد التحميل على أي حال؟`
+            : `This file is for "${parsed.workspace}" but you are on "${workspace}". Load anyway?`;
+          if (!window.confirm(msg)) return;
+        }
+        imported = imported.filter((l: any) => l.id && typeof l.colSpan === 'number');
+        if (!imported.length) throw new Error(isAr ? 'لم يتم العثور على ودجات صالحة' : 'No valid widgets found');
+        importWorkspace(workspace, imported as WidgetLayout[]);
+      } catch (err) {
+        window.alert(`${isAr ? 'فشل تحميل التخطيط' : 'Failed to load layout'}: ${(err as Error).message}`);
+      } finally {
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    };
+    reader.readAsText(file);
+  };
 
   // ─── View Mode (not editing) ─────────────────────────────────
   if (!editMode) {
@@ -268,9 +319,37 @@ const WorkspaceToolbar: React.FC<Props> = ({
                   <button onClick={() => { setShowComponents(v => !v); setShowOverflow(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5">
                     <Plus size={14} /> {isAr ? 'إضافة مكونات' : 'Add Components'} {hidden.length > 0 && <span className="ml-auto px-1.5 py-0.5 rounded-md bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 text-[10px] font-bold">{hidden.length}</span>}
                   </button>
+                  <div className="h-px bg-gray-200 dark:bg-white/10 my-1" />
+                  <button onClick={() => { handleSave(); setShowOverflow(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5">
+                    <Download size={14} /> {isAr ? 'حفظ التخطيط' : 'Save Layout'}
+                  </button>
+                  <button onClick={() => { fileInputRef.current?.click(); setShowOverflow(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5">
+                    <Upload size={14} /> {isAr ? 'تحميل التخطيط' : 'Load Layout'}
+                  </button>
                 </div>
               )}
             </div>
+
+            {/* ═══ Group: File (desktop) ═══ */}
+            <div className="hidden lg:flex items-center gap-1 shrink-0">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-white/40 px-1.5 select-none">File</span>
+              <button
+                onClick={handleSave}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
+                title={isAr ? 'حفظ التخطيط كـ JSON' : 'Save layout as JSON'}
+              >
+                <Download size={13} /> {isAr ? 'حفظ' : 'Save'}
+              </button>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
+                title={isAr ? 'تحميل تخطيط من JSON' : 'Load layout from JSON'}
+              >
+                <Upload size={13} /> {isAr ? 'تحميل' : 'Load'}
+              </button>
+            </div>
+
+            <div className="hidden lg:block w-px h-6 bg-gray-200 dark:bg-white/10 mx-1 shrink-0" />
 
             {/* ═══ Group: Actions (always visible) ═══ */}
             <div className="flex items-center gap-1.5 shrink-0">
@@ -322,6 +401,9 @@ const WorkspaceToolbar: React.FC<Props> = ({
           )}
         </div>
       </div>
+
+      {/* Hidden file input for Load (edit mode) */}
+      <input ref={fileInputRef} type="file" accept=".json,application/json" className="hidden" onChange={handleLoadFile} />
 
       {/* ═══ Reset Confirmation Modal ═══ */}
       {confirmReset && (

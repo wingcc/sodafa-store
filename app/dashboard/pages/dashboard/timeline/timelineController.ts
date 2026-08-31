@@ -167,20 +167,13 @@ export function buildAccurateTimeline(
   // ── بناء الموصل الواحد من البداية إلى النهاية ──
   const connectors: { from: number; to: number }[] = [];
 
-  // الحالة الأولى هي Pending أو أول عقدة في التاريخ
-  const firstNode = lifecycleHistory.find(n => n.status === 'pending') || lifecycleHistory[0];
-  const firstPct = calcPct(firstNode.timestampMs);
-  const lastPct = calcPct(currentTimestamp);
-
-  // BUGFIX (real-time state transitions): this used to require >= 2 historical
-  // states before drawing any connector at all. Right after a live status change
-  // (e.g. pending -> confirmed), the order only has ONE historical state yet —
-  // the line from that single circle to the current status pill was silently
-  // skipped, making the connection look "broken" exactly when a state updates.
-  // We already bail out earlier (`historical.length === 0`) when there is
-  // nothing at all to connect, so here >= 1 is the correct, sufficient check.
   if (historical.length >= 1) {
-    connectors.push({ from: firstPct, to: lastPct });
+    const firstNode = lifecycleHistory.find(n => n.status === 'pending') || lifecycleHistory[0];
+    const firstPct = calcPct(firstNode.timestampMs);
+    const lastPct = calcPct(currentTimestamp);
+    if (firstPct !== lastPct) {
+      connectors.push({ from: Math.min(firstPct, lastPct), to: Math.max(firstPct, lastPct) });
+    }
   }
 
   // ملاحظة: لم نعد نستخدم MERGE_THRESHOLD لأننا نفضل إظهار جميع الحالات التاريخية

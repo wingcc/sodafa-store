@@ -536,12 +536,16 @@ const OrdersTimelineCard: React.FC = () => {
     });
   }, [orders, isAr, now]);
 
-  // Memoized timeline cache per order — avoids rebuilding 20+ rows on every render (2.1)
+  // Memoized timeline cache per order — avoids rebuilding 20+ rows on every render
   const timelineCache = useMemo(() => {
     const cache = new Map<string, ReturnType<typeof buildTimelineElements>>();
     for (const item of timelineData) {
       const hist = (item.lifecycleHistory as any[]).filter((n: any) => n.status !== item.orderStatus);
-      const result = buildTimelineElements(hist as any, item.orderStatus, item.eventTimestamp, viewportStartMs, viewportDurationMs, zoomLevel);
+      const isShippedBranch = item.orderStatus === 'shipped' || item.orderStatus === 'delivered';
+      const pillPct = isShippedBranch && item.shippedAtMs
+        ? calcPercentFromTimestamp(item.shippedAtMs, viewportStartMs, viewportDurationMs)
+        : calcPercentFromTimestamp(item.eventTimestamp, viewportStartMs, viewportDurationMs);
+      const result = buildTimelineElements(hist as any, item.orderStatus, pillPct, viewportStartMs, viewportDurationMs, zoomLevel);
       cache.set(item.order.id, result as any);
     }
     return cache;
@@ -1119,7 +1123,7 @@ const OrdersTimelineCard: React.FC = () => {
                             return buildTimelineElements(
                               lifecycleNodes as any,
                               st,
-                              item.eventTimestamp,
+                              pillPct,
                               viewportStartMs,
                               viewportDurationMs,
                               zoomLevel

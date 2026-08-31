@@ -39,8 +39,8 @@ import {
 } from 'lucide-react';
 import { WHATSAPP_LINK } from '../../../constants';
 
-/** Global free-shipping threshold (mirrors store_settings.seed). */
-const GLOBAL_FREE_SHIPPING_THRESHOLD = 500;
+/** Default free-shipping threshold used until the live DB value loads. */
+const DEFAULT_FREE_SHIPPING_THRESHOLD = 500;
 
 /** Bilingual city labels: English DB name → display label ("Arabic (English)"). */
 const CITY_LABELS: Record<string, string> = {
@@ -128,10 +128,61 @@ export default function CheckoutClient() {
   const [placing, setPlacing] = useState(false);
   const [shippingZones, setShippingZones] = useState<ShippingZoneData[]>([]);
   const [shippingLoading, setShippingLoading] = useState(true);
+  const [globalFreeShippingThreshold, setGlobalFreeShippingThreshold] = useState<number>(DEFAULT_FREE_SHIPPING_THRESHOLD);
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number } | null>(null);
   const [couponApplying, setCouponApplying] = useState(false);
+  const [couponStatus, setCouponStatus] = useState<{ tone: 'success' | 'warning' | 'danger'; message: string } | null>(null);
+
+  // ─── Track begin_checkout for cart abandonment ───────────────
+  useEffect(() => {
+    if (cartItems.length === 0) return;
+    try {
+      const fp = document.cookie.match(/sodfa_fp=([^;]+)/)?.[1];
+      const sess = document.cookie.match(/sodfa_session=([^;]+)/)?.[1];
+      const vid = document.cookie.match(/sodfa_visitor_id=([^;]+)/)?.[1];
+      if (!fp || !sess || !vid) return;
+      const consent = document.cookie.match(/sodfa_analytics_consent=([^;]+)/)?.[1];
+      if (consent !== 'true') return;
+      fetch('/api/analytics/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'event',
+          fingerprint: decodeURIComponent(fp),
+          sessionToken: decodeURIComponent(sess),
+          visitorId: decodeURIComponent(vid),
+          eventType: 'begin_checkout',
+          eventData: { cart_value: cartTotal, item_count: cartItems.reduce((s, i) => s + i.qty, 0) },
+          pageUrl: window.location.href,
+        }),
+      }).catch(() => {});
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ─── Fetch shipping zones + cities + methods from DB (once) ──────
+  useEffect(() => {
+    let active = true;
+
+    const loadThreshold = async () => {
+      try {
+        const res = await fetch('/api/admin/settings', { cache: 'no-store' });
+        const json = await res.json();
+        const value = Number(json?.data?.free_shipping_threshold ?? DEFAULT_FREE_SHIPPING_THRESHOLD);
+        if (active && Number.isFinite(value) && value >= 0) {
+          setGlobalFreeShippingThreshold(value);
+        }
+      } catch (error) {
+        console.error('Failed to load free shipping threshold', error);
+      }
+    };
+
+    void loadThreshold();
+    return () => {
+      active = false;
+    };
+  }, []);
+
   useEffect(() => {
     const loadShipping = async () => {
       try {
@@ -215,9 +266,9 @@ export default function CheckoutClient() {
       methodPrice: selectedMethod.price,
       freeShippingThreshold: null,
       subtotal,
-      globalThreshold: GLOBAL_FREE_SHIPPING_THRESHOLD,
+      globalThreshold: globalFreeShippingThreshold,
     });
-  }, [selectedMethod, subtotal]);
+  }, [selectedMethod, subtotal, globalFreeShippingThreshold]);
 
   const discount = appliedCoupon?.discount ?? 0;
   const grandTotal = calcFinalTotal({ subtotal, deliveryFee, discount });
@@ -258,6 +309,7 @@ export default function CheckoutClient() {
   const handleApplyCoupon = async () => {
     if (!form.couponCode.trim()) return;
     setCouponApplying(true);
+    setCouponStatus(null);
     try {
       const res = await fetch('/api/coupons/validate', {
         method: 'POST',
@@ -273,12 +325,23 @@ export default function CheckoutClient() {
       const json = await res.json();
       if (json.success && json.data?.valid) {
         setAppliedCoupon({ code: form.couponCode.trim(), discount: json.data.discount || 0 });
+        setCouponStatus({
+          tone: 'success',
+          message: isAr ? `تم تطبيق الكوبون: خصم ${json.data.discount} د.م` : `Coupon applied: -${json.data.discount} MAD`,
+        });
         addToast('success', isAr ? `تم تطبيق الكوبون: خصم ${json.data.discount} د.م` : `Coupon applied: -${json.data.discount} MAD`);
       } else {
-        addToast('error', json.data?.reason || (isAr ? 'الكوبون غير صالح' : 'Invalid coupon code'));
+        const reason = json.data?.reason || (isAr ? 'الكوبون غير صالح' : 'Invalid coupon code');
+        setCouponStatus({
+          tone: 'danger',
+          message: reason,
+        });
+        addToast('error', reason);
       }
     } catch (e) {
-      addToast('error', isAr ? 'فشل تطبيق الكوبون' : 'Failed to apply coupon');
+      const fallback = isAr ? 'فشل تطبيق الكوبون' : 'Failed to apply coupon';
+      setCouponStatus({ tone: 'danger', message: fallback });
+      addToast('error', fallback);
     } finally {
       setCouponApplying(false);
     }
@@ -286,6 +349,7 @@ export default function CheckoutClient() {
 
   const handleRemoveCoupon = () => {
     setAppliedCoupon(null);
+    setCouponStatus(null);
     setForm((prev) => ({ ...prev, couponCode: '' }));
   };
 
@@ -355,6 +419,9 @@ export default function CheckoutClient() {
 
   const handleChange = (field: keyof FormData, val: string) => {
     setForm((prev) => ({ ...prev, [field]: val }));
+    if (field === 'couponCode') {
+      setCouponStatus(null);
+    }
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: '' }));
   };
 
@@ -580,7 +647,7 @@ export default function CheckoutClient() {
                           {deliveryOptionsForCity.map((method) => {
                             const isSelected = selectedMethod?.id === method.id;
                             const isFree =
-                              subtotal >= GLOBAL_FREE_SHIPPING_THRESHOLD;
+                              subtotal >= globalFreeShippingThreshold;
                             const priceDisplay = isFree
                               ? (isAr ? 'مجاني 🎉' : 'FREE 🎉')
                               : `${method.price.toFixed(2)} ${isAr ? 'د.م' : 'MAD'}`;
@@ -750,24 +817,41 @@ export default function CheckoutClient() {
                   {/* Coupon Code Section */}
                   <div className="px-6 pt-4 border-t border-stone-100">
                     {!appliedCoupon ? (
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={form.couponCode}
-                          onChange={(e) => handleChange('couponCode', e.target.value)}
-                          placeholder={isAr ? 'أدخل كوبون الخصم' : 'Enter coupon code'}
-                          className="flex-1 px-3 py-2 rounded-xl border border-stone-200 text-sm text-stone-900 bg-stone-50/50 focus:bg-white focus:outline-none focus:border-emerald-800 transition-colors"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleApplyCoupon}
-                          disabled={couponApplying || !form.couponCode.trim() || !selectedMethod}
-                          className="px-4 py-2 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-1 transition-all disabled:opacity-50"
-                          style={{ background: 'linear-gradient(135deg, #061c16 0%, #0b2e22 100%)' }}
-                        >
-                          {couponApplying ? <Loader className="w-3 h-3 animate-spin" /> : <Tag className="w-3 h-3" />}
-                          {isAr ? 'تطبيق' : 'Apply'}
-                        </button>
+                      <div className="space-y-2">
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={form.couponCode}
+                            onChange={(e) => handleChange('couponCode', e.target.value)}
+                            placeholder={isAr ? 'أدخل كوبون الخصم' : 'Enter coupon code'}
+                            className="flex-1 px-3 py-2 rounded-xl border border-stone-200 text-sm text-stone-900 bg-stone-50/50 focus:bg-white focus:outline-none focus:border-emerald-800 transition-colors"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleApplyCoupon}
+                            disabled={couponApplying || !form.couponCode.trim() || !selectedMethod}
+                            className="px-4 py-2 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-1 transition-all disabled:opacity-50"
+                            style={{ background: 'linear-gradient(135deg, #061c16 0%, #0b2e22 100%)' }}
+                          >
+                            {couponApplying ? <Loader className="w-3 h-3 animate-spin" /> : <Tag className="w-3 h-3" />}
+                            {isAr ? 'تطبيق' : 'Apply'}
+                          </button>
+                        </div>
+
+                        {couponStatus && (
+                          <div
+                            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold ${
+                              couponStatus.tone === 'success'
+                                ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                : couponStatus.tone === 'warning'
+                                  ? 'border-amber-200 bg-amber-50 text-amber-700'
+                                  : 'border-red-200 bg-red-50 text-red-700'
+                            }`}
+                          >
+                            <Tag className="w-3 h-3" />
+                            {couponStatus.message}
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="flex items-center justify-between p-2.5 bg-emerald-50 rounded-xl border border-emerald-200">

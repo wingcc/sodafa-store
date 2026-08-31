@@ -11,11 +11,11 @@ import { Toast } from './Toast';
    emits classes found verbatim in source), which is why changing the
    position setting previously had no effect. */
 const POSITION_CLASSES: Record<ToastPosition, string> = {
-  'top-right': 'top-4 right-4',
-  'top-left': 'top-4 left-4',
+  'top-right': 'top-4 right-4 sm:right-6',
+  'top-left': 'top-4 left-4 sm:left-6',
   'top-center': 'top-4 left-1/2 -translate-x-1/2',
-  'bottom-right': 'bottom-4 right-4',
-  'bottom-left': 'bottom-4 left-4',
+  'bottom-right': 'bottom-4 right-4 sm:right-6',
+  'bottom-left': 'bottom-4 left-4 sm:left-6',
   'bottom-center': 'bottom-4 left-1/2 -translate-x-1/2',
 };
 
@@ -27,7 +27,7 @@ export function ToastContainer() {
 
   return (
     <div
-      className={`fixed z-[9999] flex flex-col gap-3 max-w-sm w-full pointer-events-none ${
+      className={`fixed z-[9999] flex w-full max-w-md flex-col gap-3 pointer-events-none ${
         POSITION_CLASSES[settings.position] ?? POSITION_CLASSES['top-right']
       }`}
     >

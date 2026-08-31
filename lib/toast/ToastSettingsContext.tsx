@@ -13,7 +13,7 @@ export type ToastPosition =
 
 export interface ToastSettings {
   position: ToastPosition;
-  duration: number; // milliseconds
+  duration: number;
   autoDismiss: boolean;
   showProgress: boolean;
   maxToasts: number;
@@ -40,33 +40,43 @@ const ToastSettingsContext = createContext<ToastSettingsContextType | undefined>
 export function ToastSettingsProvider({ children }: { children: ReactNode }) {
   const getInitialSettings = (): ToastSettings => {
     if (typeof window === 'undefined') return defaultSettings;
+
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        return { ...defaultSettings, ...parsed };
-      }
-    } catch (_) {
-      // ignore
+      const stored = window.localStorage.getItem(STORAGE_KEY);
+      if (!stored) return defaultSettings;
+
+      const parsed = JSON.parse(stored) as Partial<ToastSettings>;
+      return {
+        ...defaultSettings,
+        ...parsed,
+        maxToasts: Math.min(Math.max(parsed.maxToasts ?? defaultSettings.maxToasts, 1), 10),
+      };
+    } catch {
+      return defaultSettings;
     }
-    return defaultSettings;
   };
 
   const [settings, setSettings] = useState<ToastSettings>(getInitialSettings);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
     }
   }, [settings]);
 
   const updateSettings = (newSettings: Partial<ToastSettings>) => {
-    setSettings((prev) => ({ ...prev, ...newSettings }));
+    setSettings((prev) => ({
+      ...prev,
+      ...newSettings,
+      maxToasts: Math.min(Math.max(newSettings.maxToasts ?? prev.maxToasts, 1), 10),
+    }));
   };
 
   const resetSettings = () => {
     setSettings(defaultSettings);
-    localStorage.removeItem(STORAGE_KEY);
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(STORAGE_KEY);
+    }
   };
 
   return (

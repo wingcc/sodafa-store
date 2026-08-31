@@ -49,6 +49,7 @@ export function mapProductRow(row: SupabaseRow, categoryName?: string): Product 
 
   const isOffer = row.IsOffer !== undefined ? Boolean(row.IsOffer) : Boolean(row.isOffer);
   const offerTime = row.OfferTime ? String(row.OfferTime) : row.offerTime ? String(row.offerTime) : undefined;
+  const moreInfo = row.more_info && typeof row.more_info === 'object' ? row.more_info as Record<string, unknown> : {};
 
   return {
     id: String(row.id ?? ''),
@@ -78,5 +79,12 @@ export function mapProductRow(row: SupabaseRow, categoryName?: string): Product 
     images: images.map((src) => ({ src, alt: String(row.name ?? '') })),
     isOffer,
     offerTime,
+    moreInfo: {
+      ingredients: Array.isArray(moreInfo.ingredients) ? moreInfo.ingredients.filter((item): item is string => typeof item === 'string') : [],
+      ingredientsFull: typeof moreInfo.ingredientsFull === 'string' ? moreInfo.ingredientsFull : '',
+      benefits: Array.isArray(moreInfo.benefits) ? moreInfo.benefits.filter((item): item is string => typeof item === 'string') : [],
+      howToUse: typeof moreInfo.howToUse === 'string' ? moreInfo.howToUse : '',
+      shoppingInfo: typeof moreInfo.shoppingInfo === 'string' ? moreInfo.shoppingInfo : '',
+    },
   };
 }

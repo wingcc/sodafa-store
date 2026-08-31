@@ -1,21 +1,49 @@
 // components/CartDrawer.tsx
 "use client";
 
+import { useEffect, useState } from "react";
 import { useUI } from "../contexts/UIContext";
 import { useLanguage } from "../contexts/LanguageContext";
-import { ShoppingBag, X, Plus, Minus, Trash2, ArrowRight, ArrowLeft, MessageCircle } from "lucide-react";
+import { ShoppingBag, X, Plus, Minus, Trash2, ArrowRight, ArrowLeft, MessageCircle, Truck } from "lucide-react";
 import { WHATSAPP_LINK } from "../constants";
 import { useRouter } from "next/navigation";
 
 
 export const CartDrawer = () => {
-  const { isCartOpen, closeCart, cartItems, cartTotal, updateQuantity, removeFromCart, clearCart } = useUI();
+  const { isCartOpen, closeCart, cartItems, cartTotal, updateQuantity, removeFromCart } = useUI();
   const { locale } = useLanguage();
   const isAr = locale === "ar";
   
   const router = useRouter();
+  const [freeShippingThreshold, setFreeShippingThreshold] = useState<number>(500);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadThreshold = async () => {
+      try {
+        const res = await fetch('/api/admin/settings', { cache: 'no-store' });
+        const json = await res.json();
+        const value = Number(json?.data?.free_shipping_threshold ?? 500);
+        if (active && Number.isFinite(value) && value >= 0) {
+          setFreeShippingThreshold(value);
+        }
+      } catch (error) {
+        console.error('Failed to load free shipping threshold', error);
+      }
+    };
+
+    void loadThreshold();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const totalItems = cartItems.reduce((acc, item) => acc + item.qty, 0);
+  const safeThreshold = freeShippingThreshold > 0 ? freeShippingThreshold : 1;
+  const freeShippingRemaining = Math.max(safeThreshold - cartTotal, 0);
+  const freeShippingProgress = safeThreshold > 0 ? Math.min((cartTotal / safeThreshold) * 100, 100) : 100;
+  const freeShippingUnlocked = cartTotal >= safeThreshold;
 
   const handleProceedToCheckout = () => {
     closeCart();
@@ -32,7 +60,7 @@ export const CartDrawer = () => {
   };
 
   return (
-    <>
+    <div className="sodfa-cart-drawer-shell">
       {/* Backdrop Overlay */}
       <div
         className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-[998] transition-opacity duration-300 ${
@@ -45,6 +73,8 @@ export const CartDrawer = () => {
       {/* Drawer Container */}
       <aside
         dir={isAr ? "rtl" : "ltr"}
+        role="dialog"
+        aria-modal="true"
         aria-label={isAr ? "حقيبة التسوق" : "Shopping Bag"}
         className={`fixed top-0 bottom-0 ${isAr ? "right-0" : "left-auto right-0"} w-full max-w-md bg-stone-50 shadow-2xl z-[999] transform transition-transform duration-300 ease-out flex flex-col ${
           isCartOpen ? "translate-x-0" : "translate-x-full"
@@ -104,6 +134,43 @@ export const CartDrawer = () => {
           >
             <X className="w-5 h-5" />
           </button>
+        </div>
+
+        <div className="px-4 pt-4 pb-3 border-b border-stone-200 bg-white/80 backdrop-blur-sm">
+          <div className="rounded-2xl border border-emerald-100 bg-gradient-to-r from-emerald-50 via-white to-amber-50 p-3 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-full bg-white border border-emerald-200 flex items-center justify-center shadow-sm">
+                  <Truck className="w-4 h-4 text-emerald-700" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-700">
+                    {isAr ? 'الشحن' : 'Shipping'}
+                  </p>
+                  <p className="text-xs font-semibold text-stone-700">
+                    {freeShippingUnlocked
+                      ? (isAr ? 'شحن مجاني تم تفعيله' : 'Free shipping unlocked')
+                      : (isAr ? `تبقى ${freeShippingRemaining.toFixed(0)} د.م` : `${freeShippingRemaining.toFixed(0)} MAD left`)}
+                  </p>
+                </div>
+              </div>
+              <span className="text-[11px] font-bold px-2 py-1 rounded-full bg-emerald-600 text-white shadow-sm">
+                {freeShippingUnlocked ? (isAr ? 'مجاني' : 'FREE') : `${Math.min(Math.round(freeShippingProgress), 100)}%`}
+              </span>
+            </div>
+
+            <div className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-emerald-100/80">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-emerald-600 to-amber-400 transition-all duration-700 ease-out shadow-[0_0_16px_rgba(16,185,129,0.4)]"
+                style={{ width: `${freeShippingProgress}%` }}
+              />
+            </div>
+
+            <div className="mt-2 flex items-center justify-between text-[10px] text-stone-500">
+              <span>{cartTotal.toFixed(2)} {isAr ? 'د.م' : 'MAD'}</span>
+              <span>{freeShippingThreshold.toFixed(0)} {isAr ? 'د.م' : 'MAD'}</span>
+            </div>
+          </div>
         </div>
 
         {/* Scrollable Cart Items */}
@@ -243,6 +310,6 @@ export const CartDrawer = () => {
           </a>
         </div>
       </aside>
-    </>
+    </div>
   );
 };

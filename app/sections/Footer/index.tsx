@@ -1,10 +1,11 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { InstagramSVG, FacebookSVG } from "../common/icons";
 import type { SiteConfig, LegalConfig } from "../common/types";
 import { useLanguage } from "../../contexts/LanguageContext";
+import LegalModal from "../common/LegalModal";
 
 const DEFAULT_SITE: SiteConfig = {
   brandName: "SODFA",
@@ -53,8 +54,7 @@ const STORE_LINKS = [
   { href: "/store", ar: "المتجر", fr: "Boutique", en: "Store" },
   { href: "/favorites", ar: "المفضلة", fr: "Favoris", en: "Favorites" },
   { href: "/track-order", ar: "تتبع الطلب", fr: "Suivre la commande", en: "Track Order" },
-  { href: "/contact", ar: "اتصل بنا", fr: "Contactez-nous", en: "Contact" },
-  { href: "/#faq", ar: "الأسئلة الشائعة", fr: "FAQ", en: "FAQ" },
+  { href: "/contact", ar: "اتصل بنا", fr: "Contactez-nous", en: "Contact Us" },
 ];
 
 function resolveVariant(pathname: string, explicit?: FooterVariant): FooterVariant {
@@ -81,22 +81,16 @@ export function Footer({
   const isFr = locale === "fr";
   const t = (ar: string, fr: string, en: string) => isAr ? ar : isFr ? fr : en;
   const activeVariant = resolveVariant(pathname, variant);
-  const [btnLabel, setBtnLabel] = useState(t("اشتركي الآن", "S'abonner", "Subscribe Now"));
   const [localLegal, setLocalLegal] = useState<string | null>(null);
-  const [site, setSite] = useState<SiteConfig>(siteProp);
-  const [legal, setLegal] = useState<LegalConfig>(legalProp);
+  const [fetchedSite, setFetchedSite] = useState<SiteConfig>(DEFAULT_SITE);
+  const [fetchedLegal, setFetchedLegal] = useState<LegalConfig>(DEFAULT_LEGAL);
+  const [storeLegal, setStoreLegal] = useState<Record<string, { title: string; body: string }>>({});
+  const btnLabel = t("اشتركي الآن", "S'abonner", "Subscribe Now");
 
-  useEffect(() => {
-    setBtnLabel(t("اشتركي الآن", "S'abonner", "Subscribe Now"));
-  }, [locale]);
-
-  // Keep in sync if parent passes real config (e.g. MainContent)
-  useEffect(() => {
-    if (siteProp !== DEFAULT_SITE) setSite(siteProp);
-  }, [siteProp]);
-  useEffect(() => {
-    if (legalProp !== DEFAULT_LEGAL && Object.keys(legalProp).length > 0) setLegal(legalProp);
-  }, [legalProp]);
+  const site = siteProp !== DEFAULT_SITE ? siteProp : fetchedSite;
+  // Prefer Store Content (content_pages) over legacy legal config — editable in Dashboard → Store Content
+  const LEGAL_SLUG_MAP: Record<string, string> = { privacy: 'privacy-policy', terms: 'terms', cookies: 'cookies' };
+  const legal = { ...(legalProp && Object.keys(legalProp).length > 0 ? legalProp : fetchedLegal), ...storeLegal } as LegalConfig;
 
   // Self-fetch when rendered standalone on store pages (no props)
   useEffect(() => {
@@ -109,16 +103,16 @@ export function Footer({
         const { loadPublicConfig } = await import("@/lib/public-content");
         const cfg = await loadPublicConfig();
         if (cancelled) return;
-        if (needsSite && cfg.site) setSite(cfg.site);
-        if (needsLegal && cfg.legal) setLegal(cfg.legal as LegalConfig);
+        if (needsSite && cfg.site) setFetchedSite({ ...DEFAULT_SITE, ...cfg.site });
+        if (needsLegal && cfg.legal) setFetchedLegal(cfg.legal as LegalConfig);
       } catch {
         // fallback to static json
         try {
           const r = await fetch("/json/config.json");
           const data = await r.json();
           if (cancelled) return;
-          if (needsSite && data.site) setSite((prev) => ({ ...prev, ...data.site }));
-          if (needsLegal && data.legal) setLegal(data.legal);
+          if (needsSite && data.site) setFetchedSite((prev) => ({ ...prev, ...data.site }));
+          if (needsLegal && data.legal) setFetchedLegal(data.legal);
         } catch {}
       }
     })();
@@ -126,6 +120,60 @@ export function Footer({
       cancelled = true;
     };
   }, [siteProp, legalProp]);
+
+  // Fetch Store Content pages for footer popups — uses Store Info slugs (editable in Dashboard → Store Management → Settings → Legal Pages)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const privacySlug = (site as any).privacyPolicySlug || LEGAL_SLUG_MAP.privacy;
+        const termsSlug = (site as any).termsSlug || LEGAL_SLUG_MAP.terms;
+        const cookiesSlug = (site as any).cookiesSlug || LEGAL_SLUG_MAP.cookies;
+        const targets = [
+          { key: 'privacy', slug: privacySlug },
+          { key: 'terms', slug: termsSlug },
+          { key: 'cookies', slug: cookiesSlug },
+        ];
+        const map: Record<string, { title: string; body: string }> = {};
+        await Promise.all(
+          targets.map(async ({ key, slug }) => {
+            if (!slug) return;
+            try {
+              const res = await fetch(`/api/content-pages?slug=${encodeURIComponent(slug)}`);
+              const json = await res.json();
+              if (json.success && json.data) {
+                map[key] = { title: String(json.data.name ?? ''), body: String(json.data.content ?? '') };
+              }
+            } catch {}
+          })
+        );
+        // Fallback bulk for any missing
+        const missing = targets.filter((t) => !map[t.key]);
+        if (missing.length) {
+          try {
+            const res = await fetch('/api/content-pages');
+            const json = await res.json();
+            if (json.success && Array.isArray(json.data)) {
+              for (const row of json.data as any[]) {
+                const slug = String(row.slug ?? '');
+                const hit = missing.find((m) => m.slug === slug);
+                if (hit && !map[hit.key]) map[hit.key] = { title: String(row.name ?? ''), body: String(row.content ?? '') };
+              }
+              // also support legacy direct keys
+              for (const row of json.data as any[]) {
+                const slug = String(row.slug ?? '');
+                if (['privacy', 'terms', 'cookies'].includes(slug) && !map[slug]) {
+                  map[slug] = { title: String(row.name ?? ''), body: String(row.content ?? '') };
+                }
+              }
+            }
+          } catch {}
+        }
+        if (!cancelled && Object.keys(map).length) setStoreLegal((prev) => ({ ...prev, ...map }));
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [site]);
 
   const quickLinks = activeVariant === "home" ? HOME_LINKS : STORE_LINKS;
 
@@ -153,12 +201,27 @@ export function Footer({
     onOpenContact();
   };
 
-  const handleLegal = (key: string) => {
+  const handleLegal = async (key: string) => {
     if (onOpenLegal) {
       onOpenLegal(key);
       return;
     }
     setLocalLegal(key);
+    // Always fetch fresh from Store Content (content_pages) so popup matches what was edited in Dashboard
+    const slugMap: Record<string, string> = {
+      privacy: (site as any).privacyPolicySlug || LEGAL_SLUG_MAP.privacy,
+      terms: (site as any).termsSlug || LEGAL_SLUG_MAP.terms,
+      cookies: (site as any).cookiesSlug || LEGAL_SLUG_MAP.cookies,
+    };
+    const slug = slugMap[key];
+    if (!slug) return;
+    try {
+      const res = await fetch(`/api/content-pages?slug=${encodeURIComponent(slug)}`, { cache: 'no-store' });
+      const json = await res.json();
+      if (json.success && json.data) {
+        setStoreLegal((prev) => ({ ...prev, [key]: { title: String(json.data.name ?? ''), body: String(json.data.content ?? '') } }));
+      }
+    } catch {}
   };
 
   const handleNewsletter = (e: React.FormEvent<HTMLFormElement>) => {
@@ -177,10 +240,19 @@ export function Footer({
         }),
       }).catch(() => {});
 
-      setBtnLabel(t("✓ تم الاشتراك", "✓ Abonné", "✓ Subscribed"));
+      const subscribedLabel = t("✓ تم الاشتراك", "✓ Abonné", "✓ Subscribed");
+      const button = (e.currentTarget as HTMLFormElement).querySelector("button") as HTMLButtonElement | null;
+
       showToast(t("تم اشتراكك في النشرة البريدية بنجاح 🌿", "Abonné avec succès à la newsletter 🌿", "Successfully subscribed to our newsletter 🌿"));
+
+      if (button) {
+        button.textContent = subscribedLabel;
+      }
+
       setTimeout(() => {
-        setBtnLabel(t("اشتركي الآن", "S'abonner", "Subscribe Now"));
+        if (button) {
+          button.textContent = t("اشتركي الآن", "S'abonner", "Subscribe Now");
+        }
         input.value = "";
       }, 3000);
     }
@@ -231,9 +303,6 @@ export function Footer({
                     </Link>
                   </li>
                 ))}
-                <li>
-                  <button onClick={handleContact}>{t("تواصلي معنا", "Contactez-nous", "Contact Us")}</button>
-                </li>
               </ul>
             </div>
 
@@ -266,7 +335,7 @@ export function Footer({
                   </span>
                 </li>
               </ul>
-              <button className="msg-btn" onClick={handleContact}>
+              <button type="button" className="msg-btn" onClick={handleContact}>
                 {t("✉ أو أرسلي رسالة مباشرة", "✉ Ou envoyez-nous un message", "✉ Or send us a message")}
               </button>
             </div>
@@ -329,21 +398,14 @@ export function Footer({
         </div>
       </footer>
 
-      {/* Fallback legal modal for store pages without external handler */}
+      {/* Legal modal — beautiful, editor-grade, with polished scroll */}
       {activeLegal && (
-        <div className="modal open" role="dialog" aria-modal="true" aria-label="معلومات قانونية">
-          <div className="ovl" onClick={() => setLocalLegal(null)} />
-          <div className="modal-box legal-box">
-            <button className="m-close" onClick={() => setLocalLegal(null)} aria-label="إغلاق">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round">
-                <path d="M6 6l12 12M18 6L6 18" />
-              </svg>
-            </button>
-            <h3>{activeLegal.title}</h3>
-            <span className="lg-date">آخر تحديث: غشت 2026</span>
-            <div className="lg-body" dangerouslySetInnerHTML={{ __html: activeLegal.body }} />
-          </div>
-        </div>
+        <LegalModal
+          title={activeLegal.title}
+          body={activeLegal.body}
+          updatedAt="غشت 2026"
+          onClose={() => setLocalLegal(null)}
+        />
       )}
     </>
   );

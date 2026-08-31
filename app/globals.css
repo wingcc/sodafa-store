@@ -204,6 +204,32 @@
     @apply border-border outline-ring/50;
   }
 
+  .sodfa-cart-drawer-shell,
+  .sodfa-cart-drawer-shell *,
+  .sodfa-cart-drawer-shell *::before,
+  .sodfa-cart-drawer-shell *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-tajawal), 'Tajawal', sans-serif;
+    line-height: 1.5;
+    letter-spacing: normal;
+    text-decoration: none;
+  }
+
+  .sodfa-cart-drawer-shell img {
+    display: block;
+    max-width: 100%;
+  }
+
+  .sodfa-cart-drawer-shell button,
+  .sodfa-cart-drawer-shell a,
+  .sodfa-cart-drawer-shell input,
+  .sodfa-cart-drawer-shell textarea,
+  .sodfa-cart-drawer-shell select {
+    font: inherit;
+  }
+
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));

@@ -781,9 +781,9 @@ footer .pat {
   .mq span { padding: .45rem 1rem; gap: .4rem; }
 }
 
-/* ── Reduced motion ── */
+/* ── Reduced motion: keep marquee but slower ── */
 @media (prefers-reduced-motion: reduce) {
-  .mq { animation: none; }
+  .mq { animation-duration: 52s; }
   .fab::before { animation: none; }
   .faller { animation: none; }
 }

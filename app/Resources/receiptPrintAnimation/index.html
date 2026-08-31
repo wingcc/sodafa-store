@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Classic & Smooth Receipt Printer Animation</title>
+  <meta name="description" content="Realistic thermal receipt dispenser with Classic stepper and Smooth fluid rollout animations on clean white background.">
+  
+  <!-- Premium Google Fonts: JetBrains Mono (Receipt Typography) & Plus Jakarta Sans (UI) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="app-viewport">
+    
+
+
+    <!-- Main Stage -->
+    <main class="printer-stage">
+      
+      <!-- Unified Metallic Gold 3D Dispenser Machine -->
+      <div class="machine-unit">
+        
+        <!-- Top 3D Metallic Hood Bar -->
+        <div class="machine-hood-top">
+          <div class="hood-highlight"></div>
+        </div>
+
+        <!-- Dark Slit Mouth where receipt feeds out -->
+        <div class="machine-slot-slit"></div>
+
+        <!-- Cutter Blade Flash Effect -->
+        <div class="cutter-blade-flash" id="cutterBladeFlash"></div>
+
+        <!-- Bottom Machine Lip Base (Attached directly under slit!) -->
+        <div class="machine-hood-bottom">
+          <div class="hood-shadow"></div>
+        </div>
+
+        <!-- Paper Viewport Container (Clips paper above slit line) -->
+        <div class="paper-viewport" id="paperViewport">
+          
+          <!-- Animated Paper Component -->
+          <div class="receipt-paper-wrapper retracted" id="receiptPaper">
+            
+            <div class="receipt-content">
+              <!-- Receipt Header & Brand Logo Stamp -->
+              <div class="receipt-header">
+                <div class="header-brand-info">
+                  <div class="brand-company-name">BIZY MEDIA AGENCY</div>
+                  <div class="payment-title" id="dispHeaderTitle">DIGITAL SERVICES RECEIPT</div>
+                </div>
+                <div class="logo-badge">
+                  <img src="images.jfif" alt="Bizy Media Logo" class="brand-logo-img">
+                </div>
+              </div>
+
+              <!-- Big Total Display ($) -->
+              <div class="receipt-amount-section">
+                <div class="receipt-amount" id="dispTotalAmount">$2,936.85</div>
+                <div class="receipt-meta" id="dispMeta">10TH AUGUST 2026 | INVOICE PAID</div>
+              </div>
+
+              <div class="receipt-divider"></div>
+
+              <!-- Items Breakdown ($) -->
+              <div class="receipt-items-list" id="dispItemsList">
+                <div class="receipt-item-row">
+                  <span class="item-name">1X Web Development & Design</span>
+                  <span class="item-price">$1,499.00</span>
+                </div>
+                <div class="receipt-item-row">
+                  <span class="item-name">1X SEO Optimization (Monthly)</span>
+                  <span class="item-price">$499.00</span>
+                </div>
+                <div class="receipt-item-row">
+                  <span class="item-name">1X Digital Marketing & Branding</span>
+                  <span class="item-price">$799.00</span>
+                </div>
+              </div>
+
+              <div class="receipt-divider"></div>
+
+              <!-- Subtotal & Grand Total -->
+              <div class="receipt-totals-section">
+                <div class="total-row">
+                  <span>Subtotal</span>
+                  <span id="dispSubtotal">$2,797.00</span>
+                </div>
+                <div class="total-row">
+                  <span>Tax (5%)</span>
+                  <span id="dispTax">$139.85</span>
+                </div>
+                
+                <div class="receipt-grand-total">
+                  <span>TOTAL</span>
+                  <span id="dispGrandTotal">$2,936.85</span>
+                </div>
+              </div>
+
+              <!-- Footer Greeting & Barcode -->
+              <div class="receipt-footer">
+                <div class="footer-msg">HAVE A NICE DAY!</div>
+                <div class="barcode-graphic">
+                  <div class="barcode-lines"></div>
+                  <div class="barcode-num">TXN-8849204192</div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Authentic Shift Cutter Edge at Bottom -->
+            <div class="serrated-edge"></div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Action Status & Centered Controls Below Machine -->
+      <section class="stage-info" id="stageInfo">
+        <h1 class="status-heading" id="statusTitle">Payment Successful</h1>
+        <p class="status-subtext" id="statusSub">You're all set—now let the receipt roll!</p>
+
+        <!-- Centered Action Buttons -->
+        <div class="centered-action-bar">
+          <button class="print-action-btn" id="btnPrintReceipt">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 6 2 18 2 18 9"></polyline>
+              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+              <rect x="6" y="14" width="12" height="8"></rect>
+            </svg>
+            <span id="btnPrintText">Print receipt</span>
+          </button>
+
+          <button class="secondary-action-btn hidden" id="btnTearReceipt">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+            <span>Tear receipt</span>
+          </button>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Customizer Drawer Modal -->
+    <aside class="customizer-drawer hidden" id="customizerDrawer">
+      <div class="drawer-header">
+        <h3>Customize Receipt</h3>
+        <button class="close-drawer-btn" id="btnCloseCustomizer">&times;</button>
+      </div>
+
+      <div class="drawer-body">
+        <div class="form-group">
+          <label>Header Title</label>
+          <input type="text" id="inputHeader" value="PAYMENT SUCCESSFUL">
+        </div>
+
+        <div class="form-group">
+          <label>Meta Line</label>
+          <input type="text" id="inputMeta" value="28TH APRIL 2026 | CARD(PAID)">
+        </div>
+
+        <div class="items-header">
+          <label>Line Items ($)</label>
+          <button class="add-item-btn" id="btnAddItem">+ Add Item</button>
+        </div>
+
+        <div id="itemsContainer">
+          <!-- Dynamic Items List -->
+        </div>
+
+        <div class="form-group">
+          <label>Tax Rate (%)</label>
+          <input type="number" id="inputTaxRate" value="5" min="0" max="100" step="0.5">
+        </div>
+
+        <button class="save-custom-btn" id="btnSaveCustomizer">Update Receipt</button>
+      </div>
+    </aside>
+
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

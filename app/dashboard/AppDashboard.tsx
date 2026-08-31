@@ -19,6 +19,7 @@ import Payments from './pages/Payments';
 import Analytics from './pages/Analytic';
 import Logs from './pages/Logs';
 import Notifications from './pages/Notifications';
+import Messages from './pages/Messages';
 import Settings from './pages/Settings';
 import DashboardNotFound from './pages/DashboardNotFound';
 import { useStore } from './store/useStore';
@@ -34,7 +35,7 @@ import StoreContentPage from './pages/store-manager/store-content/page';
 
 const VALID_PAGE_KEYS = new Set([
   'dashboard', 'analytics', 'logs', 'products', 'categories', 'orders', 'customers', 'inventory',
-  'reviews', 'coupons', 'shipping', 'payments', 'notifications',
+  'reviews', 'coupons', 'shipping', 'payments', 'notifications', 'messages',
   'settings', 'store', 'store-homepage', 'store-homepage-content', 'store-reviews',
   'store-settings', 'store-seo', 'store-banners', 'store-content',
 ]);
@@ -66,6 +67,7 @@ const App: React.FC = () => {
       case 'analytics': return <Analytics />;
       case 'logs': return <Logs />;
       case 'notifications': return <Notifications />;
+      case 'messages': return <Messages />;
       case 'settings': return <Settings />;
       // حالات إدارة المتجر الجديدة
       case 'store': return <StoreManagerOverview />;

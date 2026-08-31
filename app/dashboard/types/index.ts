@@ -303,6 +303,32 @@ export interface StoreSettings {
   freeShippingThreshold: number;
 }
 
+export type ContactMessageStatus = 'new' | 'read' | 'replied' | 'archived';
+
+export interface ContactMessage {
+  id: string;
+  customer_id: string | null;
+  name: string;
+  phone: string;
+  email: string | null;
+  message: string;
+  status: ContactMessageStatus;
+  is_starred: boolean;
+  is_customer: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ContactMessageCounts {
+  total: number;
+  newCount: number;
+  read: number;
+  replied: number;
+  archived: number;
+  starred: number;
+  customer: number;
+}
+
 export type PageSection =
   | 'dashboard'
   | 'analytics'
@@ -317,6 +343,7 @@ export type PageSection =
   | 'shipping'
   | 'payments'
   | 'notifications'
+  | 'messages'
   | 'store'              // ← الصفحة الرئيسية لإدارة المتجر
   | 'store-homepage'     // ← إدارة أقسام الصفحة الرئيسية
   | 'store-banners'      // ← إدارة البانرات

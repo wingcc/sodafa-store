@@ -8,7 +8,15 @@ import { ProductTabs } from '@/app/dashboard/components/products/Tabs';
 import { TagInput } from '@/app/dashboard/components/products/TagInput';
 
 type ProductStatus = 'draft' | 'active' | 'inactive';
-type TabId = 'general' | 'pricing' | 'media' | 'seo' | 'advanced';
+type TabId = 'general' | 'pricing' | 'media' | 'seo' | 'more-info' | 'advanced';
+
+interface ProductMoreInfoForm {
+  ingredients: string[];
+  ingredientsFull: string;
+  benefits: string[];
+  howToUse: string;
+  shoppingInfo: string;
+}
 
 interface ProductFormData {
   name: string;
@@ -38,6 +46,7 @@ interface ProductFormData {
   seoDescription: string;
   seoSlug: string;
   seoKeywords: string[];
+  moreInfo: ProductMoreInfoForm;
 }
 
 interface Category {
@@ -81,6 +90,13 @@ const emptyForm: ProductFormData = {
   seoDescription: '',
   seoSlug: '',
   seoKeywords: [],
+  moreInfo: {
+    ingredients: [],
+    ingredientsFull: '',
+    benefits: [],
+    howToUse: '',
+    shoppingInfo: '',
+  },
 };
 
 export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: ProductModalProps) {
@@ -159,6 +175,13 @@ export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: Prod
             seoDescription: String(p.seo_description ?? ''),
             seoSlug: String(p.seo_slug ?? ''),
             seoKeywords: Array.isArray(p.seo_keywords) ? p.seo_keywords : [],
+            moreInfo: {
+              ingredients: Array.isArray(p.more_info?.ingredients) ? p.more_info.ingredients.filter((item: unknown) => typeof item === 'string') : [],
+              ingredientsFull: typeof p.more_info?.ingredientsFull === 'string' ? p.more_info.ingredientsFull : '',
+              benefits: Array.isArray(p.more_info?.benefits) ? p.more_info.benefits.filter((item: unknown) => typeof item === 'string') : [],
+              howToUse: typeof p.more_info?.howToUse === 'string' ? p.more_info.howToUse : '',
+              shoppingInfo: typeof p.more_info?.shoppingInfo === 'string' ? p.more_info.shoppingInfo : '',
+            },
           });
         } else {
           addToast('error', 'Failed to load product.', { title: 'Error' });
@@ -314,6 +337,13 @@ export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: Prod
         seoDescription: form.seoDescription || null,
         seoSlug: form.seoSlug || null,
         seoKeywords: form.seoKeywords,
+        moreInfo: {
+          ingredients: form.moreInfo.ingredients,
+          ingredientsFull: form.moreInfo.ingredientsFull,
+          benefits: form.moreInfo.benefits,
+          howToUse: form.moreInfo.howToUse,
+          shoppingInfo: form.moreInfo.shoppingInfo,
+        },
       };
 
       const url = mode === 'edit' && productId ? `/api/products/${productId}` : '/api/products';
@@ -847,6 +877,136 @@ export function ProductModal({ isOpen, onClose, mode, productId, onSaved }: Prod
                           </p>
                         </div>
                       </div>
+                    </div>
+                  )}
+
+                  {/* More info Tab — Beautiful JSON-driven extra details */}
+                  {activeTab === 'more-info' && (
+                    <div className="space-y-6">
+                      {/* Header */}
+                      <div className="rounded-xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white grid place-items-center shadow-md shrink-0">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-bold text-emerald-900">Extra Details (JSON)</h4>
+                            <p className="text-xs text-emerald-700/70 mt-1 leading-relaxed">These fields power the product tabs: <b>Benefits</b> → Key Benefits, <b>Ingredients</b> → Ingredients, <b>How to Use</b> → About, <b>Shopping Info</b> → Shipping. Stored as <code className="px-1 py-0.5 bg-white border border-emerald-100 rounded text-[10px] font-mono">more_info JSONB</code> in DB. Leave empty to use graceful fallbacks.</p>
+                          </div>
+                          <div className="hidden sm:flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-emerald-700 bg-white border border-emerald-100 rounded-full px-2.5 py-1">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> Live
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Benefits */}
+                      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+                        <label className="flex items-center gap-2 text-sm font-bold text-gray-800">
+                          <span className="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 grid place-items-center">★</span>
+                          Benefits
+                          <span className="ml-auto text-[11px] font-medium text-gray-400">{form.moreInfo.benefits.length} items</span>
+                        </label>
+                        <p className="text-xs text-gray-500 mt-1">One benefit per line — shown as check list in “Key Benefits”.</p>
+                        <textarea
+                          value={form.moreInfo.benefits.join('\n')}
+                          onChange={(e) => updateField('moreInfo', {
+                            ...form.moreInfo,
+                            benefits: e.target.value.split('\n').map((item) => item.trim()).filter(Boolean),
+                          })}
+                          rows={4}
+                          className="mt-2 w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-stone-50/50 focus:bg-white text-gray-900 resize-none text-sm leading-6"
+                          placeholder={"100% Natural\nDeeply nourishes & hydrates\nParaben & Sulfate Free"}
+                        />
+                      </div>
+
+                      {/* Ingredients */}
+                      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+                        <label className="flex items-center gap-2 text-sm font-bold text-gray-800">
+                          <span className="w-7 h-7 rounded-lg bg-sky-100 text-sky-700 grid place-items-center">◍</span>
+                          Ingredients
+                          <span className="ml-auto text-[11px] font-medium text-gray-400">{form.moreInfo.ingredients.length} items</span>
+                        </label>
+                        <p className="text-xs text-gray-500 mt-1">One ingredient per line — grid in “Ingredients” tab.</p>
+                        <textarea
+                          value={form.moreInfo.ingredients.join('\n')}
+                          onChange={(e) => updateField('moreInfo', {
+                            ...form.moreInfo,
+                            ingredients: e.target.value.split('\n').map((item) => item.trim()).filter(Boolean),
+                          })}
+                          rows={4}
+                          className="mt-2 w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-stone-50/50 focus:bg-white text-gray-900 resize-none text-sm leading-6"
+                          placeholder={"Argan Oil\nPrickly Pear Oil\nAloe Vera Extract\nVitamin E"}
+                        />
+                      </div>
+
+                      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+                        <label className="block text-sm font-bold text-gray-800">Full Ingredients</label>
+                        <p className="text-xs text-gray-500 mt-1">Single paragraph — shown as “Full Ingredients List”.</p>
+                        <textarea
+                          value={form.moreInfo.ingredientsFull}
+                          onChange={(e) => updateField('moreInfo', {
+                            ...form.moreInfo,
+                            ingredientsFull: e.target.value,
+                          })}
+                          rows={3}
+                          className="mt-2 w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-stone-50/50 focus:bg-white text-gray-900 resize-none text-sm leading-6"
+                          placeholder="Argania Spinosa Kernel Oil, Opuntia Ficus-Indica Seed Oil, Tocopherol, Aloe Barbadensis Leaf Extract, Sodium Hyaluronate..."
+                        />
+                      </div>
+
+                      {/* How to Use */}
+                      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+                        <label className="flex items-center gap-2 text-sm font-bold text-gray-800">
+                          <span className="w-7 h-7 rounded-lg bg-violet-100 text-violet-700 grid place-items-center">◐</span>
+                          How to Use
+                        </label>
+                        <p className="text-xs text-gray-500 mt-1">Shown in “About This Product → How to Use”.</p>
+                        <textarea
+                          value={form.moreInfo.howToUse}
+                          onChange={(e) => updateField('moreInfo', {
+                            ...form.moreInfo,
+                            howToUse: e.target.value,
+                          })}
+                          rows={3}
+                          className="mt-2 w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-stone-50/50 focus:bg-white text-gray-900 resize-none text-sm leading-6"
+                          placeholder="Apply 3-4 drops to clean, dry skin every morning before moisturizer..."
+                        />
+                      </div>
+
+                      {/* Shopping / Extra */}
+                      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+                        <label className="flex items-center gap-2 text-sm font-bold text-gray-800">
+                          <span className="w-7 h-7 rounded-lg bg-teal-100 text-teal-700 grid place-items-center">⬢</span>
+                          Shopping / Extra Info
+                        </label>
+                        <p className="text-xs text-gray-500 mt-1">Shown in “Shipping” tab as highlighted note. Supports plain text.</p>
+                        <textarea
+                          value={form.moreInfo.shoppingInfo}
+                          onChange={(e) => updateField('moreInfo', {
+                            ...form.moreInfo,
+                            shoppingInfo: e.target.value,
+                          })}
+                          rows={3}
+                          className="mt-2 w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-stone-50/50 focus:bg-white text-gray-900 resize-none text-sm leading-6"
+                          placeholder="Use as part of your daily routine. Orders ship within 24-48h in major cities. Extra care: store in cool dry place..."
+                        />
+                      </div>
+
+                      {/* Raw JSON preview — beautiful */}
+                      <details className="group rounded-2xl border border-gray-200 bg-stone-50 open:bg-white transition">
+                        <summary className="list-none flex items-center justify-between px-4 py-3 cursor-pointer">
+                          <span className="text-xs font-bold uppercase tracking-widest text-gray-500 flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-gray-400 group-open:bg-emerald-500 transition" />
+                            Raw JSON (more_info)
+                          </span>
+                          <span className="text-xs text-gray-400 group-open:hidden">▶</span>
+                          <span className="text-xs text-gray-400 hidden group-open:inline">▼</span>
+                        </summary>
+                        <div className="px-4 pb-4">
+                          <pre className="text-xs leading-5 p-3 rounded-xl bg-gray-900 text-emerald-50 overflow-auto border border-gray-800 max-h-[220px]">{JSON.stringify(form.moreInfo, null, 2)}</pre>
+                          <p className="text-[11px] text-gray-500 mt-2">Stored as <code className="px-1 py-0.5 bg-white border rounded">JSONB</code> in <code className="px-1 py-0.5 bg-white border rounded">products.more_info</code>. Empty fields fall back to elegant defaults on storefront.</p>
+                        </div>
+                      </details>
                     </div>
                   )}
 

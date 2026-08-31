@@ -12,6 +12,8 @@ import { TopPagesModal } from './components/TopPagesModal';
 import WorkspaceGrid from '../dashboard/workspace/WorkspaceGrid';
 import WorkspaceToolbar from '../dashboard/workspace/WorkspaceToolbar';
 import { analyticsRegistry, analyticsDefaults } from '../dashboard/workspace/registry';
+import { WidgetIcon } from '../dashboard/workspace/icons';
+import { useStore } from '../../store/useStore';
 import DashboardSkeleton from '../../components/ui/DashboardSkeleton';
 
 import AnalyticsOverview from './analytics/AnalyticsOverview';
@@ -33,6 +35,7 @@ const Analytic: React.FC = () => {
   const [showAllPages, setShowAllPages] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const { loading, refreshing, stats, trend, topPages, trafficSources, devices, browsers, countries, bounceRate, avgDuration, dailyAvgDuration, fetchData } = useAnalyticsData(period);
+  const { orders } = useStore();
   const {
     analytics: saved, analyticsDraft, analyticsEditMode, analyticsAutoAlign,
     analyticsGridVisible, analyticsPreview,
@@ -64,21 +67,36 @@ const Analytic: React.FC = () => {
       case 'cart-abandonment': return <CartAbandonment stats={stats} period={period} />;
       case 'traffic-performance': return <TrafficPerformance sources={trafficSources} />;
       case 'device-analytics': return <DeviceAnalytics devices={devices} browsers={browsers} />;
-      case 'user-behavior': return <UserBehavior pages={topPages} />;
+      case 'user-behavior': return <UserBehavior pages={topPages} period={period} />;
       case 'product-analytics': return <ProductAnalytics pages={topPages} />;
       case 'customer-analytics': return <CustomerAnalytics visitorNew={visitorTotals.unique} visitorReturning={visitorTotals.returning} />;
       case 'geographic-analytics': return <GeographicAnalytics countries={countries} />;
       case 'top-pages': return <TopPagesCard pages={topPages} period={period} onViewAll={() => setShowAllPages(true)} />;
       case 'session-quality': return <SessionQuality bounceRate={bounceRate} avgDuration={avgDuration} stats={stats} />;
-      case 'peak-hours': return <PeakHoursHeatmap period={period} />;
-      case 'search-behavior': return <SearchBehavior />;
+      case 'peak-hours': return <PeakHoursHeatmap period={period} orders={orders} />;
+      case 'search-behavior': return <SearchBehavior period={period} />;
       default: return null;
     }
   };
 
   const skeletonFor = () => <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-white/10 animate-pulse h-[280px]"><div className="h-4 bg-gray-200 dark:bg-white/10 rounded w-32 mb-3" /><div className="h-6 bg-gray-200 dark:bg-white/10 rounded w-48 mb-2" /><div className="h-32 bg-gray-100 dark:bg-white/5 rounded-xl" /></div>;
 
-  const expandedNode = expandedId ? renderWidget(expandedId) : null;
+  const expandedNode = (() => {
+    if (!expandedId) return null;
+    if (expandedId === 'user-behavior') return <UserBehavior pages={topPages} period={period} isExpanded />;
+    if (expandedId === 'visitor-trends') return <VisitorTrends trend={trend} isExpanded />;
+    if (expandedId === 'conversion-funnel') return <ConversionFunnel stats={stats} period={period} isExpanded />;
+    if (expandedId === 'traffic-performance') return <TrafficPerformance sources={trafficSources} isExpanded />;
+    if (expandedId === 'device-analytics') return <DeviceAnalytics devices={devices} browsers={browsers} isExpanded />;
+    if (expandedId === 'session-quality') return <SessionQuality bounceRate={bounceRate} avgDuration={avgDuration} stats={stats} isExpanded />;
+    if (expandedId === 'product-analytics') return <ProductAnalytics pages={topPages} isExpanded />;
+    if (expandedId === 'customer-analytics') return <CustomerAnalytics visitorNew={visitorTotals.unique} visitorReturning={visitorTotals.returning} isExpanded />;
+    if (expandedId === 'top-pages') return <TopPagesCard pages={topPages} period={period} onViewAll={() => setShowAllPages(true)} isExpanded />;
+    if (expandedId === 'peak-hours') return <PeakHoursHeatmap period={period} orders={orders} isExpanded />;
+    if (expandedId === 'geographic-analytics') return <GeographicAnalytics countries={countries} isExpanded />;
+    if (expandedId === 'search-behavior') return <SearchBehavior period={period} isExpanded />;
+    return renderWidget(expandedId);
+  })();
   const expandedMeta = expandedId ? analyticsRegistry.find(r => r.id === expandedId) : null;
 
   return (
@@ -124,6 +142,8 @@ const Analytic: React.FC = () => {
           onRemove={id => updateWidget('analytics', id, { visible: false })}
           onChangeSpan={(id, span) => updateWidget('analytics', id, { colSpan: span })}
           onChangeRowSpan={(id, span) => updateWidget('analytics', id, { rowSpan: span as any })}
+          onChangeCustomHeight={(id, px) => updateWidget('analytics', id, { customHeight: px })}
+          onChangeCustomWidth={(id, px) => updateWidget('analytics', id, { customWidth: px })}
           onExpand={id => setExpandedId(id)}
           renderWidget={renderWidget}
         />
@@ -132,14 +152,28 @@ const Analytic: React.FC = () => {
       <TopPagesModal open={showAllPages} onClose={() => setShowAllPages(false)} pages={topPages} period={period} />
 
       {expandedId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setExpandedId(null)} />
-          <div className="relative w-full max-w-6xl max-h-[90vh] overflow-auto bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/10 shadow-2xl p-4">
-            <div className="sticky top-0 z-10 flex items-center justify-between bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl -mx-4 -mt-4 px-4 py-3 border-b border-gray-100 dark:border-white/10 mb-4">
-              <h3 className="text-base font-semibold text-gray-900 dark:text-white">{expandedMeta ? expandedMeta.name : expandedId}</h3>
-              <button onClick={() => setExpandedId(null)} className="p-2 rounded-xl bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300"><X size={16} /></button>
+        <div className="fixed inset-0 z-50 flex flex-col">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setExpandedId(null)} />
+          <div className="relative flex-1 flex flex-col max-h-screen p-3 sm:p-4 lg:p-6 overflow-hidden">
+            <div className="flex-1 flex flex-col max-w-7xl w-full mx-auto bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/10 shadow-2xl overflow-hidden">
+              <div className="shrink-0 flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-white/10 bg-gray-50/50 dark:bg-white/[0.02]">
+                <div className="w-9 h-9 rounded-xl bg-[var(--color-darkGreen)]/10 border border-[var(--color-darkGreen)]/10 flex items-center justify-center shrink-0">
+                  <WidgetIcon id={expandedId} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-base font-semibold text-gray-900 dark:text-white leading-tight">{expandedMeta?.name ?? expandedId}</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{expandedMeta?.description}</p>
+                </div>
+                <button onClick={() => setExpandedId(null)} className="w-8 h-8 rounded-full bg-white dark:bg-white/10 border border-gray-200 dark:border-white/10 flex items-center justify-center text-gray-500 hover:text-gray-700 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/10 transition-colors shrink-0">
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="flex-1 overflow-auto p-4 sm:p-5 lg:p-6 bg-gray-50/30 dark:bg-white/[0.01]">
+                <div className="min-h-full">
+                  {expandedNode}
+                </div>
+              </div>
             </div>
-            {expandedNode}
           </div>
         </div>
       )}

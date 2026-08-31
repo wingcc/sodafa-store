@@ -363,6 +363,256 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // ─── CART: Abandonment funnel from visitor_events ────────
+    if (view === 'cart') {
+      const [addToCartRes, checkoutRes] = await Promise.all([
+        supabase.from('visitor_events').select('id', { count: 'exact', head: true })
+          .in('event_type', ['add_to_cart']).gte('created_at', start).lte('created_at', end),
+        supabase.from('visitor_events').select('id', { count: 'exact', head: true })
+          .in('event_type', ['begin_checkout', 'checkout_started']).gte('created_at', start).lte('created_at', end),
+      ]);
+      const addToCartCount = addToCartRes.count || 0;
+      const checkoutCount = checkoutRes.count || 0;
+
+      // Fallback: also check page_views for checkout page hits as proxy for checkout intent
+      let fallbackCheckout = checkoutCount;
+      if (checkoutCount === 0) {
+        const { count: checkoutPageViews } = await supabase.from('page_views')
+          .select('id', { count: 'exact', head: true })
+          .eq('page_type', 'checkout').gte('created_at', start).lte('created_at', end);
+        fallbackCheckout = checkoutPageViews || 0;
+      }
+
+      const { count: ordersCount } = await supabase.from('orders')
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', start).lte('created_at', end);
+
+      return NextResponse.json({
+        addToCart: addToCartCount,
+        checkoutStarted: fallbackCheckout,
+        orders: ordersCount || 0,
+        hasRealData: addToCartCount > 0 || checkoutCount > 0,
+        period,
+      });
+    }
+
+    // ─── BEHAVIOR: User behavior metrics ──────────────────────
+    if (view === 'behavior') {
+      const [sessionsRes, pageViewsRes, eventsRes, homeViewsRes, storeViewsRes] = await Promise.all([
+        supabase.from('sessions').select('id, landing_page, exit_page, page_views').gte('created_at', start).lte('created_at', end),
+        supabase.from('page_views').select('id, session_id, page_path, page_type, scroll_depth').gte('created_at', start).lte('created_at', end),
+        supabase.from('visitor_events').select('id, event_type').gte('created_at', start).lte('created_at', end),
+        supabase.from('page_views').select('id', { count: 'exact', head: true }).eq('page_type', 'home').gte('created_at', start).lte('created_at', end),
+        supabase.from('page_views').select('id', { count: 'exact', head: true }).in('page_type', ['store', 'product']).gte('created_at', start).lte('created_at', end),
+      ]);
+
+      const sessions = sessionsRes.data || [];
+      const pageViews = pageViewsRes.data || [];
+      const events = eventsRes.data || [];
+
+      // Avg pages per session
+      const totalPageViews = pageViews.length;
+      const totalSessions = sessions.length;
+      const avgPagesPerSession = totalSessions > 0 ? Math.round((totalPageViews / totalSessions) * 10) / 10 : 0;
+
+      // Avg scroll depth (from page_views where scroll_depth not null)
+      const scrollDepths = pageViews.filter(pv => pv.scroll_depth != null).map(pv => pv.scroll_depth as number);
+      const avgScrollDepth = scrollDepths.length > 0 ? Math.round(scrollDepths.reduce((a, b) => a + b, 0) / scrollDepths.length) : 0;
+
+      // Interaction events
+      const eventCounts = new Map<string, number>();
+      for (const e of events) {
+        eventCounts.set(e.event_type, (eventCounts.get(e.event_type) || 0) + 1);
+      }
+
+      // Home → Store funnel
+      const homeViews = homeViewsRes.count || 0;
+      const storeViews = storeViewsRes.count || 0;
+
+      // Sessions that touched home and store (via page_views)
+      const sessionHomeSet = new Set<string>();
+      const sessionStoreSet = new Set<string>();
+      for (const pv of pageViews) {
+        if (pv.page_type === 'home') sessionHomeSet.add(pv.session_id);
+        if (pv.page_type === 'store' || pv.page_type === 'product') sessionStoreSet.add(pv.session_id);
+      }
+      const homeSessions = sessionHomeSet.size;
+      const storeSessions = sessionStoreSet.size;
+      let homeToStoreSessions = 0;
+      for (const sid of sessionHomeSet) {
+        if (sessionStoreSet.has(sid)) homeToStoreSessions++;
+      }
+      const homeToStoreRate = homeSessions > 0 ? Math.round((homeToStoreSessions / homeSessions) * 100) : 0;
+
+      // Home exits (sessions where exit_page is home or only viewed home)
+      const homeExits = sessions.filter(s =>
+        s.exit_page === '/' || s.exit_page === '/home' || (s.landing_page === '/' && s.page_views === 1)
+      ).length;
+      const homeExitRate = homeSessions > 0 ? Math.round((homeExits / homeSessions) * 100) : 0;
+
+      // Top entry pages (landing_page)
+      const entryMap = new Map<string, number>();
+      for (const s of sessions) {
+        const lp = s.landing_page || '/';
+        entryMap.set(lp, (entryMap.get(lp) || 0) + 1);
+      }
+      const topEntryPages = Array.from(entryMap.entries())
+        .map(([path, views]) => ({ path, views }))
+        .sort((a, b) => b.views - a.views).slice(0, 5);
+
+      // Top exit pages (exit_page)
+      const exitMap = new Map<string, number>();
+      for (const s of sessions) {
+        const ep = s.exit_page || s.landing_page || '/';
+        exitMap.set(ep, (exitMap.get(ep) || 0) + 1);
+      }
+      const topExitPages = Array.from(exitMap.entries())
+        .map(([path, views]) => ({ path, views }))
+        .sort((a, b) => b.views - a.views).slice(0, 5);
+
+      return NextResponse.json({
+        avgPagesPerSession,
+        avgScrollDepth,
+        scrollDepthCount: scrollDepths.length,
+        totalEvents: events.length,
+        eventBreakdown: Array.from(eventCounts.entries()).map(([type, count]) => ({ type, count })),
+        homeFunnel: {
+          homeViews,
+          storeViews,
+          homeSessions,
+          storeSessions,
+          homeToStoreSessions,
+          homeToStoreRate,
+          homeExits,
+          homeExitRate,
+        },
+        topEntryPages,
+        topExitPages,
+        period,
+      });
+    }
+
+    // ─── PEAK HOURS: Real hourly matrix ───────────────────────
+    if (view === 'peak_hours') {
+      const metric = searchParams.get('metric') || 'visitors';
+      if (metric === 'orders') {
+        // Paginated fetch to handle many orders
+        let allOrders: { created_at: string }[] = [];
+        let from = 0;
+        const pageSize = 1000;
+        while (true) {
+          const { data: chunk } = await supabase.from('orders').select('created_at')
+            .gte('created_at', start).lte('created_at', end)
+            .order('created_at', { ascending: true })
+            .range(from, from + pageSize - 1);
+          if (!chunk || chunk.length === 0) break;
+          allOrders = allOrders.concat(chunk as any);
+          if (chunk.length < pageSize) break;
+          from += pageSize;
+          if (from > 10000) break;
+        }
+        const matrix = Array.from({ length: 7 }, () => Array(24).fill(0));
+        for (const o of allOrders) {
+          const d = new Date(o.created_at);
+          // Use local hour for more intuitive display (Morocco is UTC+1)
+          const day = (d.getUTCDay() + 6) % 7; // Mon=0
+          const hour = d.getUTCHours();
+          matrix[day][hour]++;
+        }
+        return NextResponse.json({ matrix, period, metric, total: allOrders.length });
+      }
+      if (metric === 'sessions') {
+        let allSessions: { started_at: string }[] = [];
+        let from = 0;
+        const pageSize = 1000;
+        while (true) {
+          const { data: chunk } = await supabase.from('sessions').select('started_at')
+            .gte('started_at', start).lte('started_at', end)
+            .order('started_at', { ascending: true })
+            .range(from, from + pageSize - 1);
+          if (!chunk || chunk.length === 0) break;
+          allSessions = allSessions.concat(chunk as any);
+          if (chunk.length < pageSize) break;
+          from += pageSize;
+          if (from > 10000) break;
+        }
+        const matrix = Array.from({ length: 7 }, () => Array(24).fill(0));
+        for (const s of allSessions) {
+          if (!s.started_at) continue;
+          const d = new Date(s.started_at);
+          const day = (d.getUTCDay() + 6) % 7;
+          const hour = d.getUTCHours();
+          matrix[day][hour]++;
+        }
+        return NextResponse.json({ matrix, period, metric, total: allSessions.length });
+      }
+      // visitors: distinct visitors per hour from page_views (paginated)
+      let allPVs: { created_at: string; visitor_id: string }[] = [];
+      let from = 0;
+      const pageSize = 1000;
+      while (true) {
+        const { data: chunk } = await supabase.from('page_views').select('created_at, visitor_id')
+          .gte('created_at', start).lte('created_at', end)
+          .order('created_at', { ascending: true })
+          .range(from, from + pageSize - 1);
+        if (!chunk || chunk.length === 0) break;
+        allPVs = allPVs.concat(chunk as any);
+        if (chunk.length < pageSize) break;
+        from += pageSize;
+        if (from > 10000) break;
+      }
+      const matrix = Array.from({ length: 7 }, () => Array(24).fill(0));
+      const seen = new Set<string>();
+      for (const pv of allPVs) {
+        const d = new Date(pv.created_at);
+        const day = (d.getUTCDay() + 6) % 7;
+        const hour = d.getUTCHours();
+        const key = `${pv.visitor_id}-${day}-${hour}`;
+        if (!seen.has(key)) { seen.add(key); matrix[day][hour]++; }
+      }
+      return NextResponse.json({ matrix, period, metric, total: seen.size });
+    }
+
+    // ─── SEARCH: Search behavior ──────────────────────────────
+    if (view === 'search') {
+      const { data: searchEvents } = await supabase
+        .from('visitor_events')
+        .select('event_data, created_at')
+        .eq('event_type', 'search')
+        .gte('created_at', start).lte('created_at', end)
+        .order('created_at', { ascending: false }).limit(200);
+
+      const termMap = new Map<string, { term: string; count: number; results: number[] }>();
+      for (const e of (searchEvents || [])) {
+        const q = (e.event_data as any)?.query || (e.event_data as any)?.term || '';
+        const term = String(q).trim().toLowerCase();
+        if (!term) continue;
+        if (!termMap.has(term)) termMap.set(term, { term, count: 0, results: [] });
+        const entry = termMap.get(term)!;
+        entry.count++;
+        const rc = (e.event_data as any)?.results_count ?? (e.event_data as any)?.results ?? 0;
+        if (typeof rc === 'number') entry.results.push(rc);
+      }
+      const topTerms = Array.from(termMap.values())
+        .map(t => ({ term: t.term, count: t.count, avgResults: t.results.length ? Math.round(t.results.reduce((a, b) => a + b, 0) / t.results.length) : 0 }))
+        .sort((a, b) => b.count - a.count).slice(0, 10);
+
+      const totalSearches = searchEvents?.length || 0;
+      const uniqueTerms = termMap.size;
+
+      // Funnel: search -> view -> cart -> order (approx via visitor_events + page_views)
+      const { count: searchResultViews } = await supabase.from('page_views').select('id', { count: 'exact', head: true })
+        .like('page_path', '%search%').gte('created_at', start).lte('created_at', end);
+
+      return NextResponse.json({
+        totalSearches,
+        uniqueTerms,
+        topTerms,
+        searchResultViews: searchResultViews || 0,
+        period,
+      });
+    }
+
     // ─── REALTIME: Current activity ───────────────────────────
     if (view === 'realtime') {
       const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();

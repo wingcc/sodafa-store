@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Save, Loader2, ToggleLeft, MousePointerClick, Store } from 'lucide-react';
+import { Save, Loader2, ToggleLeft, MousePointerClick, Store, FileText, Link2 } from 'lucide-react';
 import Badge from '@/app/dashboard/components/ui/Badge';
 import RefreshButton from '@/app/dashboard/components/ui/RefreshButton';
 import { useToast } from '@/lib/toast';
@@ -26,12 +26,16 @@ const DEFAULT_SITE_INFO: SiteInfoContent = {
   instagram: '',
   facebook: '',
   tiktok: '',
+  privacyPolicySlug: 'privacy-policy',
+  termsSlug: 'terms',
+  cookiesSlug: 'cookies',
 };
 
 export default function SettingsTab() {
   const [features, setFeatures] = useState<PageFeature[]>([]);
   const [buttons, setButtons] = useState<FloatingButton[]>([]);
   const [siteInfo, setSiteInfo] = useState<SiteInfoContent>(DEFAULT_SITE_INFO);
+  const [contentPages, setContentPages] = useState<{ slug: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingSite, setSavingSite] = useState(false);
   const { addToast } = useToast();
@@ -47,7 +51,13 @@ export default function SettingsTab() {
         if (cancelled) return;
         setFeatures(f);
         setButtons(b);
-        setSiteInfo(s);
+        // Ensure legal slugs have defaults if missing (backwards compat)
+        setSiteInfo({
+          privacyPolicySlug: 'privacy-policy',
+          termsSlug: 'terms',
+          cookiesSlug: 'cookies',
+          ...s,
+        } as SiteInfoContent);
       })
       .catch((error) => {
         console.error('Load settings error:', error);
@@ -56,6 +66,16 @@ export default function SettingsTab() {
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
+    // Load available Store Content pages for legal-link pickers
+    fetch('/api/content-pages')
+      .then((r) => r.json())
+      .then((json) => {
+        if (cancelled) return;
+        if (json.success && Array.isArray(json.data)) {
+          setContentPages(json.data.map((row: any) => ({ slug: String(row.slug), name: String(row.name) })));
+        }
+      })
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
@@ -355,6 +375,81 @@ export default function SettingsTab() {
           <FormField label="TikTok URL">
             <TextInput dir="ltr" value={siteInfo.tiktok} onChange={(e) => updateSite({ tiktok: e.target.value })} />
           </FormField>
+        </div>
+      </section>
+
+      {/* Legal Links — Footer Popups use Store Content */}
+      <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center">
+              <FileText size={16} className="text-emerald-600" />
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-gray-900">Legal Pages — Footer Popups</h4>
+              <p className="text-xs text-gray-500">Pick which Store Content page is shown for each footer link. Popup loads from its slug.</p>
+            </div>
+          </div>
+          <a
+            href="/dashboard/store-content"
+            className="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium text-purple-600 hover:text-purple-700"
+          >
+            <Link2 size={12} /> Go to Store Content
+          </a>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {[
+            { key: 'privacyPolicySlug' as const, label: 'Privacy Policy', hint: 'Footer → Privacy' },
+            { key: 'termsSlug' as const, label: 'Terms & Conditions', hint: 'Footer → Terms' },
+            { key: 'cookiesSlug' as const, label: 'Cookies Policy', hint: 'Footer → Cookies' },
+          ].map((field) => (
+            <FormField key={field.key} label={field.label} hint={field.hint}>
+              <div className="relative">
+                <select
+                  value={(siteInfo as any)[field.key] || ''}
+                  onChange={(e) => updateSite({ [field.key]: e.target.value } as Partial<SiteInfoContent>)}
+                  className="w-full px-3 py-2.5 pr-8 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 appearance-none"
+                >
+                  <option value="">— Select Store Content —</option>
+                  {contentPages.map((p) => (
+                    <option key={p.slug} value={p.slug}>
+                      {p.name} — /content/{p.slug}
+                    </option>
+                  ))}
+                  {/* Allow custom slug even if not in list */}
+                  {contentPages.every((p) => p.slug !== (siteInfo as any)[field.key]) && (siteInfo as any)[field.key] ? (
+                    <option value={(siteInfo as any)[field.key]}>{(siteInfo as any)[field.key]} — custom</option>
+                  ) : null}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6" /></svg>
+                </div>
+              </div>
+              <p className="text-[11px] text-gray-400 mt-1">
+                Link: <span dir="ltr" className="font-mono text-gray-600">/content/{(siteInfo as any)[field.key] || '…'}</span>
+                {(siteInfo as any)[field.key] && (
+                  <a href={`/content/${(siteInfo as any)[field.key]}`} target="_blank" rel="noopener" className="ml-2 text-purple-600 hover:underline">
+                    Preview
+                  </a>
+                )}
+              </p>
+            </FormField>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+          <p className="text-xs text-gray-500">
+            Tip: Create or edit pages in <b>Store Content</b>. Published content is loaded via <code className="px-1 py-0.5 bg-gray-100 rounded text-[11px]">/api/content-pages?slug=…</code>
+          </p>
+          <button
+            onClick={handleSaveSite}
+            disabled={savingSite}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl text-sm font-medium hover:shadow-lg transition-all disabled:opacity-60"
+          >
+            <Save size={14} className={savingSite ? 'animate-spin' : ''} />
+            Save Legal Links
+          </button>
         </div>
       </section>
     </div>

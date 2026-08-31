@@ -11,6 +11,8 @@ export interface WidgetLayout {
   locked: boolean;
   colSpan: number;
   rowSpan: number;
+  customWidth?: number;
+  customHeight?: number;
   order: number;
 }
 
@@ -59,6 +61,7 @@ interface WorkspaceState {
   redo: (workspace: WorkspaceId) => void;
   canUndo: (workspace: WorkspaceId) => boolean;
   canRedo: (workspace: WorkspaceId) => boolean;
+  importWorkspace: (workspace: WorkspaceId, layouts: WidgetLayout[]) => void;
 }
 
 // Helper: push new state to history, truncating any future entries
@@ -150,7 +153,9 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         const validated = dashboardDraft.map(w => ({
           ...w,
           colSpan: Math.min(12, Math.max(3, w.colSpan)),
-          rowSpan: Math.min(4, Math.max(1, w.rowSpan ?? 2)),
+          rowSpan: Math.min(6, Math.max(1, w.rowSpan ?? 2)),
+          customWidth: w.customWidth != null ? Math.min(2400, Math.max(200, w.customWidth)) : undefined,
+          customHeight: w.customHeight != null ? Math.min(1320, Math.max(120, w.customHeight)) : undefined,
         }));
         set({ dashboard: validated, dashboardDraft: null, dashboardEditMode: false });
       },
@@ -173,7 +178,9 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         const validated = analyticsDraft.map(w => ({
           ...w,
           colSpan: Math.min(12, Math.max(3, w.colSpan)),
-          rowSpan: Math.min(4, Math.max(1, w.rowSpan ?? 2)),
+          rowSpan: Math.min(6, Math.max(1, w.rowSpan ?? 2)),
+          customWidth: w.customWidth != null ? Math.min(2400, Math.max(200, w.customWidth)) : undefined,
+          customHeight: w.customHeight != null ? Math.min(1320, Math.max(120, w.customHeight)) : undefined,
         }));
         set({ analytics: validated, analyticsDraft: null, analyticsEditMode: false });
       },
@@ -262,6 +269,23 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         const idx = workspace === 'dashboard' ? get().dashboardHistoryIndex : get().analyticsHistoryIndex;
         const hist = workspace === 'dashboard' ? get().dashboardHistory : get().analyticsHistory;
         return idx < hist.length - 1;
+      },
+
+      importWorkspace: (workspace, layouts) => {
+        const validated = layouts.map(w => ({
+          ...w,
+          colSpan: Math.min(12, Math.max(3, w.colSpan)),
+          rowSpan: Math.min(6, Math.max(1, w.rowSpan ?? 2)),
+          customWidth: w.customWidth != null ? Math.min(2400, Math.max(200, w.customWidth)) : undefined,
+          customHeight: w.customHeight != null ? Math.min(1320, Math.max(120, w.customHeight)) : undefined,
+          visible: w.visible ?? true,
+          locked: w.locked ?? false,
+          order: typeof w.order === 'number' ? w.order : 0,
+        }));
+        // Ensure unique orders
+        validated.forEach((w, i) => { if (w.order == null) w.order = i; });
+        setDraftOrSaved(get, set, workspace, validated);
+        pushToHistory(get, set, workspace, validated);
       },
     }),
     {

@@ -46,10 +46,10 @@ export default function WebsiteLayout({
           <FavoritesProvider>
             <div className="website-root" dir="rtl" lang="ar">
               {children}
-              <CartDrawer />
-              <SearchDialog />
-              <CheckoutFormModal />
             </div>
+            <CartDrawer />
+            <SearchDialog />
+            <CheckoutFormModal />
           </FavoritesProvider>
         </LanguageProvider>
       </UIProvider>

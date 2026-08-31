@@ -89,6 +89,11 @@ export type Database = {
         Insert: StoreSettingInsert;
         Update: StoreSettingUpdate;
       };
+      contact_messages: {
+        Row: ContactMessageRow;
+        Insert: ContactMessageInsert;
+        Update: ContactMessageUpdate;
+      };
       visitors: {
         Row: VisitorRow;
         Insert: VisitorInsert;
@@ -190,6 +195,7 @@ export interface ProductRow {
   seo_description: string | null;
   seo_slug: string | null;
   seo_keywords: string[];
+  more_info: Json | Record<string, unknown> | null;
   total_sold: number;
   rating: number;
   review_count: number;
@@ -223,6 +229,7 @@ export interface ProductInsert {
   seo_description?: string | null;
   seo_slug?: string | null;
   seo_keywords?: string[];
+  more_info?: Json | Record<string, unknown> | null;
   total_sold?: number;
   rating?: number;
   review_count?: number;
@@ -775,3 +782,32 @@ export interface VisitorEventInsert {
   page_url?: string | null;
 }
 export type VisitorEventUpdate = Partial<VisitorEventInsert>;
+
+// ──────────────────────────────────────────────────────────────
+// CONTACT MESSAGES (014_contact_messages)
+// ──────────────────────────────────────────────────────────────
+export interface ContactMessageRow {
+  id: string;
+  customer_id: string | null;
+  name: string;
+  phone: string;
+  email: string | null;
+  message: string;
+  status: 'new' | 'read' | 'replied' | 'archived';
+  is_starred: boolean;
+  is_customer: boolean;
+  created_at: string;
+  updated_at: string;
+}
+export interface ContactMessageInsert {
+  id?: string;
+  customer_id?: string | null;
+  name: string;
+  phone: string;
+  email?: string | null;
+  message: string;
+  status?: 'new' | 'read' | 'replied' | 'archived';
+  is_starred?: boolean;
+  is_customer?: boolean;
+}
+export type ContactMessageUpdate = Partial<ContactMessageInsert>;

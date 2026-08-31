@@ -32,6 +32,40 @@ export async function validateCoupon(
   if (coupon.usage_limit > 0 && (coupon.used_count ?? 0) >= coupon.usage_limit) {
     return { valid: false, discount: 0, reason: 'Coupon usage limit reached' };
   }
+
+  let customerId: string | null = null;
+  if (input.customerPhone || input.customerEmail) {
+    if (input.customerPhone) {
+      const { data: phoneCustomer } = await admin
+        .from('customers')
+        .select('id')
+        .eq('phone', input.customerPhone)
+        .maybeSingle();
+      if (phoneCustomer) customerId = phoneCustomer.id;
+    }
+
+    if (!customerId && input.customerEmail) {
+      const { data: emailCustomer } = await admin
+        .from('customers')
+        .select('id')
+        .eq('email', input.customerEmail)
+        .maybeSingle();
+      if (emailCustomer) customerId = emailCustomer.id;
+    }
+  }
+
+  if (coupon.customer_usage_limit > 0 && customerId) {
+    const { count, error: usageError } = await admin
+      .from('orders')
+      .select('id', { count: 'exact', head: true })
+      .eq('customer_id', customerId)
+      .eq('coupon_code', code);
+
+    if (!usageError && (count ?? 0) >= coupon.customer_usage_limit) {
+      return { valid: false, discount: 0, reason: 'Customer coupon usage limit reached' };
+    }
+  }
+
   if (input.subtotal < (coupon.minimum_order ?? 0)) {
     return { valid: false, discount: 0, reason: `Minimum order ${coupon.minimum_order ?? 0} MAD not reached` };
   }
@@ -40,29 +74,11 @@ export async function validateCoupon(
   if (coupon.applicable_to === 'customers') {
     const allowedIds = (coupon.applicable_ids ?? []).map((s: string) => s.trim()).filter(Boolean);
     if (allowedIds.length > 0) {
-      let customerId: string | null = null;
-
-      // Look up customer by phone
-      if (input.customerPhone) {
-        const { data: phoneCustomer } = await admin
-          .from('customers')
-          .select('id')
-          .eq('phone', input.customerPhone)
-          .single();
-        if (phoneCustomer) customerId = phoneCustomer.id;
+      if (!customerId) {
+        return { valid: false, discount: 0, reason: 'This coupon is not available for your account' };
       }
 
-      // Fallback: look up customer by email
-      if (!customerId && input.customerEmail) {
-        const { data: emailCustomer } = await admin
-          .from('customers')
-          .select('id')
-          .eq('email', input.customerEmail)
-          .single();
-        if (emailCustomer) customerId = emailCustomer.id;
-      }
-
-      if (!customerId || !allowedIds.includes(customerId)) {
+      if (!allowedIds.includes(customerId)) {
         return { valid: false, discount: 0, reason: 'This coupon is not available for your account' };
       }
     }

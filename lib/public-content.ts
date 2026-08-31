@@ -71,9 +71,23 @@ async function fetchContentBlocks(db: Db): Promise<Record<string, unknown>> {
  * static config.json overlaid with dashboard-managed database content.
  */
 export async function loadPublicConfig(): Promise<SodfaConfig> {
-  const res = await fetch("/json/config.json");
-  if (!res.ok) throw new Error(`config.json ${res.status}`);
-  const base = (await res.json()) as SodfaConfig;
+  let base: SodfaConfig;
+  try {
+    if (typeof window === "undefined") {
+      const { readFile } = await import("node:fs/promises");
+      const { join } = await import("node:path");
+      const configPath = join(process.cwd(), "public", "json", "config.json");
+      const raw = await readFile(configPath, "utf8");
+      base = JSON.parse(raw) as SodfaConfig;
+    } else {
+      const res = await fetch("/json/config.json");
+      if (!res.ok) throw new Error(`fetch /json/config.json failed: ${res.status}`);
+      base = (await res.json()) as SodfaConfig;
+    }
+  } catch (err) {
+    console.error("[public-content] Failed to read config.json:", err);
+    throw new Error("config.json could not be loaded");
+  }
 
   try {
     const db = createClient();

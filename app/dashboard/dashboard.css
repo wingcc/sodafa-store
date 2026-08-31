@@ -351,3 +351,114 @@
   animation-play-state: running;
   filter: brightness(1.15);
 }
+
+/* ── Widget Resize Handles — Edit Mode ── */
+
+/* Corner handles (bottom-left, bottom-right) */
+.resize-handle-corner {
+  width: 24px;
+  height: 24px;
+  transform: translateY(50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: nwse-resize;
+  touch-action: none;
+  user-select: none;
+}
+
+.resize-handle-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: white;
+  border: 1.5px solid #d1d5db;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  transition: all 0.15s ease;
+  opacity: 0;
+}
+
+.dark .resize-handle-dot {
+  background: #1e293b;
+  border-color: rgba(255,255,255,0.12);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+/* Show handles on widget hover */
+.resize-handle-corner:hover .resize-handle-dot,
+.resize-handle-center:hover .resize-handle-line {
+  opacity: 1;
+}
+
+.resize-handle-dot:hover {
+  border-color: var(--color-darkGreen, #047857);
+  background: color-mix(in srgb, var(--color-darkGreen, #047857) 8%, white);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-darkGreen, #047857) 12%, transparent);
+}
+
+.dark .resize-handle-dot:hover {
+  background: color-mix(in srgb, var(--color-darkGreen, #047857) 15%, #1e293b);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-darkGreen, #047857) 18%, transparent);
+}
+
+.resize-handle-icon {
+  color: #9ca3af;
+  transition: color 0.15s ease;
+}
+
+.resize-handle-dot:hover .resize-handle-icon {
+  color: var(--color-darkGreen, #047857);
+}
+
+/* Center handle (bottom-center — height only) */
+.resize-handle-center {
+  width: 48px;
+  height: 12px;
+  transform: translateY(50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: ns-resize;
+  touch-action: none;
+  user-select: none;
+}
+
+.resize-handle-line {
+  width: 32px;
+  height: 3px;
+  border-radius: 2px;
+  background: #d1d5db;
+  transition: all 0.15s ease;
+  opacity: 0;
+}
+
+.dark .resize-handle-line {
+  background: rgba(255,255,255,0.12);
+}
+
+.resize-handle-center:hover .resize-handle-line {
+  opacity: 1;
+  background: var(--color-darkGreen, #047857);
+  height: 4px;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-darkGreen, #047857) 15%, transparent);
+}
+
+/* Active resize state — show all handles */
+.resize-active .resize-handle-dot {
+  opacity: 1;
+}
+.resize-active .resize-handle-line {
+  opacity: 1;
+}
+
+/* During resize — prevent text selection */
+body.resizing {
+  cursor: inherit !important;
+  user-select: none !important;
+}
+body.resizing * {
+  cursor: inherit !important;
+}

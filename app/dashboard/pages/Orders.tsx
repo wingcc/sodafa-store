@@ -311,6 +311,15 @@ const Orders: React.FC = () => {
     addToast('success', `Order status changed to "${label}".`, { title: 'Order Updated' });
   };
 
+  const handleCopyOrderNumber = async (orderNumber: string) => {
+    try {
+      await navigator.clipboard.writeText(orderNumber);
+      addToast('success', 'Order number copied.', { title: 'Copied' });
+    } catch {
+      addToast('error', 'Unable to copy order number.', { title: 'Copy failed' });
+    }
+  };
+
   const getNextStatus = (currentStatus: string) => {
     const flow: Record<string, string> = {
       pending: 'confirmed',
@@ -713,6 +722,14 @@ const Orders: React.FC = () => {
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="text-sm font-semibold text-gray-900">{order.orderNumber}</p>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyOrderNumber(order.orderNumber)}
+                              className="p-1 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                              title="Copy order number"
+                            >
+                              <Copy size={12} />
+                            </button>
                             <StatusDropdown
                               orderId={order.id}
                               currentStatus={order.orderStatus}
@@ -876,7 +893,17 @@ const Orders: React.FC = () => {
                   return (
                     <tr key={order.id} className="hover:bg-gray-50/50 transition-colors">
                       <td className="px-6 py-4">
-                        <span className="text-sm font-semibold text-[#0a2c23]">{order.orderNumber}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-[#0a2c23]">{order.orderNumber}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyOrderNumber(order.orderNumber)}
+                            className="p-1 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                            title="Copy order number"
+                          >
+                            <Copy size={12} />
+                          </button>
+                        </div>
                       </td>
                       <td className="px-6 py-4">
                         <div>

@@ -1,7 +1,7 @@
 "use client";
 
-import type { StaticImageData } from "next/image";
 import Link from "next/link";
+import { ShoppingBag } from "lucide-react";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 
 import type { Product } from "../types/product";
@@ -12,35 +12,38 @@ import styles from "./ProductCard.module.css";
 
 function useCountdown(targetDate: string | undefined) {
   const target = useMemo(() => (targetDate ? new Date(targetDate).getTime() : 0), [targetDate]);
-  const [mounted, setMounted] = useState(false);
-  const [time, setTime] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, expired: true });
-
-  useEffect(() => {
-    if (!target) { setMounted(true); return; }
+  const [time, setTime] = useState(() => {
+    if (!target) return { days: 0, hours: 0, minutes: 0, seconds: 0, expired: true };
     const diff = Math.max(0, target - Date.now());
-    setTime({
+    return {
       days: Math.floor(diff / 86400000),
       hours: Math.floor((diff % 86400000) / 3600000),
       minutes: Math.floor((diff % 3600000) / 60000),
       seconds: Math.floor((diff % 60000) / 1000),
       expired: diff <= 0,
-    });
-    setMounted(true);
+    };
+  });
 
-    const id = setInterval(() => {
-      const d = Math.max(0, target - Date.now());
+  useEffect(() => {
+    if (!target) return;
+
+    const tick = () => {
+      const diff = Math.max(0, target - Date.now());
       setTime({
-        days: Math.floor(d / 86400000),
-        hours: Math.floor((d % 86400000) / 3600000),
-        minutes: Math.floor((d % 3600000) / 60000),
-        seconds: Math.floor((d % 60000) / 1000),
-        expired: d <= 0,
+        days: Math.floor(diff / 86400000),
+        hours: Math.floor((diff % 86400000) / 3600000),
+        minutes: Math.floor((diff % 3600000) / 60000),
+        seconds: Math.floor((diff % 60000) / 1000),
+        expired: diff <= 0,
       });
-    }, 1000);
+    };
+
+    tick();
+    const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, [target]);
 
-  return { ...time, mounted };
+  return time;
 }
 
 export type ProductCardProps = {
@@ -100,7 +103,7 @@ export const ProductCard = ({
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const countdown = useCountdown(product.isOffer ? product.offerTime : undefined);
-  const showCountdownTimer = showCountdown && product.isOffer && product.offerTime && !countdown.expired && countdown.mounted;
+  const showCountdownTimer = showCountdown && product.isOffer && product.offerTime && !countdown.expired;
 
   const hasMultiple = allImages.length > 1;
 
@@ -307,10 +310,7 @@ export const ProductCard = ({
             disabled={product.inStock === false}
             className={`${styles.orderBtn} ${product.inStock === false ? styles.orderBtnDisabled : ""}`}
           >
-            <svg className={styles.orderBtnIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-              <path d="M7 11V7a5 5 0 0110 0v4" />
-            </svg>
+            <ShoppingBag className={styles.orderBtnIcon} />
             <span>
               {product.inStock === false
                 ? (isAr ? "غير متوفر" : "Out of stock")

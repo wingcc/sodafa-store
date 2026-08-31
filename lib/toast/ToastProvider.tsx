@@ -1,7 +1,7 @@
 // lib/toast/ToastProvider.tsx
 'use client';
 
-import { createContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useState, useCallback, ReactNode, useMemo } from 'react';
 import { Toast, ToastContextType, ToastOptions, ToastType } from './types';
 import { ToastContainer } from '@/lib/toast/ToastContainer';
 import { useToastSettings } from '@/lib/toast/ToastSettingsContext';
@@ -14,7 +14,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const addToast = useCallback(
     (type: ToastType, message: string, options?: ToastOptions): string => {
-      const id = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36);
+      const id = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
       const newToast: Toast = {
         id,
         type,
@@ -24,14 +24,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         autoDismiss: options?.autoDismiss ?? settings.autoDismiss,
         showProgress: options?.showProgress ?? settings.showProgress,
       };
+
       setToasts((prev) => {
-        const updated = [...prev, newToast];
-        // Enforce maxToasts
-        if (updated.length > settings.maxToasts) {
-          return updated.slice(-settings.maxToasts);
-        }
-        return updated;
+        const nextToasts = [...prev, newToast];
+        const maxVisible = Math.max(1, settings.maxToasts || 1);
+        return nextToasts.length > maxVisible ? nextToasts.slice(-maxVisible) : nextToasts;
       });
+
       return id;
     },
     [settings]
@@ -45,12 +44,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToasts([]);
   }, []);
 
-  const value: ToastContextType = {
+  const value = useMemo<ToastContextType>(() => ({
     toasts,
     addToast,
     removeToast,
     dismissAll,
-  };
+  }), [addToast, dismissAll, removeToast, toasts]);
 
   return (
     <ToastContext.Provider value={value}>

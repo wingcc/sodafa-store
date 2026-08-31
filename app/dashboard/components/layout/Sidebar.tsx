@@ -21,6 +21,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   ScrollText,
+  Mail,
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { usePreferencesStore } from '../../store/usePreferencesStore';
@@ -47,15 +48,23 @@ const navDefs: NavItemDef[] = [
   { id: 'coupons', icon: <Ticket size={19} />, labelKey: 'sidebar.coupons', groupKey: 'sidebar.marketing' },
   { id: 'shipping', icon: <Truck size={19} />, labelKey: 'sidebar.shipping', groupKey: 'sidebar.operations' },
   { id: 'payments', icon: <CreditCard size={19} />, labelKey: 'sidebar.payments', groupKey: 'sidebar.finance' },
+  { id: 'messages', icon: <Mail size={19} />, labelKey: 'sidebar.messages', groupKey: 'sidebar.sales' },
   { id: 'notifications', icon: <Bell size={19} />, labelKey: 'sidebar.notifications', groupKey: 'sidebar.system' },
   { id: 'store', icon: <Store size={19} />, labelKey: 'sidebar.store', groupKey: 'sidebar.system' },
   { id: 'settings', icon: <Settings size={19} />, labelKey: 'sidebar.settings', groupKey: 'sidebar.system' },
 ];
 
 const Sidebar: React.FC = () => {
-  const { currentPage, setCurrentPage, sidebarCollapsed, toggleSidebar, searchQuery, setSearchQuery, unreadNotifications } = useStore();
+  const { currentPage, setCurrentPage, sidebarCollapsed, toggleSidebar, searchQuery, setSearchQuery, unreadNotifications, messageCounts, fetchMessageCounts } = useStore();
   const { t, isRTL } = useTranslation();
   const prefTheme = usePreferencesStore((s) => s.theme);
+
+  // keep message badge fresh
+  React.useEffect(() => {
+    fetchMessageCounts().catch(()=>{});
+    const id = setInterval(() => fetchMessageCounts().catch(()=>{}), 30000);
+    return () => clearInterval(id);
+  }, [fetchMessageCounts]);
 
   const groups = navDefs.reduce<Record<string, NavItemDef[]>>((acc, item) => {
     const groupLabel = t(item.groupKey as any);
@@ -229,6 +238,18 @@ const Sidebar: React.FC = () => {
                       }}
                     >
                       {unreadNotifications}
+                    </span>
+                  )}
+                  {/* Messages badge — new messages */}
+                  {item.id === 'messages' && (messageCounts?.newCount ?? 0) > 0 && (
+                    <span
+                      className="ml-auto text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0"
+                      style={{
+                        background: 'linear-gradient(135deg, #3b82f6, #0ea5e9)',
+                        boxShadow: '0 2px 8px rgba(59,130,246,0.4)',
+                      }}
+                    >
+                      {messageCounts.newCount}
                     </span>
                   )}
                 </button>

@@ -7,6 +7,7 @@ import { loadPublicConfig } from "@/lib/public-content";
 import Preloader from "../common/Preloader";
 import VideoModal from "../../sections/common/VideoModal";
 import ContactModal from "../../sections/common/ContactModal";
+import LegalModal from "../../sections/common/LegalModal";
 import FloatingButtons from "../../sections/common/FloatingButtons";
 import ScrollProgress from "../../sections/common/ScrollProgress";
 
@@ -39,6 +40,7 @@ export const MainContent = () => {
   const [videoModal, setVideoModal] = useState(false);
   const [contactModal, setContactModal] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [storeLegal, setStoreLegal] = useState<Record<string, { title: string; body: string }>>({});
 
   // Re-observe .rv elements whenever config changes (sections render after config loads)
   const revealRef = useRef<IntersectionObserver | null>(null);
@@ -96,6 +98,55 @@ export const MainContent = () => {
     loadConfig();
   }, []);
 
+  // Load Store Content pages for legal popups — uses slugs from Store Info (Dashboard → Store Management → Settings → Legal Pages)
+  useEffect(() => {
+    if (!config?.site) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const siteInfo: any = (config as any).site ?? {};
+        const privacySlug = siteInfo.privacyPolicySlug || 'privacy-policy';
+        const termsSlug = siteInfo.termsSlug || 'terms';
+        const cookiesSlug = siteInfo.cookiesSlug || 'cookies';
+        const targets = [
+          { key: 'privacy', slug: privacySlug },
+          { key: 'terms', slug: termsSlug },
+          { key: 'cookies', slug: cookiesSlug },
+        ];
+        const map: Record<string, { title: string; body: string }> = {};
+        await Promise.all(
+          targets.map(async ({ key, slug }) => {
+            if (!slug) return;
+            try {
+              const res = await fetch(`/api/content-pages?slug=${encodeURIComponent(slug)}`);
+              const json = await res.json();
+              if (json.success && json.data) {
+                map[key] = { title: String(json.data.name ?? ''), body: String(json.data.content ?? '') };
+              }
+            } catch {}
+          })
+        );
+        // Fallback bulk
+        const missing = targets.filter((t) => !map[t.key]);
+        if (missing.length) {
+          try {
+            const res = await fetch('/api/content-pages');
+            const json = await res.json();
+            if (json.success && Array.isArray(json.data)) {
+              for (const row of json.data as any[]) {
+                const slug = String(row.slug ?? '');
+                const hit = missing.find((m) => m.slug === slug);
+                if (hit && !map[hit.key]) map[hit.key] = { title: String(row.name ?? ''), body: String(row.content ?? '') };
+              }
+            }
+          } catch {}
+        }
+        if (!cancelled && Object.keys(map).length) setStoreLegal(map);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [config]);
+
   // Store flush (test.24.html): when 'store' is the last enabled section,
   // merge it seamlessly into the footer. Desktop only — see website.css.
   useEffect(() => {
@@ -117,9 +168,25 @@ export const MainContent = () => {
     setTimeout(() => setToastMsg(null), 3200);
   }, []);
 
-  const handleOpenLegal = useCallback((key: string) => {
+  const handleOpenLegal = useCallback(async (key: string) => {
     setLegalModal(key as "privacy" | "terms" | "cookies");
-  }, []);
+    // Fetch fresh from Store Content so popup matches Dashboard edits
+    try {
+      const siteInfo: any = (config as any)?.site ?? {};
+      const slugMap: Record<string, string> = {
+        privacy: siteInfo.privacyPolicySlug || 'privacy-policy',
+        terms: siteInfo.termsSlug || 'terms',
+        cookies: siteInfo.cookiesSlug || 'cookies',
+      };
+      const slug = slugMap[key];
+      if (!slug) return;
+      const res = await fetch(`/api/content-pages?slug=${encodeURIComponent(slug)}`, { cache: 'no-store' });
+      const json = await res.json();
+      if (json.success && json.data) {
+        setStoreLegal((prev) => ({ ...prev, [key]: { title: String(json.data.name ?? ''), body: String(json.data.content ?? '') } }));
+      }
+    } catch {}
+  }, [config]);
 
   const handleCloseLegal = useCallback(() => {
     setLegalModal(null);
@@ -141,7 +208,8 @@ export const MainContent = () => {
     );
   }
 
-  const { site, hero, stats, trust, flash, oils, benefits, video, cases, about, founder, products, testimonials, faq, orderSteps, pricing, legal, sections, buttonsSettings } = config;
+  const { site, hero, stats, trust, flash, oils, benefits, video, cases, about, founder, products, testimonials, faq, orderSteps, pricing, legal: configLegal, sections, buttonsSettings } = config as any;
+  const legal = { ...(configLegal as any), ...storeLegal } as any;
 
   // Build enabled set from config sections array
   const enabledSet = new Set(
@@ -297,21 +365,14 @@ export const MainContent = () => {
         <ContactModal site={site} onClose={handleCloseContact} showToast={showToast} />
       )}
 
-      {/* Legal Modal */}
+      {/* Legal Modal — beautiful, editor-grade */}
       {legalModal && legal && legal[legalModal] && (
-        <div className="modal open" id="legalModal" data-page="legalModal" role="dialog" aria-modal="true" aria-label="معلومات قانونية">
-          <div className="ovl" onClick={handleCloseLegal} />
-          <div className="modal-box legal-box">
-            <button className="m-close" onClick={handleCloseLegal} aria-label="إغلاق">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round">
-                <path d="M6 6l12 12M18 6L6 18" />
-              </svg>
-            </button>
-            <h3>{legal[legalModal]!.title}</h3>
-            <span className="lg-date">آخر تحديث: غشت 2026</span>
-            <div className="lg-body" dangerouslySetInnerHTML={{ __html: legal[legalModal]!.body }} />
-          </div>
-        </div>
+        <LegalModal
+          title={legal[legalModal]!.title}
+          body={legal[legalModal]!.body}
+          updatedAt="غشت 2026"
+          onClose={handleCloseLegal}
+        />
       )}
     </main>
   );

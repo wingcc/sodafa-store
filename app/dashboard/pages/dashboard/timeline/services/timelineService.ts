@@ -15,28 +15,34 @@ export interface ClusteredNodes {
 }
 
 /**
- * Build a single connector from first historical node to current status
- * This is the simplified connector logic - one continuous line
+ * Build a single connector from first historical node to current status pill.
+ * pillPct = the actual % position where the current state pill renders on the lane.
+ * This ensures the dashed line always reaches the pill, regardless of branch type.
  */
 export function buildConnectors(
   lifecycleHistory: TimelineNode[],
-  currentTimestamp: number,
+  pillPct: number,
   viewportStartMs: number,
   viewportDurationMs: number
 ): ConnectorPoint[] {
   const connectors: ConnectorPoint[] = [];
   const calcPct = (ts: number) => calcPercentFromTimestamp(ts, viewportStartMs, viewportDurationMs);
 
-  // Need at least one historical node (excluding current status)
+  // Need at least one historical node
   if (lifecycleHistory.length < 1) return connectors;
 
-  // Find first node (prefer pending, otherwise first in history)
+  // First node = Pending (always the starting point)
   const firstNode = lifecycleHistory.find(n => n.status === 'pending') || lifecycleHistory[0];
   const firstPct = calcPct(firstNode.timestampMs);
-  const lastPct = calcPct(currentTimestamp);
 
-  // Draw single connector from first to current
-  connectors.push({ from: firstPct, to: lastPct });
+  // Draw single continuous dashed line from first status → current pill
+  if (pillPct > firstPct) {
+    connectors.push({ from: firstPct, to: pillPct });
+  } else if (firstPct > pillPct) {
+    // Edge case: current is before first (shouldn't happen, but handle gracefully)
+    connectors.push({ from: pillPct, to: firstPct });
+  }
+
   return connectors;
 }
 
@@ -133,7 +139,7 @@ export function clusterNodesTransitive(nodes: TimelineNode[]): TimelineNode[][] 
 export function buildTimelineElements(
   lifecycleHistory: TimelineNode[],
   currentStatus: string,
-  currentTimestamp: number,
+  pillPct: number,
   viewportStartMs: number,
   viewportDurationMs: number,
   zoomLevel: number
@@ -151,12 +157,10 @@ export function buildTimelineElements(
   }
 
   // Cluster historical nodes using transitive clustering for robustness
-  // This ensures A-B-C chains all get grouped if each consecutive pair is < 4h
   const clusters = clusterNodesTransitive(historical);
 
-  // Convert clusters to elements - deduplicate within each cluster just in case
+  // Convert clusters to elements
   const elements: TimelineElement[] = clusters.map(cluster => {
-    // Deduplicate by status within cluster (keep latest timestamp)
     const uniqueNodes = cluster.reduce((acc, node) => {
       const existing = acc.find(n => n.status === node.status);
       if (!existing || node.timestampMs > existing.timestampMs) {
@@ -175,11 +179,10 @@ export function buildTimelineElements(
     }
   });
 
-  // Sort elements by position
   elements.sort((a, b) => a.pct - b.pct);
 
-  // Build connectors
-  const connectors = buildConnectors(lifecycleHistory, currentTimestamp, viewportStartMs, viewportDurationMs);
+  // Build single continuous connector from first status → pill position
+  const connectors = buildConnectors(lifecycleHistory, pillPct, viewportStartMs, viewportDurationMs);
 
   return { elements, connectors };
 }

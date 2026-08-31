@@ -11,7 +11,7 @@ const FALLBACK = ['#047857', '#d97706', '#0ea5e9', '#a78bfa', '#f59e0b', '#10b98
 
 interface CatSales { category: string; revenue: number; orders: number; }
 
-const SalesByCategoryCard: React.FC = () => {
+const SalesByCategoryCard: React.FC<{ isExpanded?: boolean }> = ({ isExpanded = false }) => {
   const { language } = useTranslation();
   const isAr = language === 'ar';
   const [data, setData] = useState<CatSales[]>([]);
@@ -43,6 +43,55 @@ const SalesByCategoryCard: React.FC = () => {
   }, []);
 
   const total = data.reduce((s, i) => s + i.revenue, 0);
+
+  if (isExpanded) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/10 flex items-center justify-center"><WidgetIcon id="sales-by-category" /></div>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{isAr ? 'المبيعات حسب الفئة — تفصيلي' : 'Sales by Category — Detailed'}</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{total.toLocaleString()} MAD • {data.length} {isAr ? 'فئات' : 'categories'}</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+          <div className="lg:col-span-3 rounded-2xl bg-white dark:bg-white/[0.04] border border-gray-100 dark:border-white/5 p-5">
+            <div className="h-[360px]">
+              {loading ? (
+                <div className="h-full flex items-center justify-center"><div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" /></div>
+              ) : data.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={data} cx="50%" cy="50%" innerRadius={80} outerRadius={130} paddingAngle={3} dataKey="revenue" nameKey="category" stroke="none">
+                      {data.map((_, i) => <Cell key={i} fill={FALLBACK[i % FALLBACK.length]} />)}
+                    </Pie>
+                    <Tooltip contentStyle={{ background: '#111827', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' } as any} formatter={(v: any) => [`${Number(v).toLocaleString()} MAD`, isAr ? 'الإيرادات' : 'Revenue']} />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-gray-400 text-sm">{isAr ? 'لا توجد بيانات' : 'No data'}</div>
+              )}
+            </div>
+          </div>
+          <div className="lg:col-span-2 rounded-2xl bg-white dark:bg-white/[0.04] border border-gray-100 dark:border-white/5 p-5">
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{isAr ? 'التفاصيل' : 'Breakdown'}</h4>
+            <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
+              {data.map((item, i) => (
+                <div key={item.category} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
+                  <span className="w-3 h-3 rounded-full shrink-0" style={{ background: FALLBACK[i % FALLBACK.length] }} />
+                  <span className="text-sm font-medium text-gray-900 dark:text-white flex-1 truncate">{item.category}</span>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-bold text-gray-900 dark:text-white">{item.revenue.toLocaleString()} MAD</p>
+                    <p className="text-xs text-gray-500 dark:text-white/40">{item.orders} {isAr ? 'طلب' : 'orders'} • {total ? ((item.revenue / total) * 100).toFixed(1) : '0'}%</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5 h-full flex flex-col min-h-0 overflow-hidden">

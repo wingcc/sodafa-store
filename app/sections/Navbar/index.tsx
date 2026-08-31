@@ -12,11 +12,9 @@ import { LanguageDropdown } from "../../components/LanguageDropdown";
 // ── Link sets per variant ──
 const HOME_LINKS = [
   { href: "#flash", ar: "العروض", en: "Offers" },
-  { href: "#oils", ar: "المكونات", en: "Ingredients" },
   { href: "#products", ar: "منتجاتنا", en: "Products" },
   { href: "#cases", ar: "النتائج", en: "Results" },
   { href: "#about", ar: "قصتنا", en: "Our Story" },
-  { href: "#reviews", ar: "آراء الزبونات", en: "Reviews" },
   { href: "#order", ar: "طريقة الطلب", en: "How to Order" },
   { href: "#store", ar: "المتجر", en: "Store" },
 ];
@@ -24,25 +22,19 @@ const HOME_LINKS = [
 const STORE_LINKS = [
   { href: "/", ar: "الرئيسية", en: "Home" },
   { href: "/store", ar: "المتجر", en: "Store" },
-  { href: "/#oils", ar: "المكونات", en: "Ingredients" },
-  { href: "/#reviews", ar: "الآراء", en: "Reviews" },
   { href: "/track-order", ar: "تتبع الطلب", en: "Track Order" },
 ];
 
 const HOME_MOBILE_LINKS = [
   { href: "#home", ar: "الرئيسية", en: "Home" },
   ...HOME_LINKS,
-  { href: "#faq", ar: "الأسئلة الشائعة", en: "FAQ" },
 ];
 
 const STORE_MOBILE_LINKS = [
   { href: "/", ar: "الرئيسية", en: "Home" },
   { href: "/store", ar: "المتجر", en: "Store" },
-  { href: "/#oils", ar: "المكونات", en: "Ingredients" },
-  { href: "/#reviews", ar: "الآراء", en: "Reviews" },
   { href: "/track-order", ar: "تتبع الطلب", en: "Track Order" },
   { href: "/contact", ar: "اتصل بنا", en: "Contact" },
-  { href: "#faq", ar: "الأسئلة الشائعة", en: "FAQ" },
 ];
 
 const DEFAULT_SITE: SiteConfig = {
@@ -427,40 +419,6 @@ export function Navbar({ site: siteProp = DEFAULT_SITE, onOpenContact = () => {}
             {isAr ? link.ar : link.en}
           </Link>
         ))}
-        <Link href="/favorites" onClick={closeMenu}>
-          {isAr ? "❤️ المفضلة" : locale === "fr" ? "❤️ Favoris" : "❤️ Favorites"}
-          {favorites.length > 0 && ` (${favorites.length})`}
-        </Link>
-        <button onClick={() => { setLocale("ar"); closeMenu(); }}>
-          🇲🇦 {isAr ? "العربية" : locale === "fr" ? "Arabe" : "Arabic"}
-        </button>
-        <button onClick={() => { setLocale("fr"); closeMenu(); }}>
-          🇫🇷 {isAr ? "الفرنسية" : locale === "fr" ? "Français" : "French"}
-        </button>
-        <button onClick={() => { setLocale("en"); closeMenu(); }}>
-          🇬🇧 {isAr ? "الإنجليزية" : locale === "fr" ? "Anglais" : "English"}
-        </button>
-        <button onClick={handleContactClick}>{isAr ? "تواصلي معنا ✉" : locale === "fr" ? "Contactez-nous ✉" : "Contact Us ✉"}</button>
-        {activeVariant === "store" && (
-          <>
-            <button
-              onClick={() => {
-                openSearch();
-                closeMenu();
-              }}
-            >
-              🔍 {isAr ? "بحث" : "Search"}
-            </button>
-            <button
-              onClick={() => {
-                openCart();
-                closeMenu();
-              }}
-            >
-              🛒 {isAr ? "السلة" : "Cart"} {cartCount > 0 ? `(${cartCount})` : ""}
-            </button>
-          </>
-        )}
         <a className="btn btn-wa" href={waUrl} target="_blank" rel="noopener" onClick={closeMenu}>
           {isAr ? "اطبي عبر الواتساب" : "Order via WhatsApp"}
         </a>

@@ -15,37 +15,71 @@ export default function ContactModal({ site, onClose, showToast }: ContactModalP
   const formRef = useRef<HTMLFormElement>(null);
   const waUrl = `https://wa.me/${site.whatsappStore}`;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const form = formRef.current;
     if (!form?.checkValidity()) { form?.reportValidity(); return; }
     setSending(true);
 
-    // Get form data
     const formData = new FormData(form);
-    const name = formData.get('name') as string || '';
-    const phone = formData.get('phone') as string || '';
-    const email = formData.get('email') as string || '';
-    const message = formData.get('message') as string || '';
+    const name = (formData.get('name') as string || '').trim();
+    const phone = (formData.get('phone') as string || '').trim();
+    const email = (formData.get('email') as string || '').trim();
+    const message = (formData.get('message') as string || '').trim();
 
-    // Send notification to admin
-    fetch('/api/notifications', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type: 'message',
-        title: 'New contact message',
-        message: `From ${name} (${phone}${email ? ', ' + email : ''}): ${message.slice(0, 100)}${message.length > 100 ? '...' : ''}`,
-        priority: 'medium',
-      }),
-    }).catch(() => {});
+    // Basic client validation (mirrors /api/contact)
+    if (name.length < 2 || phone.length < 8 || message.length < 10) {
+      form.reportValidity();
+      setSending(false);
+      return;
+    }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      showToast("البريد الإلكتروني غير صحيح");
+      setSending(false);
+      return;
+    }
 
-    setTimeout(() => {
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          phone,
+          email: email || undefined,
+          message,
+        }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.success) {
+        throw new Error(json?.error?.message || 'Failed to send');
+      }
       setSent(true);
       showToast("تم إرسال رسالتك بنجاح! سنتواصل معك قريباً.");
       form.reset();
       setTimeout(() => { setSent(false); setSending(false); onClose(); }, 1800);
-    }, 900);
+    } catch (err: any) {
+      // Fallback: still try to notify admin so nothing is lost
+      try {
+        await fetch('/api/notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'message',
+            title: 'New contact message (fallback)',
+            message: `From ${name} (${phone}${email ? ', ' + email : ''}): ${message.slice(0, 100)}${message.length > 100 ? '...' : ''} — ${String(err?.message ?? '')}`,
+            priority: 'medium',
+          }),
+        });
+        setSent(true);
+        showToast("تم إرسال رسالتك بنجاح! سنتواصل معك قريباً.");
+        form.reset();
+        setTimeout(() => { setSent(false); setSending(false); onClose(); }, 1800);
+      } catch {
+        showToast(err?.message || "فشل الإرسال، حاولي مرة أخرى أو عبر واتساب");
+        setSending(false);
+      }
+    }
   };
 
   return (
@@ -72,8 +106,8 @@ export default function ContactModal({ site, onClose, showToast }: ContactModalP
               </div>
             </div>
             <div className="f-field">
-              <label htmlFor="cfEmail">البريد الإلكتروني</label>
-              <input type="email" id="cfEmail" name="email" placeholder="example@email.com" required />
+              <label htmlFor="cfEmail">البريد الإلكتروني <span style={{ fontWeight: 400, opacity: 0.6, fontSize: '0.85em' }}>(اختياري)</span></label>
+              <input type="email" id="cfEmail" name="email" placeholder="example@email.com" />
             </div>
             <div className="f-field">
               <label htmlFor="cfMsg">الرسالة</label>

@@ -22,6 +22,11 @@ import {
   Check,
   CheckCheck,
   Loader2,
+  Mail,
+  MailOpen,
+  MessageSquare,
+  AtSign,
+  Phone,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
@@ -44,10 +49,16 @@ const Header: React.FC = () => {
     markNotificationAsRead,
     toggleStarNotification,
     toggleSidebar,
+    messages,
+    messageCounts,
+    fetchMessages,
+    fetchMessageCounts,
+    updateMessageStatus,
   } = useStore();
   const { theme, toggleTheme, language, toggleLanguage } = usePreferencesStore();
   const { t, isRTL } = useTranslation();
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showMessages, setShowMessages] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [userName, setUserName] = useState<string>('');
   const [userEmail, setUserEmail] = useState<string>('');
@@ -69,6 +80,14 @@ const Header: React.FC = () => {
       }).catch(() => {});
     }
   }, [fetchNotifications, notifications.length, isLoadingNotifications]);
+
+  // Fetch messages for inbox bell
+  useEffect(() => {
+    fetchMessageCounts().catch(() => {});
+    if (messages.length === 0) fetchMessages({ limit: 5 }).catch(() => {});
+    const id = setInterval(() => fetchMessageCounts().catch(() => {}), 30000);
+    return () => clearInterval(id);
+  }, [fetchMessageCounts, fetchMessages, messages.length]);
 
   // Fetch the logged-in Supabase user
   useEffect(() => {
@@ -127,6 +146,7 @@ const Header: React.FC = () => {
     payments: t('header.page.payments'),
     analytics: t('header.page.analytics'),
     notifications: t('header.page.notifications'),
+    messages: t('header.page.messages'),
     store: t('header.page.store'),
     'store-homepage': t('header.page.store-homepage'),
     'store-homepage-content': t('header.page.store-homepage-content'),
@@ -166,13 +186,14 @@ const Header: React.FC = () => {
 
   const closeAll = () => {
     setShowNotifications(false);
+    setShowMessages(false);
     setShowProfile(false);
   };
 
   // Handle click outside — close popups when clicking outside them
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (!showNotifications && !showProfile) return;
+      if (!showNotifications && !showProfile && !showMessages) return;
       const target = e.target as HTMLElement;
       // Don't close if click is inside any popup
       if (target.closest('[data-popup]')) return;
@@ -180,12 +201,12 @@ const Header: React.FC = () => {
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showNotifications, showProfile]);
+  }, [showNotifications, showProfile, showMessages]);
 
   return (
     <>
       {/* Backdrop — closes any open dropdown when clicked outside */}
-      {(showNotifications || showProfile) && (
+      {(showNotifications || showProfile || showMessages) && (
         <div className="fixed inset-0 z-40" onClick={closeAll} />
       )}
 
@@ -284,11 +305,156 @@ const Header: React.FC = () => {
             <span className="hidden sm:inline text-[10px] leading-none">{language === 'ar' ? 'AR' : 'EN'}</span>
           </button>
 
+          {/* Messages */}
+          <div className="relative z-50">
+            <button
+              onClick={() => {
+                setShowMessages((v) => !v);
+                setShowNotifications(false);
+                setShowProfile(false);
+              }}
+              title={t('header.page.messages')}
+              className="relative w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200"
+              style={{
+                background: showMessages
+                  ? `color-mix(in srgb, ${accentColor} 18%, transparent)`
+                  : 'rgba(255,255,255,0.06)',
+                border: showMessages
+                  ? `1px solid color-mix(in srgb, ${accentColor} 40%, transparent)`
+                  : '1px solid rgba(255,255,255,0.1)',
+                color: showMessages ? accentColor : 'rgba(255,255,255,0.75)',
+              }}
+            >
+              <Mail size={19} />
+              {messageCounts.newCount > 0 && (
+                <>
+                  <span
+                    className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 text-white text-[10px] font-bold rounded-full flex items-center justify-center pointer-events-none animate-pulse"
+                    style={{
+                      background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                      border: '2px solid var(--color-darkGreen, #0a2c23)',
+                      boxShadow: '0 2px 8px rgba(239,68,68,0.5)',
+                    }}
+                  >
+                    {messageCounts.newCount > 99 ? '99+' : messageCounts.newCount}
+                  </span>
+                  <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500/30 animate-ping pointer-events-none" />
+                </>
+              )}
+            </button>
+
+            {showMessages && (
+              <div
+                className={`absolute top-full mt-3 w-80 sm:w-[400px] rounded-2xl overflow-hidden z-50 ${isRTL ? 'left-0' : 'right-0'}`}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid rgba(0,0,0,0.08)',
+                  boxShadow: '0 20px 60px rgba(0,0,0,0.18), 0 8px 24px rgba(0,0,0,0.12)',
+                }}
+                data-popup="messages"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div
+                  className="px-5 py-3.5 flex items-center justify-between"
+                  style={{ borderBottom: '1px solid #f3f4f6', background: '#fafafa' }}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <h3 className="font-bold text-gray-900 text-sm flex items-center gap-1.5">
+                      <Mail size={14} style={{ color: accentColor }} /> {t('header.page.messages')}
+                    </h3>
+                    {messageCounts.newCount > 0 && (
+                      <span className="px-2 py-0.5 text-[11px] font-bold text-red-600 bg-red-50 rounded-full border border-red-100">
+                        {messageCounts.newCount} {t('header.new')}
+                      </span>
+                    )}
+                  </div>
+                  {messageCounts.newCount > 0 && (
+                    <button
+                      onClick={() => useStore.getState().markAllMessagesRead()}
+                      className="text-xs font-semibold transition-colors hover:opacity-70"
+                      style={{ color: accentColor }}
+                    >
+                      {t('header.markAllRead')}
+                    </button>
+                  )}
+                </div>
+
+                <div className="max-h-[360px] overflow-y-auto divide-y divide-gray-50">
+                  {messages.length === 0 ? (
+                    <div className="py-10 flex flex-col items-center gap-2 text-gray-400">
+                      <Mail size={20} className="text-gray-300" />
+                      <span className="text-xs">No messages</span>
+                    </div>
+                  ) : (
+                    messages.slice(0, 5).map((msg: any) => (
+                      <div
+                        key={msg.id}
+                        onClick={() => {
+                          if (msg.status === 'new') updateMessageStatus(msg.id, 'read').catch(() => {});
+                          setShowMessages(false);
+                          setCurrentPage('messages' as any);
+                        }}
+                        className="px-5 py-3.5 cursor-pointer transition-colors hover:bg-gray-50"
+                        style={msg.status === 'new' ? { background: `color-mix(in srgb, ${accentColor} 5%, transparent)` } : {}}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div
+                            className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 text-white text-xs font-bold"
+                            style={{ background: msg.is_customer ? '#7c3aed' : accentColor }}
+                          >
+                            {msg.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-sm font-semibold text-gray-900 truncate">{msg.name}</p>
+                              <span className="text-[11px] text-gray-400 flex-shrink-0">
+                                {new Date(msg.created_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-500 truncate">
+                              {msg.phone} {msg.email ? `· ${msg.email}` : ''}
+                            </p>
+                            <p className="text-xs text-gray-600 mt-0.5 leading-relaxed line-clamp-2">{msg.message}</p>
+                            <div className="flex items-center gap-1 mt-1">
+                              {msg.is_customer ? (
+                                <span className="px-1.5 py-0.5 rounded-full bg-violet-50 border border-violet-100 text-violet-700 text-[10px] font-bold">Customer</span>
+                              ) : (
+                                <span className="px-1.5 py-0.5 rounded-full bg-amber-50 border border-amber-100 text-amber-700 text-[10px] font-bold">Guest</span>
+                              )}
+                              {msg.status === 'new' && <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div
+                  className="px-5 py-3 text-center"
+                  style={{ borderTop: '1px solid #f3f4f6', background: '#fafafa' }}
+                >
+                  <button
+                    onClick={() => {
+                      setShowMessages(false);
+                      setCurrentPage('messages' as any);
+                    }}
+                    className="text-xs font-semibold w-full transition-colors hover:opacity-70"
+                    style={{ color: accentColor }}
+                  >
+                    View all messages →
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Notifications */}
           <div className="relative z-50">
             <button
               onClick={() => {
                 setShowNotifications((v) => !v);
+                setShowMessages(false);
                 setShowProfile(false);
               }}
               title={t('header.notifications')}
@@ -434,6 +600,7 @@ const Header: React.FC = () => {
               onClick={() => {
                 setShowProfile((v) => !v);
                 setShowNotifications(false);
+                setShowMessages(false);
               }}
               className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl transition-all duration-200"
               style={{

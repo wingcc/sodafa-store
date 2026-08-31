@@ -8,7 +8,7 @@ import { getCustomerSnapshot } from './utils';
 import type { Customer } from '../../types';
 import { WidgetIcon } from './workspace/icons';
 
-const CustomerSnapshot: React.FC<{ customers: Customer[] }> = ({ customers }) => {
+const CustomerSnapshot: React.FC<{ customers: Customer[]; isExpanded?: boolean }> = ({ customers, isExpanded = false }) => {
   const { language } = useTranslation();
   const isAr = language === 'ar';
   const s = getCustomerSnapshot(customers);
@@ -18,6 +18,58 @@ const CustomerSnapshot: React.FC<{ customers: Customer[] }> = ({ customers }) =>
     { label: isAr ? 'جدد (30 يوم)' : 'New (30d)', value: s.newCustomers, icon: <UserPlus size={14} />, color: '#0ea5e9' },
     { label: isAr ? 'عائدون' : 'Returning', value: s.returning, icon: <Repeat2 size={14} />, color: '#7c3aed' },
   ];
+
+  if (isExpanded) {
+    const topCustomers = [...customers].sort((a, b) => (b.totalOrders || 0) - (a.totalOrders || 0)).slice(0, 6);
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/10 flex items-center justify-center"><WidgetIcon id="customer-snapshot" /></div>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{isAr ? 'العملاء — نظرة شاملة' : 'Customers — Full Snapshot'}</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{s.total.toLocaleString()} {isAr ? 'عميل' : 'customers'} • {s.repeatRate}% {isAr ? 'تكرار' : 'repeat'}</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4">
+          {cards.map(c => (
+            <div key={c.label} className="rounded-2xl bg-white dark:bg-white/[0.04] border border-gray-100 dark:border-white/5 p-6 text-center">
+              <div className="w-10 h-10 mx-auto rounded-xl flex items-center justify-center text-white" style={{ background: c.color }}>{c.icon}</div>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-300 mt-3">{c.label}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{c.value.toLocaleString()}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="rounded-2xl bg-white dark:bg-white/[0.04] border border-gray-100 dark:border-white/5 p-6">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white">{isAr ? 'معدل الشراء المتكرر' : 'Repeat Purchase Rate'}</h4>
+            <span className="text-lg font-bold text-gray-900 dark:text-white">{s.repeatRate}%</span>
+          </div>
+          <div className="h-3 rounded-full bg-gray-100 dark:bg-white/10 overflow-hidden"><div className="h-full rounded-full" style={{ width: `${s.repeatRate}%`, background: 'var(--color-darkGreen, #047857)' }} /></div>
+          <p className="text-xs text-gray-500 dark:text-white/40 mt-2">{s.returning} {isAr ? 'عملاء عادوا للشراء' : 'customers returned'} • {s.newCustomers} {isAr ? 'جدد' : 'new'}</p>
+        </div>
+
+        {topCustomers.length > 0 && (
+          <div className="rounded-2xl bg-white dark:bg-white/[0.04] border border-gray-100 dark:border-white/5 p-5">
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{isAr ? 'أفضل العملاء' : 'Top Customers'}</h4>
+            <div className="space-y-2">
+              {topCustomers.map((c, i) => (
+                <div key={c.id || i} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
+                  <span className="w-7 h-7 rounded-full bg-[var(--color-darkGreen)] text-white flex items-center justify-center text-xs font-bold">{i + 1}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{c.name || c.email || `Customer ${i + 1}`}</p>
+                    <p className="text-xs text-gray-500 dark:text-white/40 truncate">{c.email || ''}</p>
+                  </div>
+                  <span className="text-sm font-bold text-gray-900 dark:text-white">{c.totalOrders} {isAr ? 'طلب' : 'orders'}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 p-5 h-full flex flex-col min-h-0 overflow-hidden">

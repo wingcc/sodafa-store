@@ -6,7 +6,7 @@
  * Auto-tracks page views, session lifecycle, and custom events.
  * Runs inside the store layout — invisible to users.
  */
-import { createContext, useContext, useEffect, useRef, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useCallback, type ReactNode, Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 
 // ─── Types ────────────────────────────────────────────────────
@@ -74,9 +74,8 @@ function detectDevice(): 'desktop' | 'mobile' | 'tablet' | 'other' {
   return 'desktop';
 }
 
-// ─── Provider ─────────────────────────────────────────────────
-
-export default function AnalyticsProvider({ children }: { children: ReactNode }) {
+// ─── Inner provider that uses searchParams (needs Suspense) ───
+function AnalyticsInner({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const pageViewIdRef = useRef<string | null>(null);
@@ -224,17 +223,16 @@ export default function AnalyticsProvider({ children }: { children: ReactNode })
     sendPageView();
   }, [pathname, searchParams, getConsent, getFingerprint, getSessionToken, getVisitorId]);
 
-  // ─── Track session end on unload ────────────────────────────
+  // ─── Track session end on page leave / hidden state ────────────────────────────
 
   useEffect(() => {
-    const handleUnload = () => {
+    const handlePageLeave = () => {
       const consent = getConsent();
       if (!consent.analytics) return;
 
       const sessionToken = getSessionToken();
       const fingerprint = getFingerprint();
 
-      // Use sendBeacon for reliable delivery on page unload
       if (navigator.sendBeacon) {
         navigator.sendBeacon('/api/analytics/track', JSON.stringify({
           action: 'session_end',
@@ -244,8 +242,19 @@ export default function AnalyticsProvider({ children }: { children: ReactNode })
       }
     };
 
-    window.addEventListener('beforeunload', handleUnload);
-    return () => window.removeEventListener('beforeunload', handleUnload);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        handlePageLeave();
+      }
+    };
+
+    window.addEventListener('pagehide', handlePageLeave);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('pagehide', handlePageLeave);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [getConsent, getFingerprint, getSessionToken]);
 
   // ─── Track scroll depth ─────────────────────────────────────
@@ -281,10 +290,10 @@ export default function AnalyticsProvider({ children }: { children: ReactNode })
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('beforeunload', sendScrollDepth);
+    window.addEventListener('pagehide', sendScrollDepth);
     return () => {
       window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('beforeunload', sendScrollDepth);
+      window.removeEventListener('pagehide', sendScrollDepth);
     };
   }, [getConsent, getFingerprint, getSessionToken]);
 
@@ -320,5 +329,14 @@ export default function AnalyticsProvider({ children }: { children: ReactNode })
     <AnalyticsContext.Provider value={{ trackEvent, getVisitorId, getSessionToken }}>
       {children}
     </AnalyticsContext.Provider>
+  );
+}
+
+// ─── Outer wrapper with Suspense (fixes useSearchParams prerender) ───
+export default function AnalyticsProvider({ children }: { children: ReactNode }) {
+  return (
+    <Suspense fallback={<>{children}</>}>
+      <AnalyticsInner>{children}</AnalyticsInner>
+    </Suspense>
   );
 }

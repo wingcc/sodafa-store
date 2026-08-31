@@ -2,30 +2,25 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import type { Product } from '../../../types/product';
+import type { TrustItem } from '../../../sections/common/types';
 import { ProductCard } from '../../../components/ProductCard';
- 
+
 import { ProductHeroCarousel } from './ProductHeroCarousel';
 import { Pagination } from './Pagination';
 import { useUI } from '../../../contexts/UIContext';
 import { useLanguage } from '../../../contexts/LanguageContext';
-import { Search, Sparkles, Grid, List, X, ArrowUpDown } from 'lucide-react';
-
-const SORT_OPTIONS_DATA = [
-  { value: 'featured', ar: 'المميزة أولاً', en: 'Featured', icon: '⭐' },
-  { value: 'price-asc', ar: 'السعر: من الأقل للأعلى', en: 'Price: Low to High', icon: '↑' },
-  { value: 'price-desc', ar: 'السعر: من الأعلى للأقل', en: 'Price: High to Low', icon: '↓' },
-  { value: 'rating', ar: 'الأعلى تقييماً', en: 'Top Rated', icon: '★' },
-];
+import TrustBadges from '../../../sections/TrustBadges';
+import { Search } from 'lucide-react';
 
 const PRODUCTS_PER_PAGE = 8;
 
 interface StoreClientProps {
   initialProducts?: Product[];
+  initialTrust?: TrustItem[];
 }
 
-export default function StoreClient({ initialProducts }: StoreClientProps) {
+export default function StoreClient({ initialProducts, initialTrust = [] }: StoreClientProps) {
   const [products, setProducts] = useState<Product[]>(initialProducts ?? []);
-  const [isLoading, setIsLoading] = useState(!initialProducts || initialProducts.length === 0);
 
   useEffect(() => {
     if (initialProducts && initialProducts.length > 0) return;
@@ -48,6 +43,7 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
               : [];
             return {
               id: String(row.id ?? ''),
+              slug: row.slug ? String(row.slug).trim() : undefined,
               name: String(row.name ?? ''),
               price,
               originalPrice,
@@ -74,8 +70,7 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
           if (!cancelled) setProducts(mapped);
         }
       })
-      .catch(() => {})
-      .finally(() => { if (!cancelled) setIsLoading(false); });
+      .catch(() => {});
     return () => { cancelled = true; };
   }, [initialProducts]);
 
@@ -85,11 +80,7 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
   const { locale } = useLanguage();
   const isAr = locale === 'ar';
 
-  const [sortBy, setSortBy] = useState('featured');
-  const [search, setSearch] = useState('');
   const [addedIds, setAddedIds] = useState<(string | number)[]>([]);
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [currentPage, setCurrentPage] = useState(1);
   const sectionRef = useRef<HTMLDivElement>(null);
 
@@ -109,33 +100,13 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
     return () => observer.disconnect();
   }, [currentPage]);
 
-  // Filter and sort products
-  const filtered = useMemo(() => {
-    return allProducts
-      .filter((p) => {
-        const lowerSearch = search.toLowerCase();
-        return (
-          search === '' ||
-          p.name.toLowerCase().includes(lowerSearch) ||
-          (p.brand ?? '').toLowerCase().includes(lowerSearch) ||
-          (p.category ?? '').toLowerCase().includes(lowerSearch)
-        );
-      })
-      .sort((a, b) => {
-        if (sortBy === 'price-asc') return a.price - b.price;
-        if (sortBy === 'price-desc') return b.price - a.price;
-        if (sortBy === 'rating') return (b.rating ?? 0) - (a.rating ?? 0);
-        return 0;
-      });
-  }, [allProducts, search, sortBy]);
-
-  // Paginate
-  const totalPages = Math.ceil(filtered.length / PRODUCTS_PER_PAGE);
   const paginatedProducts = useMemo(() => {
     const start = (currentPage - 1) * PRODUCTS_PER_PAGE;
     const end = start + PRODUCTS_PER_PAGE;
-    return filtered.slice(start, end);
-  }, [filtered, currentPage]);
+    return allProducts.slice(start, end);
+  }, [allProducts, currentPage]);
+
+  const totalPages = Math.ceil(allProducts.length / PRODUCTS_PER_PAGE);
 
   const handleAddToCart = (id: string | number) => {
     const product = allProducts.find((p) => p.id === id);
@@ -159,26 +130,12 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
     }, 400);
   };
 
-  const clearFilters = () => {
-    setSearch('');
-    setCurrentPage(1);
-  };
-
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
     document
       .querySelector('.product-grid-section')
       ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
-
-  const prevFilters = useRef({ search, sortBy });
-  useEffect(() => {
-    const prev = prevFilters.current;
-    if (prev.search !== search || prev.sortBy !== sortBy) {
-      prevFilters.current = { search, sortBy };
-      setCurrentPage(1);
-    }
-  }, [search, sortBy]);
 
   return (
     <div
@@ -194,195 +151,32 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
       </div>
       
 
-      {/* ===== CONTROLS BAR — 2026 floating glass pill ===== */}
-      <div className="store-controls-pill">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
-          {/* Top row: Search + Sort + View toggle */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-            {/* Search Input */}
-            <div className="relative flex-1 max-w-md">
-              <div
-                className={`relative flex items-center rounded-xl border bg-stone-50/80 transition-all duration-200 ${
-                  isSearchFocused
-                    ? 'border-emerald-800 ring-2 ring-emerald-800/10 bg-white shadow-sm'
-                    : 'border-stone-200 hover:border-stone-300'
-                }`}
-              >
-                <Search
-                  className={`w-4 h-4 absolute ${isAr ? 'right-3.5' : 'left-3.5'} transition-colors ${
-                    isSearchFocused ? 'text-emerald-800' : 'text-stone-400'
-                  }`}
-                />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  onFocus={() => setIsSearchFocused(true)}
-                  onBlur={() => setIsSearchFocused(false)}
-                  placeholder={
-                    isAr
-                      ? 'ابحثي عن المنتجات، الماركات، الأقسام...'
-                      : 'Search products, brands, categories...'
-                  }
-                  className={`w-full py-2.5 ${
-                    isAr ? 'pr-10 pl-10' : 'pl-10 pr-10'
-                  } bg-transparent text-xs sm:text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none`}
-                  aria-label="Search products"
-                />
-                {search && (
-                  <button
-                    onClick={() => setSearch('')}
-                    className={`absolute ${isAr ? 'left-3' : 'right-3'} p-1 rounded-full hover:bg-stone-200/60 transition-colors`}
-                    aria-label="Clear search"
-                  >
-                    <X className="w-3.5 h-3.5 text-stone-500" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Right controls: Sort + Grid/List Toggle */}
-            <div className="flex items-center gap-2 flex-wrap">
-              {/* Sort Dropdown */}
-              <div className="relative">
-                <select
-                  value={sortBy}
-                  onChange={(e) => {
-                    setSortBy(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  className={`appearance-none bg-stone-50 border border-stone-200 rounded-xl py-2.5 ${
-                    isAr ? 'pl-9 pr-4' : 'pr-9 pl-4'
-                  } text-xs font-bold text-stone-800 cursor-pointer hover:bg-stone-100 transition-colors focus:outline-none focus:border-emerald-800`}
-                >
-                  {SORT_OPTIONS_DATA.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.icon} {isAr ? opt.ar : opt.en}
-                    </option>
-                  ))}
-                </select>
-                <ArrowUpDown
-                  className={`w-3.5 h-3.5 absolute ${
-                    isAr ? 'left-3' : 'right-3'
-                  } top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none`}
-                />
-              </div>
-
-              {/* View Toggle (Grid / List) */}
-              <div className="flex items-center gap-1 bg-stone-100 rounded-xl border border-stone-200 p-1">
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`p-1.5 rounded-lg transition-all ${
-                    viewMode === 'grid'
-                      ? 'bg-white shadow-xs text-stone-900 font-bold'
-                      : 'text-stone-400 hover:text-stone-700'
-                  }`}
-                  aria-label="Grid view"
-                >
-                  <Grid className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`p-1.5 rounded-lg transition-all ${
-                    viewMode === 'list'
-                      ? 'bg-white shadow-xs text-stone-900 font-bold'
-                      : 'text-stone-400 hover:text-stone-700'
-                  }`}
-                  aria-label="List view"
-                >
-                  <List className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-        </div>
-      </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-0">
+        {initialTrust.length > 0 && <TrustBadges trust={initialTrust} variant="light" />}
       </div>
 
       {/* ===== PRODUCT GRID SECTION ===== */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 product-grid-section">
-        {/* Results Header */}
-        {filtered.length > 0 && (
-          <div className="flex items-center justify-between mb-6">
-            <p className="text-xs sm:text-sm text-stone-500 font-medium">
-              {isAr ? (
-                <>
-                  عرض <strong className="text-stone-900 font-bold">{filtered.length}</strong> منتج
-                  {search && (
-                    <span className="inline-flex items-center gap-1 mx-1 text-[#cda552] font-bold">
-                      · تطابق &quot;{search}&quot;
-                    </span>
-                  )}
-                </>
-              ) : (
-                <>
-                  Showing <strong className="text-stone-900 font-bold">{filtered.length}</strong> products
-                  {search && (
-                    <span className="inline-flex items-center gap-1 mx-1 text-[#cda552] font-bold">
-                      · matching &quot;{search}&quot;
-                    </span>
-                  )}
-                </>
-              )}
-            </p>
-
-            {search && (
-              <button
-                onClick={clearFilters}
-                className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 transition-colors"
-              >
-                <X className="w-3.5 h-3.5" />
-                <span>{isAr ? 'إلغاء التصفية' : 'Clear filters'}</span>
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Empty State */}
-        {filtered.length === 0 ? (
+        {!allProducts.length ? (
           <div className="flex flex-col items-center justify-center py-16 text-center bg-white rounded-3xl border border-stone-200 my-4 p-6 shadow-xs">
             <div className="w-16 h-16 rounded-full bg-stone-100 flex items-center justify-center text-stone-400 mb-4">
               <Search className="w-8 h-8" />
             </div>
             <h3 className="text-lg font-bold text-stone-900">
-              {isAr ? 'لم نجد أي نتائج تطابق بحثكِ' : 'No products found'}
+              {isAr ? 'لا توجد منتجات متاحة حالياً' : 'No products available'}
             </h3>
             <p className="text-xs text-stone-500 max-w-sm mt-1 mb-6">
-              {isAr
-                ? 'جربي التفتيش عن كلمة أخرى أو تصفحي أقسام المنتجات المختلفة.'
-                : 'Try adjusting your search terms or browse our category pills.'}
+              {isAr ? 'يرجى التحقق من المتجر لاحقاً.' : 'Please check back later.'}
             </p>
-            <button
-              onClick={clearFilters}
-              className="px-6 py-2.5 rounded-xl font-bold text-xs text-white transition-all shadow-md hover:scale-105"
-              style={{
-                background: 'linear-gradient(135deg, #061c16 0%, #0b2e22 100%)',
-                color: '#f7ebd0',
-              }}
-            >
-              {isAr ? 'عرض جميع المنتجات' : 'Browse All Products'}
-            </button>
           </div>
         ) : (
           <>
-            {/* Product Cards Grid */}
-            <div
-              className={`
-                grid gap-6 transition-all duration-300
-                ${
-                  viewMode === 'grid'
-                    ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
-                    : 'grid-cols-1 max-w-3xl mx-auto'
-                }
-              `}
-            >
+            <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 transition-all duration-300">
               {paginatedProducts.map((product) => (
                 <div key={product.id} className="h-full">
                   <ProductCard
                     product={product}
-                    href={`/store/${product.id}`}
+                    href={`/store/${encodeURIComponent(product.slug || String(product.id))}`}
                     onAddToCart={handleAddToCart}
                     added={addedIds.includes(product.id)}
                     showFavorite
@@ -392,13 +186,12 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
               ))}
             </div>
 
-            {/* Pagination Controls */}
             {totalPages > 1 && (
               <div className="mt-12 pt-6 border-t border-stone-200">
                 <Pagination
                   currentPage={currentPage}
                   totalPages={totalPages}
-                  totalItems={filtered.length}
+                  totalItems={allProducts.length}
                   pageSize={PRODUCTS_PER_PAGE}
                   onPageChange={handlePageChange}
                   variant="default"

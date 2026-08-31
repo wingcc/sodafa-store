@@ -1,8 +1,18 @@
 import type { StaticImageData } from 'next/image';
 
+export type ProductMoreInfo = {
+  ingredients?: string[];
+  ingredientsFull?: string;
+  benefits?: string[];
+  howToUse?: string;
+  shoppingInfo?: string;
+  [key: string]: unknown;
+};
+
 export type Product = {
   id: string | number;
   name: string;
+  slug?: string;
   price: number;
   originalPrice?: number | null;
   image?: string | StaticImageData;
@@ -29,4 +39,11 @@ export type Product = {
   variants?: Record<string, string[]>;
   isOffer?: boolean;
   offerTime?: string;
+  moreInfo?: {
+    ingredients: string[];
+    ingredientsFull: string;
+    benefits: string[];
+    howToUse: string;
+    shoppingInfo: string;
+  };
 };

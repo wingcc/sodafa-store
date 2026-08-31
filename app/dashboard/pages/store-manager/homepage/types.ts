@@ -75,6 +75,9 @@ export interface SiteInfoContent {
   instagram: string;
   facebook: string;
   tiktok: string;
+  privacyPolicySlug?: string;
+  termsSlug?: string;
+  cookiesSlug?: string;
 }
 
 // ---------------------------------------------------------------------------

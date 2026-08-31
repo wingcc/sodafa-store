@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useFavorites } from '../../contexts/FavoritesContext';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useUI } from '../../contexts/UIContext';
 import { ProductCard } from '../../components/ProductCard';
 import { Pagination } from '../store/components/Pagination';
 import type { Product } from '../../types/product';
@@ -13,12 +14,34 @@ const FAVORITES_PER_PAGE = 8;
 export default function FavoritesPage() {
   const { favorites } = useFavorites();
   const { locale } = useLanguage();
+  const { addToCart } = useUI();
   const isAr = locale === 'ar';
   const isFr = locale === 'fr';
   const t = (ar: string, fr: string, en: string) => (isAr ? ar : isFr ? fr : en);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+
+  const handleAddToCart = (id: string | number) => {
+    const product = products.find((item) => String(item.id) === String(id));
+    if (!product) return;
+
+    const imageSrc = typeof product.image === 'string'
+      ? product.image
+      : typeof product.image === 'object' && product.image !== null && 'src' in product.image
+        ? String(product.image.src ?? '/assets/images/no_image.png')
+        : '/assets/images/no_image.png';
+
+    addToCart(
+      {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: imageSrc,
+      },
+      1
+    );
+  };
 
   const prevFavorites = useRef(favorites);
 
@@ -33,8 +56,9 @@ export default function FavoritesPage() {
     }
 
     let cancelled = false;
-    setLoading(true);
+
     async function loadProducts() {
+      setLoading(true);
       try {
         const res = await fetch('/api/products');
         const json = await res.json();
@@ -56,6 +80,7 @@ export default function FavoritesPage() {
                 : [];
               return {
                 id: String(row.id ?? ''),
+                slug: row.slug ? String(row.slug).trim() : undefined,
                 name: String(row.name ?? ''),
                 price,
                 originalPrice,
@@ -80,6 +105,7 @@ export default function FavoritesPage() {
       } catch {}
       if (!cancelled) setLoading(false);
     }
+
     loadProducts();
     if (changed) setCurrentPage(1);
     return () => { cancelled = true; };
@@ -161,7 +187,8 @@ export default function FavoritesPage() {
                 <div key={product.id} className="h-full">
                   <ProductCard
                     product={product}
-                    href={`/store/${product.id}`}
+                    href={`/store/${encodeURIComponent(product.slug || String(product.id))}`}
+                    onAddToCart={handleAddToCart}
                     showFavorite
                     showCountdown
                   />

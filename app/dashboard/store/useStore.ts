@@ -7,6 +7,8 @@ import type {
   Order,
   Customer,
   Notification,
+  ContactMessage,
+  ContactMessageCounts,
   ShippingZone,
   ShippingCity,
   ShippingMethod,
@@ -79,6 +81,26 @@ interface AppState {
   bulkDeleteNotifications: (ids: string[]) => Promise<void>;
   bulkMarkNotifications: (ids: string[], read: boolean) => Promise<void>;
   loadMoreNotifications: () => Promise<void>;
+
+  // Contact Messages (Inbox)
+  messages: ContactMessage[];
+  messageCounts: ContactMessageCounts;
+  isLoadingMessages: boolean;
+  messagesError: string | null;
+  hasMoreMessages: boolean;
+  messageFilters: { status: string; search: string; sortBy: 'newest' | 'oldest' };
+  setMessageFilters: (filters: { status?: string; search?: string; sortBy?: 'newest' | 'oldest' }) => void;
+  fetchMessages: (filters?: { status?: string; search?: string; limit?: number; offset?: number; sortBy?: 'newest' | 'oldest' }) => Promise<void>;
+  fetchMessageCounts: () => Promise<void>;
+  markMessageAsRead: (id: string) => Promise<void>;
+  markMessageAsUnread: (id: string) => Promise<void>;
+  updateMessageStatus: (id: string, status: ContactMessage['status']) => Promise<void>;
+  toggleStarMessage: (id: string) => Promise<void>;
+  deleteMessage: (id: string) => Promise<void>;
+  bulkDeleteMessages: (ids: string[]) => Promise<void>;
+  bulkUpdateMessages: (ids: string[], action: 'markRead' | 'markNew' | 'markReplied' | 'archive' | 'star' | 'unstar') => Promise<void>;
+  markAllMessagesRead: () => Promise<void>;
+  loadMoreMessages: () => Promise<void>;
 
   // Shipping Zones
   shippingZones: ShippingZone[];
@@ -217,6 +239,22 @@ function mapNotification(row: ApiRow): Notification {
     timestamp: String(row.timestamp ?? row.created_at ?? new Date().toISOString()),
     actionUrl: row.action_url ? String(row.action_url) : undefined,
     metadata,
+  };
+}
+
+function mapContactMessage(row: ApiRow): ContactMessage {
+  return {
+    id: String(row.id ?? ''),
+    customer_id: row.customer_id ? String(row.customer_id) : null,
+    name: String(row.name ?? ''),
+    phone: String(row.phone ?? ''),
+    email: row.email ? String(row.email) : null,
+    message: String(row.message ?? ''),
+    status: (row.status ?? 'new') as ContactMessage['status'],
+    is_starred: Boolean(row.is_starred ?? false),
+    is_customer: Boolean(row.is_customer ?? false),
+    created_at: String(row.created_at ?? ''),
+    updated_at: String(row.updated_at ?? ''),
   };
 }
 
@@ -698,6 +736,237 @@ export const useStore = create<AppState>((set) => ({
     const state = useStore.getState();
     if (state.isLoadingNotifications || !state.hasMoreNotifications) return;
     await state.fetchNotifications({ offset: state.notifications.length });
+  },
+
+  // Contact Messages
+  messages: [],
+  messageCounts: { total: 0, newCount: 0, read: 0, replied: 0, archived: 0, starred: 0, customer: 0 },
+  isLoadingMessages: false,
+  messagesError: null,
+  hasMoreMessages: true,
+  messageFilters: { status: 'all', search: '', sortBy: 'newest' as const },
+  setMessageFilters: (filters) => set((state) => ({
+    messageFilters: { ...state.messageFilters, ...filters },
+    hasMoreMessages: true,
+    messagesError: null,
+  })),
+  fetchMessages: async (filters) => {
+    const stateFilters = useStore.getState().messageFilters;
+    const merged = { ...stateFilters, ...filters };
+    const limit = filters?.limit ?? 20;
+    const offset = filters?.offset ?? 0;
+    const isLoadMore = offset > 0;
+    if (!isLoadMore) set({ isLoadingMessages: true, messagesError: null });
+    try {
+      const params = new URLSearchParams();
+      if (merged.status && merged.status !== 'all') params.set('status', merged.status);
+      if (merged.search) params.set('search', merged.search);
+      if (merged.sortBy) params.set('sortBy', merged.sortBy);
+      params.set('limit', String(limit));
+      params.set('offset', String(offset));
+      const res = await fetch(`${API_BASE}/admin/contact-messages?${params.toString()}`);
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json?.error?.message ?? 'Failed to fetch messages');
+      const newMessages = (json.data ?? []).map(mapContactMessage);
+      const total = json.meta?.total ?? 0;
+      const counts = json.meta?.counts ?? useStore.getState().messageCounts;
+      if (isLoadMore) {
+        set((state) => {
+          const existingIds = new Set(state.messages.map((m) => m.id));
+          const deduped = newMessages.filter((m: ContactMessage) => !existingIds.has(m.id));
+          const combined = [...state.messages, ...deduped];
+          return {
+            messages: combined,
+            isLoadingMessages: false,
+            hasMoreMessages: combined.length < total,
+            messageCounts: counts,
+          };
+        });
+      } else {
+        set({
+          messages: newMessages,
+          isLoadingMessages: false,
+          hasMoreMessages: newMessages.length < total,
+          messageCounts: counts,
+        });
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to fetch messages';
+      set({ isLoadingMessages: false, messagesError: msg });
+    }
+  },
+  fetchMessageCounts: async () => {
+    try {
+      const res = await fetch(`${API_BASE}/admin/contact-messages?limit=1`);
+      const json = await res.json();
+      if (json?.meta?.counts) set({ messageCounts: json.meta.counts });
+    } catch {}
+  },
+  markMessageAsRead: async (id) => {
+    const prev = useStore.getState().messages;
+    set((state) => ({ messages: state.messages.map((m) => (m.id === id ? { ...m, status: 'read' as const } : m)) }));
+    try {
+      const res = await fetch(`${API_BASE}/admin/contact-messages?id=${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'read' }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json?.error?.message);
+      if (json.data) set((state) => ({ messages: state.messages.map((m) => (m.id === id ? mapContactMessage(json.data) : m)) }));
+    } catch (err) {
+      set({ messages: prev });
+      console.error('Failed markMessageAsRead:', err);
+      throw err;
+    }
+  },
+  markMessageAsUnread: async (id) => {
+    const prev = useStore.getState().messages;
+    set((state) => ({ messages: state.messages.map((m) => (m.id === id ? { ...m, status: 'new' as const } : m)) }));
+    try {
+      const res = await fetch(`${API_BASE}/admin/contact-messages?id=${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'new' }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json?.error?.message);
+      if (json.data) set((state) => ({ messages: state.messages.map((m) => (m.id === id ? mapContactMessage(json.data) : m)) }));
+    } catch (err) {
+      set({ messages: prev });
+      console.error('Failed markMessageAsUnread:', err);
+      throw err;
+    }
+  },
+  updateMessageStatus: async (id, status) => {
+    const prev = useStore.getState().messages;
+    set((state) => ({ messages: state.messages.map((m) => (m.id === id ? { ...m, status } : m)) }));
+    try {
+      const res = await fetch(`${API_BASE}/admin/contact-messages?id=${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json?.error?.message);
+      if (json.data) set((state) => ({ messages: state.messages.map((m) => (m.id === id ? mapContactMessage(json.data) : m)) }));
+      // refresh counts
+      useStore.getState().fetchMessageCounts();
+    } catch (err) {
+      set({ messages: prev });
+      console.error('Failed updateMessageStatus:', err);
+      throw err;
+    }
+  },
+  toggleStarMessage: async (id) => {
+    const current = useStore.getState().messages.find((m) => m.id === id);
+    if (!current) return;
+    const next = !current.is_starred;
+    const prev = useStore.getState().messages;
+    set((state) => ({ messages: state.messages.map((m) => (m.id === id ? { ...m, is_starred: next } : m)) }));
+    try {
+      const res = await fetch(`${API_BASE}/admin/contact-messages?id=${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_starred: next }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json?.error?.message);
+      if (json.data) set((state) => ({ messages: state.messages.map((m) => (m.id === id ? mapContactMessage(json.data) : m)) }));
+    } catch (err) {
+      set({ messages: prev });
+      console.error('Failed toggleStarMessage:', err);
+      throw err;
+    }
+  },
+  deleteMessage: async (id) => {
+    const prev = useStore.getState().messages;
+    set((state) => ({ messages: state.messages.filter((m) => m.id !== id) }));
+    try {
+      const res = await fetch(`${API_BASE}/admin/contact-messages?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json?.error?.message);
+      useStore.getState().fetchMessageCounts();
+    } catch (err) {
+      set({ messages: prev });
+      console.error('Failed deleteMessage:', err);
+      throw err;
+    }
+  },
+  bulkDeleteMessages: async (ids) => {
+    if (!ids.length) return;
+    const prev = useStore.getState().messages;
+    set((state) => {
+      const setIds = new Set(ids);
+      return { messages: state.messages.filter((m) => !setIds.has(m.id)) };
+    });
+    try {
+      const res = await fetch(`${API_BASE}/admin/contact-messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids, action: 'delete' }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json?.error?.message);
+      useStore.getState().fetchMessageCounts();
+    } catch (err) {
+      set({ messages: prev });
+      console.error('Failed bulkDeleteMessages:', err);
+      throw err;
+    }
+  },
+  bulkUpdateMessages: async (ids, action) => {
+    if (!ids.length) return;
+    const prev = useStore.getState().messages;
+    // optimistic
+    const mapAction: Record<string, Partial<ContactMessage>> = {
+      markRead: { status: 'read' as const },
+      markNew: { status: 'new' as const },
+      markReplied: { status: 'replied' as const },
+      archive: { status: 'archived' as const },
+    };
+    if (mapAction[action]) {
+      set((state) => ({
+        messages: state.messages.map((m) => (ids.includes(m.id) ? { ...m, ...mapAction[action] } : m)),
+      }));
+    } else if (action === 'star') {
+      set((state) => ({ messages: state.messages.map((m) => (ids.includes(m.id) ? { ...m, is_starred: true } : m)) }));
+    } else if (action === 'unstar') {
+      set((state) => ({ messages: state.messages.map((m) => (ids.includes(m.id) ? { ...m, is_starred: false } : m)) }));
+    }
+    try {
+      const res = await fetch(`${API_BASE}/admin/contact-messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids, action }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json?.error?.message);
+      useStore.getState().fetchMessageCounts();
+    } catch (err) {
+      set({ messages: prev });
+      console.error('Failed bulkUpdateMessages:', err);
+      throw err;
+    }
+  },
+  markAllMessagesRead: async () => {
+    const prev = useStore.getState().messages;
+    set((state) => ({ messages: state.messages.map((m) => (m.status === 'new' ? { ...m, status: 'read' as const } : m)) }));
+    try {
+      const res = await fetch(`${API_BASE}/admin/contact-messages`, { method: 'PUT' });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json?.error?.message);
+      useStore.getState().fetchMessageCounts();
+    } catch (err) {
+      set({ messages: prev });
+      console.error('Failed markAllMessagesRead:', err);
+      throw err;
+    }
+  },
+  loadMoreMessages: async () => {
+    const state = useStore.getState();
+    if (state.isLoadingMessages || !state.hasMoreMessages) return;
+    await state.fetchMessages({ offset: state.messages.length });
   },
 
   // Shipping Zones

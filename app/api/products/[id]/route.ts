@@ -69,6 +69,7 @@ export async function PUT(
     if (body.seoDescription !== undefined) updates.seo_description = body.seoDescription;
     if (body.seoSlug !== undefined) updates.seo_slug = body.seoSlug;
     if (body.seoKeywords !== undefined) updates.seo_keywords = body.seoKeywords;
+    if (body.moreInfo !== undefined) updates.more_info = body.moreInfo;
 
     const { data, error } = await repo.update(id, updates);
     if (error) throw error;

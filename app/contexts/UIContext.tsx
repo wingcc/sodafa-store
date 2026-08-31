@@ -74,6 +74,30 @@ export function UIProvider({ children }: { children: ReactNode }) {
 
   const cartTotal = cartItems.reduce((total, item) => total + item.price * item.qty, 0);
 
+  const trackCartEvent = (eventType: string, data?: Record<string, unknown>) => {
+    try {
+      const fp = document.cookie.match(/sodfa_fp=([^;]+)/)?.[1];
+      const sess = document.cookie.match(/sodfa_session=([^;]+)/)?.[1];
+      const vid = document.cookie.match(/sodfa_visitor_id=([^;]+)/)?.[1];
+      if (!fp || !sess || !vid) return;
+      const consent = document.cookie.match(/sodfa_analytics_consent=([^;]+)/)?.[1];
+      if (consent !== 'true') return;
+      fetch('/api/analytics/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'event',
+          fingerprint: decodeURIComponent(fp),
+          sessionToken: decodeURIComponent(sess),
+          visitorId: decodeURIComponent(vid),
+          eventType,
+          eventData: data,
+          pageUrl: window.location.href,
+        }),
+      }).catch(() => {});
+    } catch {}
+  };
+
   const addToCart = (item: Omit<CartItem, "qty">, qty: number = 1) => {
     setCartItems((prev) => {
       const existing = prev.find((i) => i.id === item.id);
@@ -82,6 +106,7 @@ export function UIProvider({ children }: { children: ReactNode }) {
       }
       return [...prev, { ...item, qty }];
     });
+    trackCartEvent('add_to_cart', { product_id: String(item.id), product_name: item.name, price: item.price, quantity: qty });
   };
 
   const removeFromCart = (id: string | number) => {
@@ -137,7 +162,34 @@ export function UIProvider({ children }: { children: ReactNode }) {
 export function useUI() {
   const context = useContext(UIContext);
   if (!context) {
-    throw new Error("useUI must be used within a UIProvider");
+    // Fallback for pages outside provider (e.g., /content/[slug])
+    // Prevents hard crash while still allowing Navbar/Footer to render
+    return {
+      isCartOpen: false,
+      openCart: () => {},
+      closeCart: () => {},
+      toggleCart: () => {},
+      isSearchOpen: false,
+      openSearch: () => {},
+      closeSearch: () => {},
+      toggleSearch: () => {},
+      isMobileMenuOpen: false,
+      openMobileMenu: () => {},
+      closeMobileMenu: () => {},
+      toggleMobileMenu: () => {},
+      isQuickAddOpen: false,
+      openQuickAdd: () => {},
+      closeQuickAdd: () => {},
+      isCheckoutOpen: false,
+      openCheckout: () => {},
+      closeCheckout: () => {},
+      cartItems: [],
+      cartTotal: 0,
+      addToCart: () => {},
+      removeFromCart: () => {},
+      updateQuantity: () => {},
+      clearCart: () => {},
+    } as UIContextType;
   }
   return context;
 }

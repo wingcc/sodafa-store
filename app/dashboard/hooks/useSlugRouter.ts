@@ -19,6 +19,7 @@ const VALID_PAGES: Record<string, PageSection> = {
   analytics: 'analytics',
   logs: 'logs',
   notifications: 'notifications',
+  messages: 'messages',
   settings: 'settings',
   store: 'store',
   'store-homepage': 'store-homepage',

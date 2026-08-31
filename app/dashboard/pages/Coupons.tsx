@@ -1,11 +1,10 @@
 // SODFA MARKETPLACE - Coupons & Discounts Page
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Plus,
   Ticket,
   Calendar,
-  Users,
   DollarSign,
   Edit2,
   Trash2,
@@ -14,7 +13,6 @@ import {
   X,
   Percent,
   Tag,
-  Info,
   Search,
   LayoutGrid,
   LayoutList,
@@ -70,15 +68,22 @@ const Coupons: React.FC = () => {
   const clearPendingNavigation = useStore((s) => s.clearPendingNavigation);
 
   useEffect(() => {
-    if (pendingNavigation?.page === 'coupons') {
-      if (pendingNavigation.searchQuery) {
-        setSearchQuery(pendingNavigation.searchQuery);
-      }
+    if (pendingNavigation?.page !== 'coupons') return;
+
+    if (!pendingNavigation.searchQuery) {
       clearPendingNavigation();
+      return;
     }
+
+    const timeoutId = window.setTimeout(() => {
+      setSearchQuery(pendingNavigation.searchQuery ?? '');
+      clearPendingNavigation();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [pendingNavigation, clearPendingNavigation]);
 
-  const fetchCoupons = async () => {
+  const fetchCoupons = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch('/api/coupons');
@@ -91,11 +96,38 @@ const Coupons: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [addToast]);
 
   useEffect(() => {
-    fetchCoupons();
-  }, []);
+    let isCancelled = false;
+
+    const loadCoupons = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/coupons');
+        if (!response.ok) throw new Error('Failed to fetch coupons');
+        const result = await response.json();
+        if (!isCancelled) {
+          setCoupons(result.data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching coupons:', error);
+        if (!isCancelled) {
+          addToast('error', 'Failed to load coupons. Please try again.');
+        }
+      } finally {
+        if (!isCancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadCoupons();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [addToast]);
 
   const filteredCoupons = useMemo(() => {
     const q = searchQuery.toLowerCase();
@@ -133,20 +165,40 @@ const Coupons: React.FC = () => {
   };
 
   const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
-  const [formData, setFormData] = useState({
+  type DiscountType = Coupon['discount_type'];
+  type ApplicableScope = Coupon['applicable_to'];
+  type CouponStatus = Coupon['status'];
+
+  type FormDataState = {
+    code: string;
+    description: string;
+    discountType: DiscountType;
+    discountValue: number;
+    minimumOrder: number;
+    maximumDiscount: number;
+    applicableTo: ApplicableScope;
+    applicableIds: string;
+    startDate: string;
+    endDate: string;
+    usageLimit: number;
+    customerUsageLimit: number;
+    status: CouponStatus;
+  };
+
+  const [formData, setFormData] = useState<FormDataState>({
     code: '',
     description: '',
-    discountType: 'percentage' as 'percentage' | 'fixed' | 'free_shipping',
+    discountType: 'percentage',
     discountValue: 0,
     minimumOrder: 0,
     maximumDiscount: 0,
-    applicableTo: 'all' as 'all' | 'products' | 'categories' | 'customers',
+    applicableTo: 'all',
     applicableIds: '',
     startDate: '',
     endDate: '',
     usageLimit: 0,
     customerUsageLimit: 1,
-    status: 'active' as 'active' | 'inactive' | 'expired',
+    status: 'active',
   });
 
   const handleEdit = (coupon: Coupon) => {
@@ -180,9 +232,10 @@ const Coupons: React.FC = () => {
       }
       setCoupons((prev) => prev.filter((c) => c.id !== id));
       addToast('success', 'Coupon has been deleted successfully.', { title: 'Coupon Deleted' });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error deleting coupon:', error);
-      addToast('error', error.message || 'Failed to delete coupon. Please try again.');
+      const message = error instanceof Error ? error.message : 'Failed to delete coupon. Please try again.';
+      addToast('error', message);
     } finally {
       setDeleting(null);
     }
@@ -239,9 +292,10 @@ const Coupons: React.FC = () => {
       setShowModal(false);
       setEditingCoupon(null);
       resetForm();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error saving coupon:', error);
-      addToast('error', error.message || (editingCoupon ? 'Failed to update coupon' : 'Failed to create coupon'));
+      const message = error instanceof Error ? error.message : (editingCoupon ? 'Failed to update coupon' : 'Failed to create coupon');
+      addToast('error', message);
     }
   };
 
@@ -263,8 +317,37 @@ const Coupons: React.FC = () => {
     });
   };
 
-  const formatDate = (d: string) =>
-    new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const formatDate = (d: string) => {
+    if (!d) return '—';
+    return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  const getCouponTags = (coupon: Coupon) => {
+    const now = new Date();
+    const flags: Array<{ label: string; variant: 'warning' | 'danger' | 'info' }> = [];
+
+    if (coupon.status !== 'active') {
+      flags.push({ label: coupon.status === 'expired' ? 'Expired' : 'Inactive', variant: 'danger' });
+    }
+
+    if (coupon.start_date && new Date(coupon.start_date) > now) {
+      flags.push({ label: 'Not Started', variant: 'warning' });
+    }
+
+    if (coupon.end_date && new Date(coupon.end_date) < now) {
+      flags.push({ label: 'Expired', variant: 'danger' });
+    }
+
+    if (coupon.usage_limit > 0 && coupon.used_count >= coupon.usage_limit) {
+      flags.push({ label: 'Usage Limit', variant: 'warning' });
+    }
+
+    if (coupon.maximum_discount != null && coupon.maximum_discount > 0) {
+      flags.push({ label: `Cap ${coupon.maximum_discount} MAD`, variant: 'info' });
+    }
+
+    return flags;
+  };
 
   const CouponTypeIcon = ({ type, size = 14 }: { type: string; size?: number }) => {
     if (type === 'free_shipping') return <Truck size={size} />;
@@ -406,16 +489,16 @@ const Coupons: React.FC = () => {
               {filteredCoupons.map((coupon) => (
                 <div key={coupon.id} className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-md transition-all group">
                   {/* Top row: code + status */}
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-2 min-w-0">
                       <div className={`w-8 h-8 rounded-lg border flex items-center justify-center flex-shrink-0 ${couponTypeStyle[coupon.discount_type]?.bg} ${couponTypeStyle[coupon.discount_type]?.border}`}>
                         <span className={couponTypeStyle[coupon.discount_type]?.text}>
                           <CouponTypeIcon type={coupon.discount_type} size={14} />
                         </span>
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-sm font-bold text-gray-900 font-mono">{coupon.code}</span>
+                          <span className="text-sm font-bold text-gray-900 font-mono truncate">{coupon.code}</span>
                           <button
                             onClick={() => handleCopyCode(coupon.code)}
                             className="p-0.5 rounded hover:bg-gray-100 transition-colors"
@@ -432,6 +515,21 @@ const Coupons: React.FC = () => {
                         </Badge>
                       </div>
                     </div>
+
+                    {getCouponTags(coupon).length > 0 && (
+                      <div className="flex flex-wrap justify-end gap-1 max-w-[48%]">
+                        {getCouponTags(coupon).slice(0, 2).map((tag) => (
+                          <Badge
+                            key={`${coupon.id}-${tag.label}`}
+                            variant={tag.variant === 'danger' ? 'danger' : tag.variant === 'warning' ? 'warning' : 'info'}
+                            size="sm"
+                            className="whitespace-nowrap"
+                          >
+                            {tag.label}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Description */}
@@ -626,7 +724,7 @@ const Coupons: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Discount Type</label>
                   <select
                     value={formData.discountType}
-                    onChange={(e) => setFormData({ ...formData, discountType: e.target.value as any })}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, discountType: e.target.value as DiscountType }))}
                     className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-300"
                   >
                     <option value="percentage">Percentage (%)</option>
@@ -741,7 +839,7 @@ const Coupons: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Applies To</label>
                   <select
                     value={formData.applicableTo}
-                    onChange={(e) => setFormData({ ...formData, applicableTo: e.target.value as any })}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, applicableTo: e.target.value as ApplicableScope }))}
                     className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-300"
                   >
                     <option value="all">All Products</option>
@@ -813,7 +911,7 @@ const Coupons: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Status</label>
                   <select
                     value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value as CouponStatus }))}
                     className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-300"
                   >
                     <option value="active">Active</option>

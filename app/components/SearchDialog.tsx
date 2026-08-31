@@ -31,6 +31,36 @@ export const SearchDialog = () => {
       })
     : [];
 
+  // Track search events for analytics
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < 2) return;
+    const timer = setTimeout(() => {
+      try {
+        const fp = document.cookie.match(/sodfa_fp=([^;]+)/)?.[1];
+        const sess = document.cookie.match(/sodfa_session=([^;]+)/)?.[1];
+        const vid = document.cookie.match(/sodfa_visitor_id=([^;]+)/)?.[1];
+        if (!fp || !sess || !vid) return;
+        const consent = document.cookie.match(/sodfa_analytics_consent=([^;]+)/)?.[1];
+        if (consent !== 'true') return;
+        fetch('/api/analytics/track', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'event',
+            fingerprint: decodeURIComponent(fp),
+            sessionToken: decodeURIComponent(sess),
+            visitorId: decodeURIComponent(vid),
+            eventType: 'search',
+            eventData: { query: q, term: q.toLowerCase(), results_count: results.length, results: results.length },
+            pageUrl: window.location.href,
+          }),
+        }).catch(() => {});
+      } catch {}
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [query, results.length]);
+
   // Auto-focus input when dialog opens
   useEffect(() => {
     if (isSearchOpen) {

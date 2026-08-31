@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, Star, ShoppingBag, Sparkles, Award, TrendingUp, Zap, Shield, Truck, RotateCcw, Play, Pause } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Star, ShoppingBag, Sparkles, Award, TrendingUp, Shield, Truck, RotateCcw, Play, Pause } from 'lucide-react';
 import type { Product } from '../../../types/product';
 
 type ProductHeroCarouselProps = {
@@ -63,6 +63,7 @@ export function ProductHeroCarousel({ products }: ProductHeroCarouselProps) {
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [freeShippingThreshold, setFreeShippingThreshold] = useState<number>(500);
   const carouselRef = useRef<HTMLDivElement | null>(null);
 
   const product = featuredProducts[activeIndex] ?? featuredProducts[0];
@@ -72,7 +73,7 @@ export function ProductHeroCarousel({ products }: ProductHeroCarouselProps) {
     if (slideCount === 0) return;
     setIsTransitioning(true);
     setImageLoaded(false);
-    setActiveIndex((current) => {
+    setActiveIndex(() => {
       const next = ((index % slideCount) + slideCount) % slideCount;
       return next;
     });
@@ -141,6 +142,28 @@ export function ProductHeroCarousel({ products }: ProductHeroCarouselProps) {
     setTouchStartX(null);
   };
 
+  useEffect(() => {
+    let active = true;
+
+    const loadThreshold = async () => {
+      try {
+        const res = await fetch('/api/admin/settings', { cache: 'no-store' });
+        const json = await res.json();
+        const value = Number(json?.data?.free_shipping_threshold ?? 500);
+        if (active && Number.isFinite(value) && value >= 0) {
+          setFreeShippingThreshold(value);
+        }
+      } catch (error) {
+        console.error('Failed to load free shipping threshold', error);
+      }
+    };
+
+    void loadThreshold();
+    return () => {
+      active = false;
+    };
+  }, []);
+
   if (!product) return null;
 
   const rating = product.rating ?? 0;
@@ -148,6 +171,7 @@ export function ProductHeroCarousel({ products }: ProductHeroCarouselProps) {
   const discount = product.originalPrice
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : null;
+  const categoryLabel = product.category ?? 'Beauty';
   const badgeText = getHeroBadge(product);
   const badgeIcon = getBadgeIcon(badgeText);
   const badgeGradient = getBadgeGradient(badgeText);
@@ -176,7 +200,7 @@ export function ProductHeroCarousel({ products }: ProductHeroCarouselProps) {
     >
       {/* Animated gradient background */}
       <div
-        className="absolute inset-0 -z-10 transition-opacity duration-1000"
+        className="absolute inset-0 z-0 transition-opacity duration-1000"
         style={{
           background: `radial-gradient(ellipse 60% 50% at 30% 20%, rgba(var(--accent-rgb), 0.12) 0%, transparent 70%), 
                        radial-gradient(ellipse 40% 40% at 80% 80%, rgba(var(--accent-rgb), 0.08) 0%, transparent 60%), 
@@ -211,22 +235,22 @@ export function ProductHeroCarousel({ products }: ProductHeroCarouselProps) {
         }}
       />
 
-      {/* Main hero grid — fixed height, image cannot expand it */}
-      <div className="relative grid h-[480px] w-full grid-cols-1 lg:h-[520px] lg:grid-cols-2">
+      {/* Main hero grid — responsive stack on mobile, split layout on larger screens */}
+      <div className="relative grid w-full grid-cols-1 lg:grid-cols-2 lg:h-[520px]">
         {/* =======================================================
-            IMAGE HALF — fixed, image object-cover clips
+            IMAGE HALF — visible on all screen sizes, stacked on mobile
         ======================================================== */}
-        <div className="relative h-full w-full overflow-hidden">
+        <div className="relative h-[260px] w-full overflow-hidden sm:h-[320px] lg:h-full">
           {/* Loading skeleton */}
           {!imageLoaded && (
             <div className="absolute inset-0 z-0 bg-gradient-to-br from-stone-800 to-stone-900 animate-pulse" />
           )}
 
-          {/* Product image with Ken Burns effect — absolute so it never stretches the container */}
+          {/* Product image with Ken Burns effect */}
           <img
             src={imageSrc}
             alt={product.bannerImageAlt ?? product.imageAlt ?? product.name}
-            className={`absolute inset-0 z-0 h-full w-full object-cover object-center transition-all duration-1000 ${
+            className={`absolute inset-0 z-10 h-full w-full object-cover object-center transition-all duration-1000 ${
               imageLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
             }`}
             onLoad={() => setImageLoaded(true)}
@@ -241,7 +265,7 @@ export function ProductHeroCarousel({ products }: ProductHeroCarouselProps) {
 
           {/* Gradient overlay - left to right fade */}
           <div
-            className="pointer-events-none absolute inset-0 z-10 hero-image-overlay"
+            className="pointer-events-none absolute inset-0 z-20 hero-image-overlay"
             style={{
               background: `
                 linear-gradient(
@@ -259,29 +283,44 @@ export function ProductHeroCarousel({ products }: ProductHeroCarouselProps) {
 
           {/* Bottom vignette */}
           <div
-            className="pointer-events-none absolute inset-0 z-10"
+            className="pointer-events-none absolute inset-0 z-20"
             style={{
               background: 'linear-gradient(to top, rgba(0,0,0,0.3) 0%, transparent 40%)',
             }}
           />
 
-          {/* Discount badge - premium design */}
-          {discount && discount > 0 && (
-            <div className="absolute left-4 top-4 z-30 lg:left-6 lg:top-6">
-              <div className="relative group">
-                {/* Glow effect */}
-                <div className="absolute inset-0 rounded-2xl bg-amber-500/40 blur-xl group-hover:blur-2xl transition-all duration-500" />
-                <div className="relative flex flex-col items-center rounded-2xl bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 px-5 py-3 text-white shadow-xl shadow-amber-500/40 transform transition-all duration-300 group-hover:scale-110 group-hover:-rotate-3">
-                  <span className="text-3xl font-extrabold leading-none tracking-tight drop-shadow-lg">
-                    -{discount}%
-                  </span>
-                  <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-100">
-                    OFF
-                  </span>
-                </div>
-              </div>
+          <div className="absolute inset-x-4 top-4 z-30 flex items-start justify-between gap-3 sm:inset-x-5 sm:top-5 lg:inset-x-6 lg:top-6">
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-500/15 px-3 py-1.5 text-[11px] font-semibold text-emerald-50 backdrop-blur-sm shadow-lg shadow-emerald-500/10">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300/70" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-300" />
+              </span>
+              In Stock
             </div>
-          )}
+
+            <div className="ml-auto flex items-center gap-2">
+              {badgeText && (
+                <span className={`inline-flex items-center gap-1.5 rounded-full border border-emerald-300/40 bg-gradient-to-r ${badgeGradient} px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white shadow-lg shadow-emerald-500/20`}>
+                  {badgeIcon}
+                  {badgeText}
+                </span>
+              )}
+
+              {discount && discount > 0 && (
+                <div className="relative group">
+                  <div className="absolute inset-0 rounded-2xl bg-amber-500/40 blur-xl group-hover:blur-2xl transition-all duration-500" />
+                  <div className="relative flex flex-col items-center rounded-2xl bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 px-4 py-2.5 text-white shadow-xl shadow-amber-500/40 transform transition-all duration-300 group-hover:scale-110 group-hover:-rotate-3 sm:px-5 sm:py-3">
+                    <span className="text-2xl font-extrabold leading-none tracking-tight drop-shadow-lg sm:text-3xl">
+                      -{discount}%
+                    </span>
+                    <span className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.2em] text-amber-100 sm:text-[10px]">
+                      OFF
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Product count badge */}
           <div className="absolute bottom-4 right-4 z-30 rounded-full bg-black/40 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-md border border-white/10 lg:bottom-6 lg:right-6">
@@ -317,7 +356,7 @@ export function ProductHeroCarousel({ products }: ProductHeroCarouselProps) {
         {/* =======================================================
             CONTENT HALF
         ======================================================== */}
-        <div className="relative z-20 flex items-center overflow-hidden bg-transparent p-6 sm:p-8 lg:p-12 xl:p-16">
+        <div className="relative z-30 flex items-center overflow-hidden bg-transparent p-5 sm:p-8 lg:p-12 xl:p-16">
           {/* Additional edge blend */}
           <div
             className="pointer-events-none absolute inset-y-0 hidden w-32 lg:block hero-content-edge"
@@ -327,24 +366,33 @@ export function ProductHeroCarousel({ products }: ProductHeroCarouselProps) {
             }}
           />
 
-          <div className={`relative z-30 w-full max-w-xl space-y-6 transition-all duration-700 ${
+          <div className={`relative z-30 w-full max-w-xl space-y-4 sm:space-y-6 transition-all duration-700 ${
             isTransitioning ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'
           }`}>
-            {/* Badge */}
-            <div className="flex flex-wrap items-center gap-3">
-              <span className={`inline-flex items-center gap-2 rounded-full bg-gradient-to-r ${badgeGradient} px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.15em] text-white shadow-lg`}>
-                {badgeIcon}
-                {badgeText}
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-medium text-white/80 backdrop-blur-sm shadow-sm">
+                <span className="inline-flex items-center gap-0.5 text-amber-300">
+                  {Array.from({ length: 5 }).map((_, index) => (
+                    <Star
+                      key={index}
+                      className={`h-3 w-3 ${
+                        index < filledStars ? 'fill-amber-300 text-amber-300' : 'text-white/20'
+                      }`}
+                    />
+                  ))}
+                </span>
+                <span className="font-semibold text-white">{rating.toFixed(1)}</span>
               </span>
-              <span className="text-xs font-medium uppercase tracking-[0.2em] text-white/40">
-                {product.category ?? 'Beauty'}
+
+              <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/70 backdrop-blur-sm">
+                {categoryLabel}
               </span>
             </div>
 
             {/* Product name */}
             <div className="space-y-3">
               <h2
-                className="text-3xl font-bold leading-tight tracking-tight text-white sm:text-4xl md:text-[44px]"
+                className="text-2xl font-bold leading-tight tracking-tight text-white sm:text-3xl md:text-[40px] lg:text-[44px]"
                 style={{ fontFamily: 'var(--disp)' }}
               >
                 {product.name}
@@ -354,46 +402,10 @@ export function ProductHeroCarousel({ products }: ProductHeroCarouselProps) {
               </p>
             </div>
 
-            {/* Rating */}
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="inline-flex items-center gap-3 rounded-full bg-white/5 px-4 py-2 backdrop-blur-sm border border-white/10">
-                <span className="flex items-center gap-0.5 text-amber-400">
-                  {Array.from({ length: 5 }).map((_, index) => (
-                    <Star
-                      key={index}
-                      className={`h-4 w-4 transition-all duration-300 ${
-                        index < filledStars
-                          ? 'fill-amber-400 text-amber-400'
-                          : 'text-white/20'
-                      }`}
-                      style={{
-                        animationDelay: `${index * 100}ms`,
-                      }}
-                    />
-                  ))}
-                </span>
-                <span className="font-semibold text-white">
-                  {rating.toFixed(1)}
-                </span>
-                <span className="text-white/40">
-                  ({product.reviews ?? 0} reviews)
-                </span>
-              </div>
-              {product.inStock && (
-                <span className="flex items-center gap-1.5 text-sm font-medium text-emerald-400">
-                  <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400/60" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
-                  </span>
-                  In Stock
-                </span>
-              )}
-            </div>
-
             {/* Price + CTA */}
             <div className="flex flex-wrap items-end gap-4 pt-2">
               <div className="flex items-center gap-3">
-                <div className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
+                <div className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl lg:text-5xl">
                   {product.price.toFixed(2)} MAD
                 </div>
                 {discount !== null && discount > 0 && (
@@ -412,8 +424,8 @@ export function ProductHeroCarousel({ products }: ProductHeroCarouselProps) {
             {/* Actions */}
             <div className="flex flex-wrap items-center gap-3 pt-1">
               <Link
-                href={`/store/${product.id}`}
-                className="group relative inline-flex items-center gap-2.5 rounded-full bg-white px-8 py-3.5 text-sm font-semibold text-slate-900 shadow-xl transition-all duration-300 hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow-2xl focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[var(--brand-deep)] overflow-hidden"
+                href={`/store/${encodeURIComponent(product.slug || String(product.id))}`}
+                className="group relative inline-flex items-center gap-2.5 rounded-full bg-white px-6 py-3 text-sm font-semibold text-slate-900 shadow-xl transition-all duration-300 hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow-2xl focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[var(--brand-deep)] overflow-hidden sm:px-8 sm:py-3.5"
                 role="button"
                 aria-label={`View product ${product.name}`}
               >
@@ -424,18 +436,18 @@ export function ProductHeroCarousel({ products }: ProductHeroCarouselProps) {
                 <ChevronRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 relative z-10" />
               </Link>
               <Link
-                href={`/store/${product.id}`}
-                className="inline-flex items-center gap-2 rounded-full border border-white/20 px-6 py-3 text-sm font-medium text-white/80 transition-all duration-300 hover:bg-white/10 hover:text-white hover:border-white/30 backdrop-blur-sm"
+                href={`/store/${encodeURIComponent(product.slug || String(product.id))}`}
+                className="inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-2.5 text-sm font-medium text-white/80 transition-all duration-300 hover:bg-white/10 hover:text-white hover:border-white/30 backdrop-blur-sm sm:px-6 sm:py-3"
               >
                 View Details
               </Link>
             </div>
 
             {/* Trust indicators */}
-            <div className="flex flex-wrap items-center gap-4 pt-2 text-xs text-white/50">
+            <div className="flex flex-wrap items-center gap-2 pt-2 text-[11px] text-white/50 sm:gap-4 sm:text-xs">
               <span className="flex items-center gap-1.5">
                 <Truck className="h-3.5 w-3.5 text-emerald-400/80" />
-                Free delivery over 500 MAD
+                Free delivery over {freeShippingThreshold} MAD
               </span>
               <span className="flex items-center gap-1.5">
                 <Shield className="h-3.5 w-3.5 text-emerald-400/80" />
@@ -489,11 +501,6 @@ export function ProductHeroCarousel({ products }: ProductHeroCarouselProps) {
         </button>
       )}
 
-      {/* Mobile navigation hint */}
-      <div className="absolute bottom-20 left-1/2 z-30 -translate-x-1/2 text-center text-white/20 lg:hidden">
-        <span className="text-xs font-medium">Swipe to explore</span>
-      </div>
-
       {/* Progress bar */}
       {slideCount > 1 && (
         <div className="absolute bottom-0 left-0 right-0 z-30 h-1 bg-white/10">
@@ -510,6 +517,18 @@ export function ProductHeroCarousel({ products }: ProductHeroCarouselProps) {
           ANIMATIONS & STYLES
       ========================================================== */}
       <style jsx global>{`
+        @media (max-width: 1023px) {
+          .hero-image-overlay {
+            background: linear-gradient(
+              to top,
+              rgba(var(--brand-deep-rgb), 0.82) 0%,
+              rgba(var(--brand-deep-rgb), 0.42) 32%,
+              rgba(var(--brand-deep-rgb), 0.18) 60%,
+              rgba(var(--brand-deep-rgb), 0.1) 100%
+            ) !important;
+          }
+        }
+
         @keyframes float {
           0%, 100% { transform: translateY(0) rotate(0deg); }
           50% { transform: translateY(-20px) rotate(2deg); }
