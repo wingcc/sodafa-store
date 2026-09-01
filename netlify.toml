@@ -1,10 +1,4 @@
 [build]
-  command = "pnpm run build"
-
-[build.environment]
-  NPM_FLAGS = "--global"
-
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
+  command = "npm run build"
 
  
