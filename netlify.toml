@@ -1,8 +1,9 @@
 [build]
   command = "npm run build"
+  publish = ".next"          # <-- Add this line
 
 [build.environment]
-  NODE_VERSION = "20"
+  NODE_VERSION = "22"        # Use Node.js 22 to align with Supabase's requirements
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
