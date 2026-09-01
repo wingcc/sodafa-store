@@ -12,17 +12,7 @@ import styles from "./ProductCard.module.css";
 
 function useCountdown(targetDate: string | undefined) {
   const target = useMemo(() => (targetDate ? new Date(targetDate).getTime() : 0), [targetDate]);
-  const [time, setTime] = useState(() => {
-    if (!target) return { days: 0, hours: 0, minutes: 0, seconds: 0, expired: true };
-    const diff = Math.max(0, target - Date.now());
-    return {
-      days: Math.floor(diff / 86400000),
-      hours: Math.floor((diff % 86400000) / 3600000),
-      minutes: Math.floor((diff % 3600000) / 60000),
-      seconds: Math.floor((diff % 60000) / 1000),
-      expired: diff <= 0,
-    };
-  });
+  const [time, setTime] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, expired: true });
 
   useEffect(() => {
     if (!target) return;

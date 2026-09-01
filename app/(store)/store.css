@@ -787,3 +787,77 @@ footer .pat {
   .fab::before { animation: none; }
   .faller { animation: none; }
 }
+
+@media (max-width: 768px) {
+  /* تأكيد ظهور زر الهامبرغر في جميع الجوالات والتغلب على أي تعارض */
+  .burger,
+  .burger.open {
+    display: block !important;
+  }
+  
+  /* تحسين المظهر بحيث لا يختفي خلف أي عنصر */
+  .burger {
+    position: relative;
+    z-index: 70;
+  }
+}
+
+@media (max-width: 420px) {
+  /* تقليص ارتفاع الشريط وحشواته */
+  .nav-in {
+    height: 56px !important;
+    padding-inline: 8px !important;
+    gap: 0.25rem !important;
+  }
+
+  /* تصغير الشعار */
+  .logo {
+    --nav-logo-width: 80px !important;
+    --nav-logo-height: 28px !important;
+  }
+  .logo img {
+    max-width: 80px !important;
+    width: 80px !important;
+    height: 28px !important;
+  }
+
+  /* تصغير أيقونات الإجراءات (المفضلة، البحث، السلة، اللغة) */
+  .nav-icon-btn {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 8px !important;
+  }
+  .nav-icon-btn svg {
+    width: 16px !important;
+    height: 16px !important;
+  }
+
+  /* تصغير زر الهامبرغر */
+  .burger {
+    width: 36px !important;
+    height: 36px !important;
+  }
+  .burger span {
+    right: 8px !important;
+    left: 8px !important;
+    height: 2px !important;
+  }
+  .burger span:nth-child(1) { top: 11px !important; }
+  .burger span:nth-child(2) { top: 17px !important; }
+  .burger span:nth-child(3) { top: 23px !important; }
+  .burger.open span:nth-child(1) { top: 17px !important; }
+  .burger.open span:nth-child(3) { top: 17px !important; }
+
+  /* تقليص المسافات بين الأزرار في nav-actions */
+  .nav-actions {
+    gap: 0.25rem !important;
+  }
+
+  /* تأكيد إخفاء عناصر سطح المكتب */
+  .nav-links {
+    display: none !important;
+  }
+  .nav-cta {
+    display: none !important;
+  }
+}

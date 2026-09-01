@@ -17,7 +17,11 @@
   --disp: "El Messiri", serif;
   --body: "Tajawal", sans-serif;
 }
-
+.website-root {
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
+}
 /* ── Tall hero — takes ~90% of viewport + navbar/announcement bar ──
    Hero is the first impression: long product image, full-page feel. */
 .website-root .hero {

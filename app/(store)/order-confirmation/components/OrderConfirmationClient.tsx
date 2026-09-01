@@ -25,6 +25,8 @@ import {
   Headset,
   X,
   Send,
+  ListOrdered,
+  FileText,
 } from 'lucide-react';
 import OrderSteps from './OrderSteps';
 import ReceiptPrinter from './ReceiptPrinter';
@@ -65,6 +67,7 @@ export default function OrderConfirmationClient() {
   const [helpMessage, setHelpMessage] = useState('');
   const [helpSending, setHelpSending] = useState(false);
   const [helpSent, setHelpSent] = useState(false);
+  const [activeTab, setActiveTab] = useState<'items' | 'details'>('items');
 
   useEffect(() => {
     setIsMounted(true);
@@ -449,25 +452,23 @@ export default function OrderConfirmationClient() {
         <div className="mt-6 grid gap-6 lg:grid-cols-[1.45fr_0.82fr]">
           <div className="space-y-6">
             <div className="rounded-[28px] border border-stone-200 bg-white p-5 shadow-[0_14px_40px_rgba(15,23,42,0.04)] sm:p-6">
-              <div className="flex items-center justify-between gap-3 border-b border-stone-100 pb-4">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#cda552]">
-                    {isAr ? 'مسار الطلب' : 'Order journey'}
-                  </p>
-                  <h2 className="mt-2 text-xl font-black text-[#0d2f25] sm:text-2xl">
-                    {isAr ? 'طلبك قيد التحضير' : 'Your order is being prepared'}
-                  </h2>
-                </div>
-                <div className="flex items-center gap-2">
+              <div className="border-b border-stone-100 pb-4">
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#cda552]">
+                  {isAr ? 'مسار الطلب' : 'Order journey'}
+                </p>
+                <h2 className="mt-2 text-base font-black text-[#0d2f25] sm:text-xl leading-tight whitespace-nowrap">
+                  {isAr ? 'طلبك قيد التحضير' : 'Your order is being prepared'}
+                </h2>
+                <div className="flex items-center gap-2 mt-3">
                   <button
                     type="button"
                     onClick={() => setShowHelpModal(true)}
-                    className="inline-flex items-center gap-2 rounded-full border border-[#d7c08d] bg-[#f8f1df] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#4e3d1d] transition hover:bg-[#f4e6c0]"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[#d7c08d] bg-[#f8f1df] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#4e3d1d] transition hover:bg-[#f4e6c0]"
                   >
                     <Headset className="h-3.5 w-3.5" />
                     {isAr ? 'مساعدة' : 'Need help?'}
                   </button>
-                  <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-700">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-700">
                     <CheckCircle2 className="h-3.5 w-3.5" />
                     {isAr ? 'مؤكد' : 'Confirmed'}
                   </span>
@@ -479,92 +480,117 @@ export default function OrderConfirmationClient() {
               </div>
             </div>
 
-            <div className="rounded-[28px] border border-stone-200 bg-white p-5 shadow-[0_14px_40px_rgba(15,23,42,0.04)] sm:p-6">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <h3 className="text-lg font-black text-[#0d2f25]">
-                  {isAr ? 'تفاصيل الطلب' : 'Order details'}
-                </h3>
-                <span className="rounded-full border border-stone-200 bg-stone-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-stone-500">
-                  {items.reduce((acc, i) => acc + i.qty, 0)} {isAr ? 'عنصر' : 'items'}
-                </span>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="rounded-2xl border border-stone-200 bg-[#faf8f3] p-4">
-                  <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-[#f7e6b8] text-[#0d2f25]">
-                    <MapPin className="h-5 w-5" />
-                  </div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-stone-500">{isAr ? 'العنوان' : 'Address'}</p>
-                  <p className="mt-2 text-sm font-semibold text-stone-800">{customerName}</p>
-                  <p className="mt-1 text-xs text-stone-500">{customerPhone}</p>
-                  <p className="mt-2 text-xs leading-5 text-stone-500">{city} — {streetAddress}</p>
-                </div>
-
-                <div className="rounded-2xl border border-stone-200 bg-[#faf8f3] p-4">
-                  <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-[#dfeee6] text-[#0d2f25]">
-                    <Truck className="h-5 w-5" />
-                  </div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-stone-500">{isAr ? 'التوصيل' : 'Delivery'}</p>
-                  <p className="mt-2 text-sm font-semibold text-stone-800">{order.delivery_method || (isAr ? 'قياسي' : 'Standard')}</p>
-                  {hasCoupon && (
-                    <p className="mt-2 flex items-center gap-1 text-xs text-amber-700">
-                      <Tag className="h-3.5 w-3.5" />
-                      {order.coupon_code || (isAr ? 'كوبون' : 'Coupon')}
-                    </p>
-                  )}
-                </div>
-
-                <div className="rounded-2xl border border-stone-200 bg-[#faf8f3] p-4">
-                  <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-[#f2e4d7] text-[#0d2f25]">
-                    <ShieldCheck className="h-5 w-5" />
-                  </div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-stone-500">{isAr ? 'معلومات' : 'Info'}</p>
-                  {customerEmail && (
-                    <p className="mt-2 flex items-center gap-1 text-xs text-stone-600">
-                      <Mail className="h-3.5 w-3.5" />
-                      {customerEmail}
-                    </p>
-                  )}
-                  <p className="mt-2 text-xs text-stone-500">
-                    {isAr ? 'حالة الدفع: قيد التأكيد' : 'Payment status: pending confirmation'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
+            {/* Tabs Section */}
             <div className="rounded-[28px] border border-stone-200 bg-white shadow-[0_14px_40px_rgba(15,23,42,0.04)] overflow-hidden">
-              <div
-                className="flex items-center justify-between px-5 py-4 text-white sm:px-6"
-                style={{ background: 'linear-gradient(135deg, #061c16 0%, #0b2e22 100%)' }}
-              >
-                <h3 className="text-base font-bold tracking-[0.12em] text-[#f7ebd0] uppercase">
-                  {isAr ? 'عربة الطلب' : 'Order items'}
-                </h3>
-                <span className="rounded-full border border-[#cda552]/40 bg-[#123a2c] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-amber-300">
-                  {items.reduce((acc, i) => acc + i.qty, 0)} {isAr ? 'قطعة' : 'pieces'}
-                </span>
+              {/* Tab Navigation */}
+              <div className="flex border-b border-stone-200 bg-stone-50/50">
+                <button
+                  onClick={() => setActiveTab('items')}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3.5 text-sm font-bold transition-all relative ${
+                    activeTab === 'items'
+                      ? 'text-[#0d2f25] bg-white'
+                      : 'text-stone-500 hover:text-stone-700 hover:bg-stone-100/50'
+                  }`}
+                >
+                  <ListOrdered className="w-4 h-4" />
+                  <span>{isAr ? 'عربة الطلب' : 'Order Items'}</span>
+                  <span className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                    activeTab === 'items'
+                      ? 'bg-[#0d2f25] text-white'
+                      : 'bg-stone-200 text-stone-600'
+                  }`}>
+                    {items.reduce((acc, i) => acc + i.qty, 0)}
+                  </span>
+                  {activeTab === 'items' && (
+                    <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#0d2f25] to-[#1a5a3a]" />
+                  )}
+                </button>
+                <button
+                  onClick={() => setActiveTab('details')}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3.5 text-sm font-bold transition-all relative ${
+                    activeTab === 'details'
+                      ? 'text-[#0d2f25] bg-white'
+                      : 'text-stone-500 hover:text-stone-700 hover:bg-stone-100/50'
+                  }`}
+                >
+                  <FileText className="w-4 h-4" />
+                  <span>{isAr ? 'تفاصيل الطلب' : 'Order Details'}</span>
+                  {activeTab === 'details' && (
+                    <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#0d2f25] to-[#1a5a3a]" />
+                  )}
+                </button>
               </div>
 
-              <div className="divide-y divide-stone-100 px-5 sm:px-6">
-                {items.map((item) => (
-                  <div key={item.productId} className="flex items-center gap-4 py-4">
-                    <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-stone-200 bg-stone-100">
-                      <img src={item.productImage} alt={item.productName} className="h-full w-full object-cover" />
-                    </div>
+              {/* Tab Content - Order Items */}
+              {activeTab === 'items' && (
+                <div className="divide-y divide-stone-100 px-5 sm:px-6 animate-fadeIn">
+                  {items.map((item) => (
+                    <div key={item.productId} className="flex items-center gap-4 py-4">
+                      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-stone-200 bg-stone-100">
+                        <img src={item.productImage} alt={item.productName} className="h-full w-full object-cover" />
+                      </div>
 
-                    <div className="min-w-0 flex-1">
-                      <h4 className="truncate text-sm font-bold text-stone-900">{item.productName}</h4>
-                      <p className="mt-1 text-xs text-stone-500">
-                        {item.qty} × {item.unitPrice.toFixed(2)} {isAr ? 'د.م' : 'MAD'}
+                      <div className="min-w-0 flex-1">
+                        <h4 className="truncate text-sm font-bold text-stone-900">{item.productName}</h4>
+                        <p className="mt-1 text-xs text-stone-500">
+                          {item.qty} × {item.unitPrice.toFixed(2)} {isAr ? 'د.م' : 'MAD'}
+                        </p>
+                      </div>
+
+                      <p className="text-sm font-bold text-stone-900">
+                        {(item.unitPrice * item.qty).toFixed(2)} {isAr ? 'د.م' : 'MAD'}
                       </p>
                     </div>
+                  ))}
+                </div>
+              )}
 
-                    <p className="text-sm font-bold text-stone-900">
-                      {(item.unitPrice * item.qty).toFixed(2)} {isAr ? 'د.م' : 'MAD'}
-                    </p>
+              {/* Tab Content - Order Details */}
+              {activeTab === 'details' && (
+                <div className="p-5 sm:p-6 animate-fadeIn">
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <div className="rounded-2xl border border-stone-200 bg-[#faf8f3] p-4">
+                      <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-[#f7e6b8] text-[#0d2f25]">
+                        <MapPin className="h-5 w-5" />
+                      </div>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-stone-500">{isAr ? 'العنوان' : 'Address'}</p>
+                      <p className="mt-2 text-sm font-semibold text-stone-800">{customerName}</p>
+                      <p className="mt-1 text-xs text-stone-500">{customerPhone}</p>
+                      <p className="mt-2 text-xs leading-5 text-stone-500">{city} — {streetAddress}</p>
+                    </div>
+
+                    <div className="rounded-2xl border border-stone-200 bg-[#faf8f3] p-4">
+                      <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-[#dfeee6] text-[#0d2f25]">
+                        <Truck className="h-5 w-5" />
+                      </div>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-stone-500">{isAr ? 'التوصيل' : 'Delivery'}</p>
+                      <p className="mt-2 text-sm font-semibold text-stone-800">{order.delivery_method || (isAr ? 'قياسي' : 'Standard')}</p>
+                      {hasCoupon && (
+                        <p className="mt-2 flex items-center gap-1 text-xs text-amber-700">
+                          <Tag className="h-3.5 w-3.5" />
+                          {order.coupon_code || (isAr ? 'كوبون' : 'Coupon')}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="rounded-2xl border border-stone-200 bg-[#faf8f3] p-4">
+                      <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-[#f2e4d7] text-[#0d2f25]">
+                        <ShieldCheck className="h-5 w-5" />
+                      </div>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-stone-500">{isAr ? 'معلومات' : 'Info'}</p>
+                      {customerEmail && (
+                        <p className="mt-2 flex items-center gap-1 text-xs text-stone-600">
+                          <Mail className="h-3.5 w-3.5" />
+                          {customerEmail}
+                        </p>
+                      )}
+                      <p className="mt-2 text-xs text-stone-500">
+                        {isAr ? 'حالة الدفع: قيد التأكيد' : 'Payment status: pending confirmation'}
+                      </p>
+                    </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
             </div>
           </div>
 
