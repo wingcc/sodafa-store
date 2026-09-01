@@ -92,9 +92,33 @@ export async function loadPublicConfig(): Promise<SodfaConfig> {
   try {
     const db = createClient();
 
+    // homepage_sections needs public read — RLS may block anon in incognito,
+    // so fallback to public API (admin bypass) when anon returns empty.
+    async function fetchSections(): Promise<Record<string, unknown>[]> {
+      const anon = await fetchTable(db, "homepage_sections", "order");
+      if (anon.length > 0) return anon;
+      // Try public API (uses admin client, bypasses RLS)
+      try {
+        // On server, call admin directly to avoid fetch loop
+        if (typeof window === "undefined") {
+          const { createAdminClient } = await import("@/lib/supabase/admin");
+          const admin = createAdminClient();
+          const { data, error } = await admin.from("homepage_sections").select("*").order("order", { ascending: true });
+          if (!error && data && data.length > 0) return data as Record<string, unknown>[];
+        } else {
+          const res = await fetch("/api/homepage-sections", { cache: "no-store" });
+          const json = await res.json().catch(() => null);
+          if (json?.success && Array.isArray(json.data) && json.data.length > 0) {
+            return json.data as Record<string, unknown>[];
+          }
+        }
+      } catch {}
+      return anon;
+    }
+
     const [sections, blocks, testimonials, faqs, benefits, oils, stats, trustBadges, pageFeatures, floatingButtons] =
       await Promise.all([
-        fetchTable(db, "homepage_sections", "order"),
+        fetchSections(),
         fetchContentBlocks(db),
         fetchTable(db, "testimonials", "sort_order"),
         fetchTable(db, "faqs", "sort_order"),

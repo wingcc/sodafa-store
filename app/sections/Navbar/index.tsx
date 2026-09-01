@@ -111,11 +111,21 @@ export function Navbar({ site: siteProp = DEFAULT_SITE, onOpenContact = () => {}
 
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isMobileView, setIsMobileView] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
+    const updateViewport = () => setIsMobileView(window.innerWidth <= 768);
+
+    handleScroll();
+    updateViewport();
+
     window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    window.addEventListener("resize", updateViewport);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", updateViewport);
+    };
   }, []);
 
   // Close mobile menu on route change
@@ -187,10 +197,12 @@ export function Navbar({ site: siteProp = DEFAULT_SITE, onOpenContact = () => {}
             <Link href="/store">{isAr ? "المتجر" : "Store"}</Link>
             <Link href="/contact">{isAr ? "تواصلي معنا" : "Contact Us"}</Link>
           </div>
-          <a className="btn btn-main nav-cta" href={waUrl} target="_blank" rel="noopener">
-            <WhatsAppIcon size={17} />
-            <span className="cta-text">{isAr ? "واتساب" : "WhatsApp"}</span>
-          </a>
+          {!isMobileView && (
+            <a className="btn btn-main nav-cta" href={waUrl} target="_blank" rel="noopener">
+              <WhatsAppIcon size={17} />
+              <span className="cta-text">{isAr ? "واتساب" : "WhatsApp"}</span>
+            </a>
+          )}
           <button
             className={`burger${menuOpen ? " open" : ""}`}
             onClick={() => setMenuOpen(!menuOpen)}
@@ -388,10 +400,12 @@ export function Navbar({ site: siteProp = DEFAULT_SITE, onOpenContact = () => {}
               </button>
             </>
           )}
-          <a className="btn btn-main nav-cta" href={waUrl} target="_blank" rel="noopener">
-            <WhatsAppIcon size={17} />
-            <span className="cta-text">{isAr ? "تواصل واتساب" : "WhatsApp"}</span>
-          </a>
+          {!isMobileView && (
+            <a className="btn btn-main nav-cta" href={waUrl} target="_blank" rel="noopener">
+              <WhatsAppIcon size={17} />
+              <span className="cta-text">{isAr ? "تواصل واتساب" : "WhatsApp"}</span>
+            </a>
+          )}
         </div>
 
         <button

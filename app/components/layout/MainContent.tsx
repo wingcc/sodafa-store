@@ -4,6 +4,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { SodfaConfig } from "../../sections/common/types";
 import { loadPublicConfig } from "@/lib/public-content";
+import { useLanguage } from "../../contexts/LanguageContext";
+import { usePathname } from "next/navigation";
 import Preloader from "../common/Preloader";
 import VideoModal from "../../sections/common/VideoModal";
 import ContactModal from "../../sections/common/ContactModal";
@@ -41,6 +43,12 @@ export const MainContent = () => {
   const [contactModal, setContactModal] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [storeLegal, setStoreLegal] = useState<Record<string, { title: string; body: string }>>({});
+  // Homepage is Arabic-only (data is Arabic) — force locale to 'ar' when on "/"
+  const pathname = usePathname();
+  const { locale, setLocale } = useLanguage();
+  useEffect(() => {
+    if (pathname === "/" && locale !== "ar") setLocale("ar");
+  }, [pathname, locale, setLocale]);
 
   // Re-observe .rv elements whenever config changes (sections render after config loads)
   const revealRef = useRef<IntersectionObserver | null>(null);

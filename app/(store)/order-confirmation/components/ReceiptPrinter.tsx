@@ -416,7 +416,7 @@ export default function ReceiptPrinter({
               onClick={handlePrintClick}
               disabled={isPrinting}
               title={isAr ? 'طباعة' : 'Print'}
-              className="absolute top-1/2 -translate-y-1/2 right-2 w-7 h-7 rounded-full bg-white/15 backdrop-blur border border-white/20 grid place-items-center text-white hover:bg-white hover:text-[#064e3b] hover:border-white transition disabled:opacity-40"
+              className="absolute top-1/2 -translate-y-1/2 right-2 w-8 h-8 rounded-full bg-white border-2 border-stone-200 shadow-[0_6px_16px_rgba(0,0,0,0.10)] grid place-items-center text-stone-700 hover:bg-emerald-50 hover:text-[#064e3b] hover:border-emerald-200 hover:shadow-md transition disabled:opacity-40"
               style={{ display: hasPrintedOnce ? 'none' : 'grid' }}
             >
               <Printer size={13} />
@@ -424,8 +424,8 @@ export default function ReceiptPrinter({
             <button
               onClick={handlePrintClick}
               disabled={isPrinting}
-              title={isAr ? 'إعادة الطباعة' : 'Re-print'}
-              className="absolute top-1/2 -translate-y-1/2 right-2 w-7 h-7 rounded-full bg-white border border-white/60 shadow grid place-items-center text-[#064e3b] hover:bg-emerald-50 hover:border-emerald-200 transition disabled:opacity-50"
+              title={isAr ? 'إعادة طباعة الإيصال' : 'Re-print receipt'}
+              className="absolute top-1/2 -translate-y-1/2 right-2 w-8 h-8 rounded-full bg-white border-2 border-stone-200 shadow-[0_6px_16px_rgba(0,0,0,0.10)] grid place-items-center text-stone-700 hover:bg-emerald-50 hover:text-[#064e3b] hover:border-emerald-200 hover:shadow-md transition disabled:opacity-50"
               style={{ display: hasPrintedOnce ? 'grid' : 'none' }}
             >
               <RefreshCw size={13} className={isPrinting ? 'animate-spin' : ''} />

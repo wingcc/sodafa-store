@@ -778,13 +778,16 @@ box-shadow: 0 8px 22px rgba(252, 211, 77, .4)
   .website-root .fs-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem }
   .website-root .fs-card {
 display: flex;
-gap: 1.2rem;
+gap: .9rem;
 background: var(--card);
 border: 1px solid var(--line);
 border-radius: 20px;
-padding: 1.1rem;
+padding: .8rem;
 transition: .35s;
-position: relative
+position: relative;
+box-sizing: border-box;
+width: 100%;
+max-width: 100%;
 }
   .website-root .fs-card:hover { transform: translateY(-6px); box-shadow: var(--sh); border-color: var(--brand) }
   .website-root .fs-img {
@@ -809,26 +812,101 @@ padding: .22rem .6rem;
 border-radius: 0 0 0 10px;
 z-index: 2
 }
-  .website-root .fs-body { flex: 1; display: flex; flex-direction: column; justify-content: space-between }
-  .website-root .fs-body h3 { font-size: 1.05rem; color: var(--brand-deep); margin-bottom: .25rem }
-  .website-root .fs-rate { display: flex; gap: .35rem; align-items: center; font-size: .78rem; color: var(--muted); margin-bottom: .4rem }
+  .website-root .fs-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    min-width: 0;
+    gap: .2rem;
+  }
+  .website-root .fs-body > div:first-child {
+    display: flex;
+    flex-direction: column;
+    gap: .1rem;
+  }
+  .website-root .fs-body h3 {
+    font-size: 1.05rem;
+    color: var(--brand-deep);
+    margin: 0;
+    padding-right: 2.1rem;
+    line-height: 1.35;
+  }
+  .website-root .fs-rate {
+    display: flex;
+    gap: .35rem;
+    align-items: center;
+    font-size: .78rem;
+    color: var(--muted);
+    margin: 0;
+  }
   .website-root .fs-rate svg { color: #EAB308 }
   .website-root .fs-rate b { color: var(--ink) }
-  .website-root .fs-price { display: flex; gap: .6rem; align-items: center; margin-bottom: .7rem }
-  .website-root .fs-price b { font-size: 1.2rem; color: var(--brand-deep) }
-  .website-root .fs-price s { color: var(--muted); font-size: .85rem; opacity: .7 }
+  .website-root .fs-price {
+    display: flex;
+    align-items: center;
+    gap: .45rem;
+    min-width: 0;
+    white-space: nowrap;
+    line-height: 1.2;
+    margin-top: .05rem;
+  }
+  .website-root .fs-price b {
+    font-size: 1.15rem;
+    color: var(--brand-deep);
+    white-space: nowrap;
+    display: inline-block;
+  }
+  .website-root .fs-price s {
+    color: var(--muted);
+    font-size: .8rem;
+    opacity: .7;
+    white-space: nowrap;
+    display: inline-block;
+  }
+  .website-root .fs-controls-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .45rem;
+    width: 100%;
+    margin-top: .1rem;
+    flex-wrap: nowrap;
+  }
+  .website-root .fs-controls-row > .fs-add {
+    order: 1;
+  }
+  .website-root .fs-controls-row > .fs-card-timer {
+    order: 2;
+  }
   .website-root .fs-add {
-align-self: flex-start;
-border: 1.5px solid var(--line);
-background: transparent;
-color: var(--ink);
-font-size: .8rem;
-font-weight: 700;
-padding: .5rem 1.1rem;
-border-radius: 10px;
-cursor: pointer;
-transition: .25s
-}
+    --flash-control-height: 38px;
+    align-self: flex-start;
+    border: 1.5px solid var(--line);
+    background: transparent;
+    color: var(--ink);
+    font-size: .75rem;
+    font-weight: 700;
+    padding: 0 .8rem;
+    min-width: 108px;
+    height: var(--flash-control-height);
+    line-height: 1;
+    border-radius: 11px;
+    cursor: pointer;
+    transition: .25s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .35rem;
+    box-sizing: border-box;
+    margin: 0;
+  }
+  .website-root .fs-add .fs-add-icon {
+    width: 14px;
+    height: 14px;
+    min-width: 14px;
+    flex-shrink: 0;
+  }
   .website-root .fs-add:hover { background: var(--brand-deep); color: #fff; border-color: var(--brand-deep) }
 
 /* ── Flash Sale Card Timer ── */
@@ -838,8 +916,11 @@ transition: .25s
   display: flex;
   flex-direction: row;
   align-items: stretch;
-  gap: 1rem;
+  gap: .8rem;
   min-height: 140px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
   .website-root .fs-img {
   position: relative;
@@ -860,33 +941,42 @@ transition: .25s
   padding-right: 10px;
 }
   .website-root .fs-card-timer {
-  position: absolute;
-  bottom: 12px;
-  z-index: 10;
+  position: static;
+  bottom: auto;
+  z-index: auto;
+  display: flex;
+  align-items: flex-end;
 }
   .website-root .fs-card-timer.timer-right {
-  right: 12px;
+  right: auto;
 }
   .website-root .fs-card-timer.timer-left {
-  left: 12px;
+  left: auto;
   /* When timer is on left, shift content to make room */
 }
   .website-root .fs-card-timer-inner {
+  --flash-control-height: 42px;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
   background: #FCD34D;
   color: #1F2937;
-  padding: 8px 14px;
+  padding: 0 14px;
   border-radius: 10px;
   box-shadow: 0 4px 14px rgba(252, 211, 77, 0.45);
   direction: ltr;
+  height: var(--flash-control-height);
+  box-sizing: border-box;
+  margin: 0;
 }
   .website-root .fs-card-timer-unit {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   min-width: 28px;
+  height: 100%;
 }
   .website-root .fs-card-timer-unit b {
   font-size: 16px;
@@ -963,17 +1053,17 @@ transition: .25s
 }
   .website-root .fs-skeleton-card {
   pointer-events: none;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
-  .website-root .fs-skeleton-timer {
-  position: absolute;
-  bottom: 12px;
-  right: 12px;
-  width: 180px;
-  height: 48px;
-  border-radius: 10px;
-  background: linear-gradient(90deg, #f5e6a3 25%, #fce588 50%, #f5e6a3 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.8s ease-in-out infinite;
+  .website-root .fs-skeleton-image-wrap {
+  flex: none;
+  width: 124px;
+  height: 124px;
+  background: transparent;
+  border-radius: 14px;
+  overflow: hidden;
 }
   .website-root .fs-skeleton-image {
   width: 100%;
@@ -982,9 +1072,63 @@ transition: .25s
   background-size: 200% 100%;
   animation: shimmer 1.8s ease-in-out infinite;
 }
+  .website-root .fs-skeleton-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: .2rem;
+}
+  .website-root .fs-skeleton-meta {
+  display: flex;
+  flex-direction: column;
+  gap: .12rem;
+}
   .website-root .fs-skeleton-line {
   border-radius: 6px;
   background: linear-gradient(90deg, #e8e3d8 25%, #f0ece1 50%, #e8e3d8 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+  .website-root .fs-skeleton-name {
+  width: 72%;
+  height: 18px;
+}
+  .website-root .fs-skeleton-rate {
+  width: 46%;
+  height: 12px;
+}
+  .website-root .fs-skeleton-price {
+  width: 48%;
+  height: 22px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #e8e3d8 25%, #f0ece1 50%, #e8e3d8 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+  margin-top: .08rem;
+}
+  .website-root .fs-skeleton-controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .45rem;
+  width: 100%;
+  margin-top: .1rem;
+}
+  .website-root .fs-skeleton-button {
+  width: 120px;
+  height: 38px;
+  border-radius: 11px;
+  background: linear-gradient(90deg, #e8e3d8 25%, #f0ece1 50%, #e8e3d8 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+  .website-root .fs-skeleton-counter {
+  width: 90px;
+  height: 38px;
+  border-radius: 11px;
+  background: linear-gradient(90deg, #f3ebc0 25%, #f8e89a 50%, #f3ebc0 75%);
   background-size: 200% 100%;
   animation: shimmer 1.8s ease-in-out infinite;
 }
@@ -2748,10 +2892,127 @@ transition: .25s
 @media(max-width:768px) {
   .website-root .nav-links, .nav-cta { display: none }
   .website-root .burger { display: block }
+  .website-root .fs-card {
+    padding: .7rem;
+    gap: .65rem;
+    min-height: 128px;
+    align-items: center;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  .website-root .fs-img {
+    width: 100px;
+    height: 100px;
+    flex-shrink: 0;
+  }
+  .website-root .fs-skeleton-image-wrap {
+    width: 100px;
+    height: 100px;
+  }
+  .website-root .fs-body {
+    min-width: 0;
+    gap: .3rem;
+  }
+  .website-root .fs-skeleton-button {
+    width: 112px;
+    height: 36px;
+  }
+  .website-root .fs-skeleton-counter {
+    width: 88px;
+    height: 36px;
+  }
+  .website-root .fs-price {
+    display: flex;
+    align-items: center;
+    gap: .45rem;
+    width: 100%;
+    white-space: nowrap;
+    line-height: 1.2;
+    margin-bottom: 0;
+  }
+  .website-root .fs-price b {
+    font-size: 1rem;
+    white-space: nowrap;
+    display: inline-block;
+  }
+  .website-root .fs-price s {
+    white-space: nowrap;
+    display: inline-block;
+  }
+  .website-root .fs-controls-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
+    width: 100%;
+    margin-left: 0;
+    margin-top: 0;
+  }
+  .website-root .fs-card-timer {
+    position: static;
+    left: auto;
+    bottom: auto;
+    z-index: auto;
+  }
+  .website-root .fs-card-timer-inner {
+    --flash-control-height: 38px;
+    padding: 0 8px;
+    gap: 2px;
+    border-radius: 9px;
+    height: var(--flash-control-height);
+  }
+  .website-root .fs-card-timer-unit {
+    min-width: 20px;
+  }
+  .website-root .fs-card-timer-unit b {
+    font-size: 12px;
+  }
+  .website-root .fs-card-timer-unit small {
+    font-size: 6px;
+  }
+  .website-root .fs-card-timer-inner i {
+    font-size: 12px;
+  }
+  .website-root .fs-add {
+    width: auto;
+    min-width: 128px;
+    height: 40px;
+    padding: 0 .8rem;
+    border-radius: 11px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
+    margin-left: 0;
+    background: rgba(17, 64, 47, 0.03);
+    white-space: nowrap;
+    flex: 1 1 auto;
+  }
+  .website-root .fs-add .fs-add-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+  .website-root .fs-add .fs-add-text {
+    display: inline;
+    font-size: .75rem;
+  }
   .website-root .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 1.6rem 0; padding: 2.2rem 1rem }
   .website-root .stat:nth-child(3)::before { display: none }
-  .website-root .ben.w3, .ben.w2 { grid-column: span 6 }
-  .website-root .ben-grid { padding: 0 1.2rem 1.8rem }
+  .website-root .ben-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    padding: 0 1.2rem 1.8rem;
+  }
+  .website-root .ben,
+  .website-root .ben.w2,
+  .website-root .ben.w3 {
+    grid-column: auto;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
 section { padding: 4rem 0 }
   .website-root .dark-band { margin: 0 10px; border-radius: 28px }
   .website-root .tst-head { flex-direction: column; align-items: flex-start }

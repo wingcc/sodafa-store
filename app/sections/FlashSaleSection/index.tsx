@@ -49,15 +49,22 @@ function FlashSaleSkeleton() {
         <div className="fs-grid">
           {[0, 1].map((i) => (
             <div key={i} className="fs-card fs-skeleton-card">
-              <div className="fs-skeleton-timer" />
-              <div className="fs-img">
+              <div className="fs-img fs-skeleton-image-wrap">
                 <div className="fs-skeleton-image" />
               </div>
-              <div className="fs-body">
-                <div className="fs-skeleton-line" style={{ width: "70%", height: "14px" }} />
-                <div className="fs-skeleton-line" style={{ width: "40%", height: "10px" }} />
-                <div className="fs-skeleton-line" style={{ width: "50%", height: "16px" }} />
-                <div className="fs-skeleton-line" style={{ width: "30%", height: "32px", borderRadius: "10px" }} />
+
+              <div className="fs-body fs-skeleton-body">
+                <div className="fs-skeleton-meta">
+                  <div className="fs-skeleton-line fs-skeleton-name" />
+                  <div className="fs-skeleton-line fs-skeleton-rate" />
+                </div>
+
+                <div className="fs-skeleton-price" />
+
+                <div className="fs-controls-row fs-skeleton-controls-row">
+                  <div className="fs-skeleton-button" />
+                  <div className="fs-skeleton-counter" />
+                </div>
               </div>
             </div>
           ))}
@@ -113,32 +120,6 @@ function FlashProductCard({
         </svg>
       </button>
 
-      {/* Countdown timer - always on LEFT (opposite of image) */}
-      <div className="fs-card-timer timer-left">
-        <div className="fs-card-timer-inner">
-          {countdown.days > 0 && (
-            <div className="fs-card-timer-unit">
-              <b>{String(countdown.days).padStart(2, "0")}</b>
-              <small>{isAr ? "أيام" : "Days"}</small>
-            </div>
-          )}
-          <div className="fs-card-timer-unit">
-            <b>{String(countdown.hours).padStart(2, "0")}</b>
-            <small>{isAr ? "ساعات" : "Hrs"}</small>
-          </div>
-          <i>:</i>
-          <div className="fs-card-timer-unit">
-            <b>{String(countdown.minutes).padStart(2, "0")}</b>
-            <small>{isAr ? "دقائق" : "Min"}</small>
-          </div>
-          <i>:</i>
-          <div className="fs-card-timer-unit">
-            <b>{String(countdown.seconds).padStart(2, "0")}</b>
-            <small>{isAr ? "ثواني" : "Sec"}</small>
-          </div>
-        </div>
-      </div>
-
       {/* Image */}
       <div className="fs-img">
         {discount !== null && (
@@ -161,19 +142,50 @@ function FlashProductCard({
             </div>
           )}
         </div>
-        <div>
-          <div className="fs-price">
-            <b>{product.price.toFixed(2)} {currency}</b>
-            {discount !== null && product.originalPrice && (
-              <s>{product.originalPrice.toFixed(2)} {currency}</s>
-            )}
-          </div>
+        <div className="fs-price">
+          <b>{product.price.toFixed(2)} {currency}</b>
+          {discount !== null && product.originalPrice && (
+            <s>{product.originalPrice.toFixed(2)} {currency}</s>
+          )}
+        </div>
+        <div className="fs-controls-row">
           <button
             className="fs-add"
             onClick={() => onAddToCart(product.id)}
+            aria-label={isAr ? "أضف إلى السلة" : "Add to cart"}
+            title={isAr ? "أضف إلى السلة" : "Add to cart"}
           >
-            {isAr ? "أضف إلى السلة" : "Add to cart"}
+            <svg className="fs-add-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="9" cy="19" r="1.5" />
+              <circle cx="17" cy="19" r="1.5" />
+              <path d="M3 4h2l2.2 9.2a1 1 0 0 0 1 .8H17a1 1 0 0 0 1-.8L20 7H7" />
+            </svg>
+            <span className="fs-add-text">{isAr ? "أضف إلى السلة" : "Add to cart"}</span>
           </button>
+          <div className="fs-card-timer timer-left">
+            <div className="fs-card-timer-inner">
+              {countdown.days > 0 && (
+                <div className="fs-card-timer-unit">
+                  <b>{String(countdown.days).padStart(2, "0")}</b>
+                  <small>{isAr ? "أيام" : "Days"}</small>
+                </div>
+              )}
+              <div className="fs-card-timer-unit">
+                <b>{String(countdown.hours).padStart(2, "0")}</b>
+                <small>{isAr ? "ساعات" : "Hrs"}</small>
+              </div>
+              <i>:</i>
+              <div className="fs-card-timer-unit">
+                <b>{String(countdown.minutes).padStart(2, "0")}</b>
+                <small>{isAr ? "دقائق" : "Min"}</small>
+              </div>
+              <i>:</i>
+              <div className="fs-card-timer-unit">
+                <b>{String(countdown.seconds).padStart(2, "0")}</b>
+                <small>{isAr ? "ثواني" : "Sec"}</small>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

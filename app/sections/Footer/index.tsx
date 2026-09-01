@@ -77,8 +77,9 @@ export function Footer({
   const pathname = usePathname() || "/";
   const router = useRouter();
   const { locale } = useLanguage();
-  const isAr = locale === "ar";
-  const isFr = locale === "fr";
+  // Homepage locked to Arabic — all homepage data is Arabic-only for now
+  const isAr = pathname === "/" ? true : locale === "ar";
+  const isFr = pathname === "/" ? false : locale === "fr";
   const t = (ar: string, fr: string, en: string) => isAr ? ar : isFr ? fr : en;
   const activeVariant = resolveVariant(pathname, variant);
   const [localLegal, setLocalLegal] = useState<string | null>(null);
