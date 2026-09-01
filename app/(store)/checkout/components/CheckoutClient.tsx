@@ -356,35 +356,42 @@ export default function CheckoutClient() {
   // ─── Confirm Order ───────────────────────────────────────────────
   const ANIMATION_DURATION = 8000; // must match OrderConfirmButton animation length
 
-  const handleConfirmOrder = async () => {
-    if (!validate()) return;
+  const isCheckoutValid = useMemo(() => {
+    if (cartItems.length === 0) return false;
+    if (!form.fullName.trim()) return false;
+    if (!form.phone.trim() || form.phone.trim().length < 8) return false;
+    if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) return false;
+    if (!form.address.trim()) return false;
+    if (!form.city || form.city === 'Other City') return false;
+    if (!selectedMethod) return false;
+    return true;
+  }, [cartItems.length, form, selectedMethod]);
+
+  const handleConfirmOrder = async (): Promise<boolean> => {
+    if (!validate()) return false;
     setPlacing(true);
 
-    // Wait for truck animation to finish first
-    await new Promise((resolve) => setTimeout(resolve, ANIMATION_DURATION));
-
-    // Map cart items to CheckoutPayload items
-    const items = cartItems.map((item) => ({
-      productId: String(item.id),
-      productName: item.name,
-      productImage: typeof item.image === 'string' ? item.image : String(item.image ?? ''),
-      qty: item.qty,
-      unitPrice: item.price,
-    }));
-
-    const payload = {
-      fullName: form.fullName.trim(),
-      phone: form.phone.trim(),
-      email: form.email.trim() || undefined,
-      address: form.address.trim(),
-      city: form.city,
-      deliveryMethodId: selectedMethod?.id ?? '',
-      couponCode: appliedCoupon?.code || undefined,
-      notes: form.notes.trim() || undefined,
-      items,
-    };
-
     try {
+      const items = cartItems.map((item) => ({
+        productId: String(item.id),
+        productName: item.name,
+        productImage: typeof item.image === 'string' ? item.image : String(item.image ?? ''),
+        qty: item.qty,
+        unitPrice: item.price,
+      }));
+
+      const payload = {
+        fullName: form.fullName.trim(),
+        phone: form.phone.trim(),
+        email: form.email.trim() || undefined,
+        address: form.address.trim(),
+        city: form.city,
+        deliveryMethodId: selectedMethod?.id ?? '',
+        couponCode: appliedCoupon?.code || undefined,
+        notes: form.notes.trim() || undefined,
+        items,
+      };
+
       const res = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -407,11 +414,14 @@ export default function CheckoutClient() {
         clearCart();
         addToast('success', isAr ? 'تم تأكيد طلبك بنجاح!' : 'Order placed successfully!');
         router.push('/order-confirmation');
-      } else {
-        addToast('error', json.error?.message || (isAr ? 'فشل إنشاء الطلب' : 'Failed to place order'));
+        return true;
       }
+
+      addToast('error', json.error?.message || (isAr ? 'فشل إنشاء الطلب' : 'Failed to place order'));
+      return false;
     } catch (e) {
       addToast('error', isAr ? 'حدث خطأ أثناء إرسال الطلب' : 'An error occurred while placing your order');
+      return false;
     } finally {
       setPlacing(false);
     }
@@ -907,7 +917,7 @@ export default function CheckoutClient() {
                 {/* Confirm Order CTA Button */}
                 <OrderConfirmButton
                   onClick={handleConfirmOrder}
-                  disabled={placing || !selectedMethod || hasCityError}
+                  disabled={placing || !isCheckoutValid}
                   total={`${grandTotal.toFixed(2)} ${isAr ? 'د.م' : 'MAD'}`}
                 />
 

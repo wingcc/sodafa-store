@@ -28,26 +28,20 @@
   transform: scale(0.98);
 }
 
-.btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
+.btn.locked {
+  cursor: default;
+  opacity: 1;
 }
 
 /* ── Animate state: shrink & center ── */
-.btn.animate {
+.btn.submitting,
+.btn.loading,
+.btn.successState {
   width: 240px;
   margin-left: auto;
   margin-right: auto;
   display: block;
   cursor: default;
-}
-
-/* ── Done state: keep compact ── */
-.btn.done {
-  width: 240px;
-  margin-left: auto;
-  margin-right: auto;
-  display: block;
 }
 
 /* ═══════════════════════════════════════════
@@ -76,9 +70,19 @@
   transition-delay: 0.4s;
 }
 
-.btn.animate .default {
+.btn.submitting .default,
+.btn.loading .default,
+.btn.successState .default {
   opacity: 0;
   transition-delay: 0s;
+}
+
+.loadingText {
+  opacity: 0;
+}
+
+.btn.loading .loadingText {
+  opacity: 1;
 }
 
 /* Success label */
@@ -87,11 +91,12 @@
   gap: 6px;
 }
 
-.btn.animate .success {
+.btn.submitting .success,
+.btn.loading .success {
   opacity: 0;
 }
 
-.btn.done .success {
+.btn.successState .success {
   opacity: 1;
   transition-delay: 0.15s;
 }
@@ -126,8 +131,13 @@
   z-index: 2;
 }
 
-.btn.animate .stage {
+.btn.submitting .stage {
   opacity: 1;
+}
+
+.btn.loading .stage,
+.btn.successState .stage {
+  opacity: 0;
 }
 
 /* ═══════════════════════════════════════════
@@ -151,7 +161,7 @@
     252px 0 0 #fff, 264px 0 0 #fff, 276px 0 0 #fff, 288px 0 0 #fff;
 }
 
-.btn.animate .lines {
+.btn.submitting .lines {
   animation: lines 8s linear forwards;
 }
 
@@ -168,7 +178,7 @@
   z-index: 3;
 }
 
-.btn.animate .truck {
+.btn.submitting .truck {
   animation: truckDrive 8s ease forwards;
 }
 
@@ -277,7 +287,7 @@
   transform-origin: 0 50%;
 }
 
-.btn.animate .lightGlow {
+.btn.submitting .lightGlow {
   animation: glowPulse 8s ease forwards;
 }
 
@@ -303,11 +313,11 @@
   transform: rotate(90deg);
 }
 
-.btn.animate .truckArmTop {
+.btn.submitting .truckArmTop {
   animation: doorOpen 2.4s ease forwards 0.3s;
 }
 
-.btn.animate .truckArmBottom {
+.btn.submitting .truckArmBottom {
   animation: doorClose 2.4s ease forwards 0.6s;
 }
 
@@ -327,7 +337,7 @@
   opacity: 0;
 }
 
-.btn.animate .box {
+.btn.submitting .box {
   animation: boxCarry 8s ease forwards;
 }
 

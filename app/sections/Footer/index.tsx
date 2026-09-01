@@ -282,7 +282,7 @@ export function Footer({
                   <span className="tg">{site.tagline}</span>
                 </span>
               </Link>
-              <p>{t("تركيبة ط自然ية متكاملة من أربعة زيوت نادرة، صُنعت بعناية لتعيد لشعرك كثافته ولمعانه — من الجذور حتى الأطراف.", "Une formule naturelle complète de quatre huiles rares, soigneusement élaborée pour restaurer le volume et l'éclat de vos cheveux — des racines aux pointes.", "A complete natural formula of four rare oils, carefully crafted to restore your hair's volume and shine — from roots to ends.")}</p>
+              <p>{t("تركيبة طبية متكاملة من أربعة زيوت نادرة، صُنعت بعناية لتعيد لشعرك كثافته ولمعانه  من الجذور حتى الأطراف.", "Une formule naturelle complète de quatre huiles rares, soigneusement élaborée pour restaurer le volume et l'éclat de vos cheveux — des racines aux pointes.", "A complete natural formula of four rare oils, carefully crafted to restore your hair's volume and shine — from roots to ends.")}</p>
               <div className="social-row" data-page="socialIcons">
                 <a href={site.instagram} target="_blank" rel="noopener" aria-label="Instagram">
                   <InstagramSVG />

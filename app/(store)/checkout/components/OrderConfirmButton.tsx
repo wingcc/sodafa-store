@@ -5,7 +5,7 @@ import { useLanguage } from '../../../contexts/LanguageContext';
 import styles from './OrderConfirmButton.module.css';
 
 interface OrderConfirmButtonProps {
-  onClick: () => void;
+  onClick: () => Promise<boolean> | boolean;
   disabled?: boolean;
   total: string;
 }
@@ -15,7 +15,7 @@ const ANIM_MS = 8000;
 export default function OrderConfirmButton({ onClick, disabled, total }: OrderConfirmButtonProps) {
   const { locale } = useLanguage();
   const isAr = locale === 'ar';
-  const [state, setState] = useState<'idle' | 'animating' | 'done'>('idle');
+  const [state, setState] = useState<'idle' | 'submitting' | 'loading' | 'success'>('idle');
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -24,36 +24,64 @@ export default function OrderConfirmButton({ onClick, disabled, total }: OrderCo
     };
   }, []);
 
-  const handleClick = useCallback(() => {
+  const handleClick = useCallback(async () => {
     if (disabled || state !== 'idle') return;
-    setState('animating');
-    onClick();
 
-    timerRef.current = setTimeout(() => {
-      setState('done');
-      timerRef.current = setTimeout(() => {
+    setState('submitting');
+
+    if (timerRef.current) clearTimeout(timerRef.current);
+
+    timerRef.current = setTimeout(async () => {
+      setState('loading');
+
+      try {
+        const didSubmit = await Promise.resolve(onClick());
+
+        if (!didSubmit) {
+          setState('idle');
+          return;
+        }
+
+        setState('success');
+        if (timerRef.current) clearTimeout(timerRef.current);
+        timerRef.current = setTimeout(() => {
+          setState('idle');
+        }, 2500);
+      } catch {
         setState('idle');
-      }, 2500);
+      }
     }, ANIM_MS);
   }, [disabled, state, onClick]);
 
+  const isInteractionLocked = disabled || state === 'submitting' || state === 'loading' || state === 'success';
   const animClass =
-    state === 'animating' ? styles.animate : state === 'done' ? styles.done : '';
+    state === 'submitting' ? styles.submitting : state === 'loading' ? styles.loading : state === 'success' ? styles.successState : '';
+  const visualLockClass = isInteractionLocked ? styles.locked : '';
 
   return (
     <button
+      type="button"
       onClick={handleClick}
-      disabled={disabled || state !== 'idle'}
-      className={`${styles.btn} ${animClass}`}
+      aria-disabled={isInteractionLocked}
+      tabIndex={isInteractionLocked ? -1 : 0}
+      className={`${styles.btn} ${animClass} ${visualLockClass}`}
+      style={{
+        pointerEvents: isInteractionLocked ? 'none' : 'auto',
+      }}
     >
       {/* Default text */}
       <span className={`${styles.text} ${styles.default}`}>
         {isAr ? `تأكيد الطلب الآن — ${total}` : `Confirm Order — ${total}`}
       </span>
 
+      {/* Loading text */}
+      <span className={`${styles.text} ${styles.loadingText}`}>
+        {isAr ? 'جاري تأكيد الطلب...' : 'Confirming order...'}
+      </span>
+
       {/* Success text */}
       <span className={`${styles.text} ${styles.success}`}>
-        {isAr ? 'تم الطلب بنجاح' : 'Order Placed'}
+        {isAr ? 'تم تأكيد الطلب' : 'Order Confirmed'}
         <svg viewBox="0 0 12 10">
           <polyline points="1.5 6 4.5 9 10.5 1" />
         </svg>
