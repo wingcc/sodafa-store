@@ -2,10 +2,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useUI } from "../contexts/UIContext";
 import { useLanguage } from "../contexts/LanguageContext";
 import { ShoppingBag, X, Plus, Minus, Trash2, ArrowRight, ArrowLeft, MessageCircle, Truck } from "lucide-react";
-import { WHATSAPP_LINK } from "../constants";
+import { useStoreSettings } from "../contexts/StoreSettingsContext";
+import { getWhatsAppLink } from "../lib/whatsapp";
 import { useRouter } from "next/navigation";
 
 
@@ -13,6 +15,7 @@ export const CartDrawer = () => {
   const { isCartOpen, closeCart, cartItems, cartTotal, updateQuantity, removeFromCart } = useUI();
   const { locale } = useLanguage();
   const isAr = locale === "ar";
+  const { siteConfig } = useStoreSettings();
   
   const router = useRouter();
   const [freeShippingThreshold, setFreeShippingThreshold] = useState<number>(500);
@@ -39,6 +42,13 @@ export const CartDrawer = () => {
     };
   }, []);
 
+  const waUrl = siteConfig
+    ? getWhatsAppLink(siteConfig, locale, "checkout", {
+        items: cartItems.map((i) => `• ${i.name} (Qty: ${i.qty})`).join("\n"),
+        total: cartTotal.toFixed(2),
+      })
+    : null;
+
   const totalItems = cartItems.reduce((acc, item) => acc + item.qty, 0);
   const safeThreshold = freeShippingThreshold > 0 ? freeShippingThreshold : 1;
   const freeShippingRemaining = Math.max(safeThreshold - cartTotal, 0);
@@ -48,15 +58,6 @@ export const CartDrawer = () => {
   const handleProceedToCheckout = () => {
     closeCart();
     router.push('/checkout');
-  };
-
-  // Function to generate WhatsApp message
-  const generateWhatsAppMessage = () => {
-    if (isAr) {
-      return `مرحباً دار صودفا 🌿، أريد تأكيد طلبي لهذه المنتجات:\n${cartItems.map((i) => `• ${i.name} (الكمية: ${i.qty})`).join("\n")}\n\nالمجموع: ${cartTotal.toFixed(2)} د.م`;
-    } else {
-      return `Hello SODFA Store 🌿, I want to place an order for:\n${cartItems.map((i) => `• ${i.name} (Qty: ${i.qty})`).join("\n")}\n\nTotal: ${cartTotal.toFixed(2)} MAD`;
-    }
   };
 
   return (
@@ -190,13 +191,14 @@ export const CartDrawer = () => {
               {cartItems.map((item) => (
                 <div key={item.id} className="py-4 flex items-center gap-3">
                   <div className="w-16 h-16 rounded-xl overflow-hidden bg-stone-100 shrink-0 border border-stone-200 relative">
-                    <img
+                    <Image
                       src={item.image}
                       alt={item.name}
-                      className="w-full h-full object-cover"
+                      fill
+                      sizes="64px"
+                      className="object-cover"
                       onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = "/assets/images/no_image.png";
+                        e.currentTarget.src = "/assets/images/no_image.png";
                       }}
                     />
                     <span className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-emerald-900 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
@@ -299,15 +301,17 @@ export const CartDrawer = () => {
           </button>
 
           {/* WhatsApp Quick Order Button */}
-          <a
-            href={`${WHATSAPP_LINK}?text=${encodeURIComponent(generateWhatsAppMessage())}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full py-3 px-4 rounded-xl border border-emerald-800/20 bg-white text-emerald-900/90 font-bold text-sm flex items-center justify-center gap-2 shadow-sm transition-all hover:shadow-md"
-          >
-            <span>{isAr ? "أو طلب عبر الواتساب" : "Or Order via WhatsApp"}</span>
-            <MessageCircle className="w-4 h-4 text-emerald-700" />
-          </a>
+          {waUrl && (
+            <a
+              href={waUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full py-3 px-4 rounded-xl border border-emerald-800/20 bg-white text-emerald-900/90 font-bold text-sm flex items-center justify-center gap-2 shadow-sm transition-all hover:shadow-md"
+            >
+              <span>{isAr ? "أو طلب عبر الواتساب" : "Or Order via WhatsApp"}</span>
+              <MessageCircle className="w-4 h-4 text-emerald-700" />
+            </a>
+          )}
         </div>
       </aside>
     </div>

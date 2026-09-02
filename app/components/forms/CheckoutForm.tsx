@@ -77,7 +77,7 @@ export const CheckoutForm = () => {
         </label>
         <input
           required
-          placeholder="رقم الواتساب"
+          placeholder="06 XX XX XX XX"
           name="phone"
           type="tel"
           value={formData.phone}

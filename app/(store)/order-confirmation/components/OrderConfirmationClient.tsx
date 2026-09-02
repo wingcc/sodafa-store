@@ -30,8 +30,11 @@ import {
 } from 'lucide-react';
 import OrderSteps from './OrderSteps';
 import ReceiptPrinter from './ReceiptPrinter';
-import { WHATSAPP_LINK } from '../../../constants';
+import { getWhatsAppLink } from '../../../lib/whatsapp';
+import { useStoreSettings } from '../../../contexts/StoreSettingsContext';
 import type { OrderRow } from '@/lib/supabase/types';
+import { BreadcrumbBar } from '../../../components/shared/BreadcrumbBar';
+import { PageShell } from '../../../components/shared/PageBackground';
 
 const receiptLogo = '/assets/Image/NavbarLogo.png';
 
@@ -57,6 +60,7 @@ interface LastOrderData {
 export default function OrderConfirmationClient() {
   const { locale } = useLanguage();
   const isAr = locale === 'ar';
+  const { siteConfig } = useStoreSettings();
   const [orderData, setOrderData] = useState<LastOrderData | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -68,6 +72,7 @@ export default function OrderConfirmationClient() {
   const [helpSending, setHelpSending] = useState(false);
   const [helpSent, setHelpSent] = useState(false);
   const [activeTab, setActiveTab] = useState<'items' | 'details'>('items');
+  const [waUrl, setWaUrl] = useState<string | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -97,7 +102,7 @@ export default function OrderConfirmationClient() {
       customer_id: null,
       customer_name: isAr ? 'خديجة العلمي' : 'Khadija El Alami',
       customer_email: '',
-      customer_phone: '0612345678',
+      customer_phone: '06 XX XX XX XX',
       subtotal: 199.0,
       discount: 0,
       shipping_cost: 0,
@@ -108,7 +113,7 @@ export default function OrderConfirmationClient() {
       order_status: 'pending',
       shipping_address: {
         name: isAr ? 'خديجة العلمي' : 'Khadija El Alami',
-        phone: '0612345678',
+        phone: '06 XX XX XX XX',
         address: '123 Rue Hassan II',
         city: 'Casablanca',
         email: null,
@@ -136,53 +141,68 @@ export default function OrderConfirmationClient() {
 
   const activeData = orderData ?? (isMounted ? fallbackOrderData : null);
 
-  if (!activeData) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f6f1e8] px-4" dir={isAr ? 'rtl' : 'ltr'}>
-        <div className="w-full max-w-md rounded-[28px] border border-stone-200 bg-white p-8 text-center shadow-[0_18px_50px_rgba(15,23,42,0.05)]">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-[#cda552]/30 bg-[#f7efd8] text-[#0d2f25]">
-            <Package className="h-7 w-7" />
-          </div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#cda552]">
-            {isAr ? 'جارٍ تجهيز الطلب' : 'Preparing your order'}
-          </p>
-          <h2 className="mt-3 text-xl font-black text-[#0d2f25]">
-            {isAr ? 'نستعد لعرض تفاصيل طلبك' : 'Loading order details'}
-          </h2>
-        </div>
-      </div>
-    );
-  }
-
-  const { order, items, appliedCoupon } = activeData;
+  // Parse order data (available even before activeData resolves)
+  const order = activeData?.order;
+  const items = activeData?.items;
+  const appliedCoupon = activeData?.appliedCoupon;
 
   // Parse shipping address (stored as JSONB)
-  const addr = order.shipping_address as {
+  const addr = order?.shipping_address as {
     name?: string;
     phone?: string;
     email?: string | null;
     address?: string;
     city?: string;
   } | null;
-  const customerName = addr?.name ?? order.customer_name ?? '';
-  const customerPhone = addr?.phone ?? order.customer_phone ?? '';
-  const customerEmail = addr?.email ?? order.customer_email;
+  const customerName = addr?.name ?? order?.customer_name ?? '';
+  const customerPhone = addr?.phone ?? order?.customer_phone ?? '';
+  const customerEmail = addr?.email ?? order?.customer_email;
   const city = addr?.city ?? '';
   const streetAddress = addr?.address ?? '';
 
-  const deliveryFee = order.shipping_cost ?? 0;
-  const subtotal = order.subtotal ?? 0;
-  const discount = order.discount ?? 0;
-  const total = order.total ?? 0;
+  const deliveryFee = order?.shipping_cost ?? 0;
+  const subtotal = order?.subtotal ?? 0;
+  const discount = order?.discount ?? 0;
+  const total = order?.total ?? 0;
   const hasDiscount = (appliedCoupon?.discount ?? 0) > 0;
-  const hasCoupon = order.coupon_code || appliedCoupon?.code;
+  const hasCoupon = order?.coupon_code || appliedCoupon?.code;
 
-  const formattedDate = new Date(order.created_at).toLocaleDateString(
-    isAr ? 'ar-MA' : 'en-US',
-    { year: 'numeric', month: 'long', day: 'numeric' }
-  );
+  const formattedDate = order?.created_at
+    ? new Date(order.created_at).toLocaleDateString(
+        isAr ? 'ar-MA' : 'en-US',
+        { year: 'numeric', month: 'long', day: 'numeric' }
+      )
+    : '';
+
+  // Build WhatsApp URL from store settings
+  useEffect(() => {
+    if (!activeData || !siteConfig) return;
+    const { order } = activeData;
+    setWaUrl(getWhatsAppLink(siteConfig, locale, "order", {
+      orderNumber: order.order_number,
+    }));
+  }, [locale, activeData, siteConfig]);
+
+  if (!activeData || !order || !items) {
+    return (
+      <PageShell dir={isAr ? 'rtl' : 'ltr'} withPadding={false} className="min-h-screen flex items-center justify-center py-20 px-4">
+        <div className="w-full max-w-md rounded-[28px] border border-[rgba(23,64,47,.08)] bg-white p-8 text-center shadow-[0_20px_60px_rgba(17,64,47,.08)]">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-[#cda552]/30 bg-[#f7efd8] text-[#0d2f25]">
+            <Package className="h-7 w-7" />
+          </div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#cda552]">
+            {isAr ? 'جارٍ تجهيز الطلب' : 'Preparing your order'}
+          </p>
+          <h2 className="mt-3 text-xl font-black text-[#0d2f25]" style={{ fontFamily: "'El Messiri', Tajawal, serif" }}>
+            {isAr ? 'نستعد لعرض تفاصيل طلبك' : 'Loading order details'}
+          </h2>
+        </div>
+      </PageShell>
+    );
+  }
 
   const handleCopyOrderNumber = async () => {
+    if (!order) return;
     try {
       await navigator.clipboard.writeText(order.order_number);
       setCopied(true);
@@ -192,16 +212,11 @@ export default function OrderConfirmationClient() {
     }
   };
 
-  const whatsappTraceMsg = encodeURIComponent(
-    isAr
-      ? `مرحباً دار صودفا 🌿، أريد الاستفسار عن طلبي رقم: *${order.order_number}*\nالاسم: ${customerName}\nالمجموع: ${total.toFixed(2)} د.م`
-      : `Hello SODFA Store 🌿, I want to trace my order: *${order.order_number}*\nName: ${customerName}\nTotal: ${total.toFixed(2)} MAD`
-  );
-
   const handleHelpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!helpName.trim() || !helpPhone.trim() || !helpMessage.trim()) return;
     if (helpEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(helpEmail)) return;
+    if (!order) return;
     setHelpSending(true);
     try {
       const res = await fetch('/api/contact', {
@@ -249,7 +264,21 @@ export default function OrderConfirmationClient() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f6f1e8] text-stone-800" dir={isAr ? 'rtl' : 'ltr'}>
+    <div className="min-h-screen bg-[#FCFBF7] text-stone-800" dir={isAr ? 'rtl' : 'ltr'}>
+      <BreadcrumbBar
+        items={[
+          { href: "/", label: isAr ? "الرئيسية" : "Home", icon: Home },
+          { href: "/store", label: isAr ? "المتجر" : "Store", icon: ShoppingBag },
+          { label: isAr ? "تأكيد الطلب" : "Order Confirmation", icon: CheckCircle2, current: true },
+        ]}
+        rightSlot={
+          <span className="hidden items-center gap-1.5 rounded-full bg-[#EAF4EE] px-2.5 py-1 text-[11px] font-extrabold text-[#1E7A57] sm:inline-flex shrink-0">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#1E7A57]" />
+            {isAr ? "تم التأكيد" : "Confirmed"}
+          </span>
+        }
+      />
+      <PageShell dir={isAr ? 'rtl' : 'ltr'} withPadding={false} className="pb-12">
       {showHelpModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setShowHelpModal(false)}>
           <div className="absolute inset-0 bg-[#0a1a14]/70 backdrop-blur-[10px]" />
@@ -287,13 +316,15 @@ export default function OrderConfirmationClient() {
             <div className="flex-1 overflow-auto p-5 sm:p-6 space-y-5" style={{ scrollbarWidth: 'thin', scrollbarColor: '#1a5a3a transparent' }}>
               {/* Quick contact cards */}
               <div className="grid grid-cols-2 gap-3">
-                <a href={`${WHATSAPP_LINK}?text=${whatsappTraceMsg}`} target="_blank" rel="noopener noreferrer" className="group flex items-center gap-3 rounded-2xl border border-[#25D366]/20 bg-[#f0fdf4] p-3.5 hover:bg-[#e6f9ec] hover:border-[#25D366]/30 transition">
-                  <span className="w-10 h-10 rounded-xl grid place-items-center bg-[#25D366] text-white shadow shrink-0 group-hover:scale-105 transition"><MessageCircle className="w-5 h-5" /></span>
-                  <span className="min-w-0">
-                    <span className="block text-xs font-black text-[#0d2f25]">{isAr ? 'واتساب' : 'WhatsApp'}</span>
-                    <span className="block text-[11px] text-stone-500 truncate">{isAr ? 'رد فوري' : 'Instant reply'}</span>
-                  </span>
-                </a>
+                {waUrl && (
+                  <a href={waUrl} target="_blank" rel="noopener noreferrer" className="group flex items-center gap-3 rounded-2xl border border-[#25D366]/20 bg-[#f0fdf4] p-3.5 hover:bg-[#e6f9ec] hover:border-[#25D366]/30 transition">
+                    <span className="w-10 h-10 rounded-xl grid place-items-center bg-[#25D366] text-white shadow shrink-0 group-hover:scale-105 transition"><MessageCircle className="w-5 h-5" /></span>
+                    <span className="min-w-0">
+                      <span className="block text-xs font-black text-[#0d2f25]">{isAr ? 'واتساب' : 'WhatsApp'}</span>
+                      <span className="block text-[11px] text-stone-500 truncate">{isAr ? 'رد فوري' : 'Instant reply'}</span>
+                    </span>
+                  </a>
+                )}
                 <a href={`tel:${customerPhone || '+212673932389'}`} className="group flex items-center gap-3 rounded-2xl border border-stone-200 bg-stone-50 p-3.5 hover:bg-white hover:border-stone-300 transition">
                   <span className="w-10 h-10 rounded-xl grid place-items-center bg-white border border-stone-200 text-stone-700 shadow-sm shrink-0 group-hover:scale-105 transition"><Phone className="w-5 h-5" /></span>
                   <span className="min-w-0">
@@ -319,7 +350,7 @@ export default function OrderConfirmationClient() {
                   </label>
                   <label className="block">
                     <span className="text-xs font-bold text-stone-700">{isAr ? 'الهاتف' : 'Phone'} <span className="text-red-500">*</span></span>
-                    <input value={helpPhone} onChange={(e) => setHelpPhone(e.target.value)} required type="tel" placeholder="+212 6XX XXX XXX" className="mt-1.5 w-full rounded-xl border border-stone-200 bg-stone-50/70 px-3.5 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-[#0d2f25] focus:ring-2 focus:ring-[#0d2f25]/10 focus:bg-white transition" dir="ltr" />
+                    <input value={helpPhone} onChange={(e) => setHelpPhone(e.target.value)} required type="tel" placeholder="06 XX XX XX XX" className="mt-1.5 w-full rounded-xl border border-stone-200 bg-stone-50/70 px-3.5 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-[#0d2f25] focus:ring-2 focus:ring-[#0d2f25]/10 focus:bg-white transition" dir="ltr" />
                   </label>
                 </div>
                 <label className="block">
@@ -352,7 +383,7 @@ export default function OrderConfirmationClient() {
         </div>
       )}
 
-      <main className="mx-auto max-w-6xl px-4 py-8 md:py-12">
+      <main className="mx-auto max-w-6xl px-4 py-8 md:py-12 relative">
         <section
           className="relative overflow-hidden rounded-[32px] border border-[#d6c59a]/70 shadow-[0_30px_90px_rgba(9,39,29,0.08)]"
           style={{
@@ -451,7 +482,8 @@ export default function OrderConfirmationClient() {
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[1.45fr_0.82fr]">
           <div className="space-y-6">
-            <div className="rounded-[28px] border border-stone-200 bg-white p-5 shadow-[0_14px_40px_rgba(15,23,42,0.04)] sm:p-6">
+            <div className="relative overflow-hidden rounded-[28px] border border-[rgba(23,64,47,.08)] bg-white p-5 shadow-[0_20px_60px_rgba(17,64,47,.08)] sm:p-6">
+              <div className="absolute top-0 left-0 right-0 h-[4px] bg-gradient-to-r from-[#1E7A57] via-[#1E7A57] to-[#C6A15B]" />
               <div className="border-b border-stone-100 pb-4">
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#cda552]">
                   {isAr ? 'مسار الطلب' : 'Order journey'}
@@ -480,8 +512,8 @@ export default function OrderConfirmationClient() {
               </div>
             </div>
 
-            {/* Tabs Section */}
-            <div className="rounded-[28px] border border-stone-200 bg-white shadow-[0_14px_40px_rgba(15,23,42,0.04)] overflow-hidden">
+            {/* Tabs Section — contact card language */}
+            <div className="rounded-[28px] border border-[rgba(23,64,47,.08)] bg-white shadow-[0_20px_60px_rgba(17,64,47,.08)] overflow-hidden">
               {/* Tab Navigation */}
               <div className="flex border-b border-stone-200 bg-stone-50/50">
                 <button
@@ -629,6 +661,7 @@ export default function OrderConfirmationClient() {
           </aside>
         </div>
       </main>
+      </PageShell>
     </div>
   );
 }

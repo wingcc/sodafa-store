@@ -1,11 +1,9 @@
 // lib/public-content.ts
 // Public-site content loader.
 //
-// Strategy: /json/config.json is the BASE (guaranteed complete), then every
-// piece managed from the dashboard is OVERLAID from Supabase (anon client —
-// RLS policies allow public reads of published rows). If Supabase is
-// unreachable or a table is empty, the base value survives, so the site
-// never breaks.
+// Strategy: Start with an empty default config, then overlay all data from
+// Supabase (homepage_content table). All managed content comes from the database.
+// No config.json dependency — everything is database-driven.
 
 import { createClient } from "@/lib/supabase/client";
 import type {
@@ -27,6 +25,32 @@ import type {
 } from "@/app/sections/common/types";
 
 type Db = ReturnType<typeof createClient>;
+
+// Empty default config — all real data comes from the database
+function getDefaultConfig(): SodfaConfig {
+  return {
+    site: {
+      brandName: "SODFA",
+      logo: "/assets/Image/NavbarLogo.png",
+      NavbarLogo: "/assets/Image/NavbarLogo.png",
+      footerLogo: "/assets/Image/FooterLogo.jpg",
+    },
+    pricing: { label: "", current: 0, old: 0, currency: "MAD" },
+    hero: {},
+    stats: [],
+    trust: [],
+    oils: [],
+    benefits: [],
+    video: {},
+    cases: [],
+    about: {},
+    products: [],
+    testimonials: [],
+    faq: [],
+    orderSteps: [],
+    legal: {},
+  };
+}
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -68,26 +92,12 @@ async function fetchContentBlocks(db: Db): Promise<Record<string, unknown>> {
 
 /**
  * Loads the public landing configuration:
- * static config.json overlaid with dashboard-managed database content.
+ * Default config overlaid with dashboard-managed database content.
+ * All data comes from Supabase — no config.json dependency.
  */
 export async function loadPublicConfig(): Promise<SodfaConfig> {
-  let base: SodfaConfig;
-  try {
-    if (typeof window === "undefined") {
-      const { readFile } = await import("node:fs/promises");
-      const { join } = await import("node:path");
-      const configPath = join(process.cwd(), "public", "json", "config.json");
-      const raw = await readFile(configPath, "utf8");
-      base = JSON.parse(raw) as SodfaConfig;
-    } else {
-      const res = await fetch("/json/config.json");
-      if (!res.ok) throw new Error(`fetch /json/config.json failed: ${res.status}`);
-      base = (await res.json()) as SodfaConfig;
-    }
-  } catch (err) {
-    console.error("[public-content] Failed to read config.json:", err);
-    throw new Error("config.json could not be loaded");
-  }
+  // Start with empty default config
+  const base = getDefaultConfig();
 
   try {
     const db = createClient();

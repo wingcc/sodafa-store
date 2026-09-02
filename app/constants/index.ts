@@ -1,6 +1,7 @@
 // constants/index.ts
-export const WHATSAPP_NUMBER = "212626038407";
-export const WHATSAPP_MESSAGE =
-  "سلام دار كريمة 🌿، بغيت نستفسر";
+// NOTE: WhatsApp number is now centralized in app/lib/whatsapp.ts
+// and read from Store Settings (homepage_content → site_info → whatsappMain).
+// The old hardcoded WHATSAPP_NUMBER, WHATSAPP_MESSAGE, and WHATSAPP_LINK
+// are deprecated. Use the helpers from app/lib/whatsapp instead.
 
-export const WHATSAPP_LINK = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`;
+export { getWhatsAppLink, getWhatsAppNumber, getWhatsAppMessage, buildWhatsAppUrl, getSimpleWhatsAppLink } from "../lib/whatsapp";

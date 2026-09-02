@@ -21,6 +21,9 @@ export interface SiteConfig {
   instagram?: string;
   facebook?: string;
   tiktok?: string;
+  privacyPolicySlug?: string;
+  termsSlug?: string;
+  cookiesSlug?: string;
   videoUrl?: string;
   benefitsVideoUrl?: string;
 }

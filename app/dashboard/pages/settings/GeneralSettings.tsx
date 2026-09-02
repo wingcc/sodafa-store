@@ -54,6 +54,7 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({ settings, setSettings
             type="tel"
             value={settings.contactPhone}
             onChange={(e) => update('contactPhone', e.target.value)}
+            placeholder="06 XX XX XX XX"
             className={inputClass}
           />
         </div>

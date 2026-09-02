@@ -7,6 +7,7 @@ import './website.css';
 import { UIProvider } from '../contexts/UIContext';
 import { LanguageProvider } from '../contexts/LanguageContext';
 import { FavoritesProvider } from '../contexts/FavoritesContext';
+import { StoreSettingsProvider } from '../contexts/StoreSettingsContext';
 import { ThemeProvider } from '@/lib/theme';
 import { CartDrawer } from '../components/CartDrawer';
 import { SearchDialog } from '../components/SearchDialog';
@@ -44,12 +45,14 @@ export default function WebsiteLayout({
       <UIProvider>
         <LanguageProvider>
           <FavoritesProvider>
-            <div className="website-root" dir="rtl" lang="ar">
-              {children}
-            </div>
-            <CartDrawer />
-            <SearchDialog />
-            <CheckoutFormModal />
+            <StoreSettingsProvider>
+              <div className="website-root" dir="rtl" lang="ar">
+                {children}
+              </div>
+              <CartDrawer />
+              <SearchDialog />
+              <CheckoutFormModal />
+            </StoreSettingsProvider>
           </FavoritesProvider>
         </LanguageProvider>
       </UIProvider>

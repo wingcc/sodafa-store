@@ -102,7 +102,7 @@ export default function ContactModal({ site, onClose, showToast }: ContactModalP
               </div>
               <div className="f-field">
                 <label htmlFor="cfPhone">رقم الهاتف</label>
-                <input type="tel" id="cfPhone" name="phone" placeholder="+212 6XX XXX XXX" required />
+                <input type="tel" id="cfPhone" name="phone" placeholder="06 XX XX XX XX" required />
               </div>
             </div>
             <div className="f-field">

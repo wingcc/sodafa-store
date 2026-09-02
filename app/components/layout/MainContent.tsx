@@ -34,6 +34,15 @@ import StoreVisitSection from "../../sections/StoreVisitSection";
 import Footer from "../../sections/Footer";
 import FallingLeaves from "../../sections/common/FallingLeaves";
 
+type ContentPageRecord = {
+  slug?: unknown;
+  name?: unknown;
+  content?: unknown;
+};
+
+const isContentPageRecord = (value: unknown): value is ContentPageRecord =>
+  typeof value === "object" && value !== null;
+
 export const MainContent = () => {
   const [config, setConfig] = useState<SodfaConfig | null>(null);
   const [loading, setLoading] = useState(true);
@@ -112,7 +121,7 @@ export const MainContent = () => {
     let cancelled = false;
     (async () => {
       try {
-        const siteInfo: any = (config as any).site ?? {};
+        const siteInfo = config.site;
         const privacySlug = siteInfo.privacyPolicySlug || 'privacy-policy';
         const termsSlug = siteInfo.termsSlug || 'terms';
         const cookiesSlug = siteInfo.cookiesSlug || 'cookies';
@@ -141,7 +150,8 @@ export const MainContent = () => {
             const res = await fetch('/api/content-pages');
             const json = await res.json();
             if (json.success && Array.isArray(json.data)) {
-              for (const row of json.data as any[]) {
+              for (const row of json.data as unknown[]) {
+                if (!isContentPageRecord(row)) continue;
                 const slug = String(row.slug ?? '');
                 const hit = missing.find((m) => m.slug === slug);
                 if (hit && !map[hit.key]) map[hit.key] = { title: String(row.name ?? ''), body: String(row.content ?? '') };
@@ -180,7 +190,8 @@ export const MainContent = () => {
     setLegalModal(key as "privacy" | "terms" | "cookies");
     // Fetch fresh from Store Content so popup matches Dashboard edits
     try {
-      const siteInfo: any = (config as any)?.site ?? {};
+      const siteInfo = config?.site;
+      if (!siteInfo) return;
       const slugMap: Record<string, string> = {
         privacy: siteInfo.privacyPolicySlug || 'privacy-policy',
         terms: siteInfo.termsSlug || 'terms',
@@ -216,8 +227,8 @@ export const MainContent = () => {
     );
   }
 
-  const { site, hero, stats, trust, flash, oils, benefits, video, cases, about, founder, products, testimonials, faq, orderSteps, pricing, legal: configLegal, sections, buttonsSettings } = config as any;
-  const legal = { ...(configLegal as any), ...storeLegal } as any;
+  const { site, hero, stats, trust, oils, benefits, video, cases, about, founder, testimonials, faq, orderSteps, pricing, legal: configLegal, sections, buttonsSettings } = config;
+  const legal = { ...configLegal, ...storeLegal };
 
   // Build enabled set from config sections array
   const enabledSet = new Set(

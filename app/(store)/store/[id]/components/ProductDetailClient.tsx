@@ -69,8 +69,11 @@ import { ProductCard } from '../../../../components/ProductCard';
 import { useUI } from '../../../../contexts/UIContext';
 import { useLanguage } from '../../../../contexts/LanguageContext';
 import { useFavorites } from '../../../../contexts/FavoritesContext';
+import { useStoreSettings } from '../../../../contexts/StoreSettingsContext';
 import type { Product } from '../../../../types/product';
-import { WHATSAPP_LINK } from '../../../../constants';
+import { getWhatsAppLink } from '../../../../lib/whatsapp';
+import { BreadcrumbBar } from '../../../../components/shared/BreadcrumbBar';
+import { PageShell } from '../../../../components/shared/PageBackground';
 
 interface ReviewItem {
   id?: string;
@@ -91,15 +94,18 @@ export default function ProductDetailClient({ product: initialProduct }: Product
   const { locale } = useLanguage();
   const { isFavorite, toggleFavorite } = useFavorites();
   const { addToast } = useStoreToast();
+  const { siteConfig } = useStoreSettings();
   const isAr = locale === 'ar';
 
   const product = initialProduct;
 
   if (!product) {
     return (
-      <main className="min-h-screen bg-stone-50 pt-6 pb-20 font-sans flex items-center justify-center">
-        <p className="text-stone-500">Product not found.</p>
-      </main>
+      <PageShell dir={isAr ? "rtl" : "ltr"} withPadding={false} className="min-h-screen flex items-center justify-center py-20">
+        <main className="font-sans text-center">
+          <p className="text-[#5A6B5F]" style={{ fontFamily: "Tajawal, sans-serif" }}>Product not found.</p>
+        </main>
+      </PageShell>
     );
   }
 
@@ -113,6 +119,7 @@ export default function ProductDetailClient({ product: initialProduct }: Product
   const [isImageHovered, setIsImageHovered] = useState(false);
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
   const [activeTab, setActiveTab] = useState<'description' | 'ingredients' | 'reviews' | 'shipping'>('description');
+  const [waUrl, setWaUrl] = useState<string | null>(null);
 
   const productBenefits = (product.moreInfo?.benefits && product.moreInfo.benefits.length > 0)
     ? product.moreInfo.benefits
@@ -322,11 +329,14 @@ export default function ProductDetailClient({ product: initialProduct }: Product
     setCursorPosition({ x, y });
   };
 
-  const whatsappMessage = encodeURIComponent(
-    isAr
-      ? `مرحباً دار صودفا 🌿، أريد استفسار أو طلب المنتج:\n*${product.name}*\nالسعر: ${product.price} د.م`
-      : `Hello SODFA Store 🌿, I would like to order:\n*${product.name}*\nPrice: ${product.price} MAD`
-  );
+  // Build WhatsApp URL from store settings
+  useEffect(() => {
+    if (!product || !siteConfig) return;
+    setWaUrl(getWhatsAppLink(siteConfig, locale, "product", {
+      productName: product.name,
+      productPrice: String(product.price),
+    }));
+  }, [locale, product, siteConfig]);
 
   useEffect(() => {
     if (!product) return;
@@ -381,39 +391,26 @@ export default function ProductDetailClient({ product: initialProduct }: Product
   }, [product]);
 
   return (
-    <main className="min-h-screen bg-stone-50 pt-6 pb-20 font-sans" dir={isAr ? 'rtl' : 'ltr'}>
-        {/* Breadcrumb Navigation */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <ol className="flex items-center whitespace-nowrap">
-            <li className="inline-flex items-center">
-              <Link
-                href="/"
-                className="flex items-center text-sm text-stone-500 hover:text-emerald-800 transition-colors focus:outline-none focus:text-emerald-800"
-              >
-                <Home className="shrink-0 me-2 w-4 h-4" />
-                {isAr ? 'الرئيسية' : 'Home'}
-              </Link>
-              <ChevronRight className="shrink-0 mx-2 w-4 h-4 text-stone-400" />
-            </li>
-            <li className="inline-flex items-center">
-              <Link
-                href="/store"
-                className="flex items-center text-sm text-stone-500 hover:text-emerald-800 transition-colors focus:outline-none focus:text-emerald-800"
-              >
-                <LayoutGrid className="shrink-0 me-2 w-4 h-4" />
-                {isAr ? 'المتجر' : 'Store'}
-              </Link>
-              <ChevronRight className="shrink-0 mx-2 w-4 h-4 text-stone-400" />
-            </li>
-            <li className="inline-flex items-center text-sm font-semibold text-stone-900 truncate max-w-[200px]" aria-current="page">
-              {product.name}
-            </li>
-          </ol>
-        </div>
+    <div dir={isAr ? 'rtl' : 'ltr'} className="font-sans">
+      <BreadcrumbBar
+        items={[
+          { href: "/", label: isAr ? "الرئيسية" : "Home", icon: Home },
+          { href: "/store", label: isAr ? "المتجر" : "Store", icon: LayoutGrid },
+          { label: product.name, icon: Package, current: true },
+        ]}
+        rightSlot={
+          <span className="hidden items-center gap-1.5 rounded-full bg-[#EAF4EE] px-2.5 py-1 text-[11px] font-extrabold text-[#1E7A57] sm:inline-flex shrink-0">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#1E7A57]" />
+            {isAr ? "منتج طبيعي" : "Natural product"}
+          </span>
+        }
+      />
+      <PageShell dir={isAr ? 'rtl' : 'ltr'} withPadding={false} className="pb-20 pt-6">
 
-        {/* Product Details Main Section */}
+        {/* Product Details Main Section — contact card language */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-8 lg:gap-10 bg-white p-5 sm:p-7 lg:p-8 rounded-3xl border border-stone-200/80 shadow-sm items-stretch">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-8 lg:gap-10 bg-white p-5 sm:p-7 lg:p-8 rounded-[28px] border border-[rgba(23,64,47,.08)] shadow-[0_20px_60px_rgba(17,64,47,.08)] items-stretch relative overflow-hidden">
+            <div className="absolute top-0 left-0 right-0 h-[4px] bg-gradient-to-r from-[#1E7A57] via-[#1E7A57] to-[#C6A15B]" />
             {/* LEFT: Image Gallery */}
             <div className="flex flex-col gap-4 min-h-0">
               {/* Main Image View */}
@@ -784,20 +781,22 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                 </div>
 
                 {/* Order via WhatsApp Direct Button */}
-                <a
-                  href={`${WHATSAPP_LINK}?text=${whatsappMessage}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-3 px-6 rounded-xl font-bold text-xs text-white flex items-center justify-center gap-2 shadow-md transition-all hover:scale-[1.01]"
-                  style={{
-                    background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
-                  }}
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  <span>
-                    {isAr ? 'طلب سريع وتأكيد مباشر عبر الواتساب' : 'Quick Order via WhatsApp'}
-                  </span>
-                </a>
+                {waUrl && (
+                  <a
+                    href={waUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-3 px-6 rounded-xl font-bold text-xs text-white flex items-center justify-center gap-2 shadow-md transition-all hover:scale-[1.01]"
+                    style={{
+                      background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
+                    }}
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    <span>
+                      {isAr ? 'طلب سريع وتأكيد مباشر عبر الواتساب' : 'Quick Order via WhatsApp'}
+                    </span>
+                  </a>
+                )}
               </div>
 
               {/* Trust Features Grid */}
@@ -833,8 +832,8 @@ export default function ProductDetailClient({ product: initialProduct }: Product
             </div>
           </div>
 
-          {/* Product Details Tabs Section */}
-          <div className="mt-10 bg-white rounded-2xl border border-stone-200/80 shadow-sm overflow-hidden">
+          {/* Product Details Tabs Section — contact card language */}
+          <div className="mt-10 bg-white rounded-[28px] border border-[rgba(23,64,47,.08)] shadow-[0_20px_60px_rgba(17,64,47,.08)] overflow-hidden">
             {/* Tab Navigation */}
             <div className="flex border-b border-stone-200 overflow-x-auto scrollbar-none">
               {[
@@ -1218,6 +1217,7 @@ export default function ProductDetailClient({ product: initialProduct }: Product
             </div>
           )}
         </div>
-      </main>
+      </PageShell>
+    </div>
   );
 }

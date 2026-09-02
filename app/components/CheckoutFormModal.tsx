@@ -2,7 +2,7 @@
 "use client";
 
 import { useUI } from "../contexts/UIContext";
-import { CheckoutForm } from "./forms/CheckoutForm";
+ 
 
 export const CheckoutFormModal = () => {
   const { isCheckoutOpen, closeCheckout } = useUI();
@@ -18,7 +18,7 @@ export const CheckoutFormModal = () => {
         >
           ✕
         </button>
-        <CheckoutForm />
+       
       </div>
     </div>
   );

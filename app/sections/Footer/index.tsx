@@ -5,27 +5,15 @@ import { usePathname, useRouter } from "next/navigation";
 import { InstagramSVG, FacebookSVG } from "../common/icons";
 import type { SiteConfig, LegalConfig } from "../common/types";
 import { useLanguage } from "../../contexts/LanguageContext";
+import { useStoreSettings } from "../../contexts/StoreSettingsContext";
 import LegalModal from "../common/LegalModal";
 
+// Default site config — only logo and brand name, no hardcoded contact info
 const DEFAULT_SITE: SiteConfig = {
   brandName: "SODFA",
   logo: "/assets/Image/NavbarLogo.png",
   NavbarLogo: "/assets/Image/NavbarLogo.png",
   footerLogo: "/assets/Image/FooterLogo.jpg",
-  tagline: "جمال · طبيعة · ثقة",
-  whatsappMain: "+212673932389",
-  whatsappMessage: "أريد طلب سيروم الشعر الطبيعي",
-  whatsappStore: "+212673932389",
-  phoneDisplay: "+212 673-932389",
-  phoneTel: "+212673932389",
-  email: "info@sodfa.com",
-  address: "حي شماعو سلا ، المغرب",
-  addressShort: "حي شماعو سلا، سلا",
-  hoursStore: "من الإثنين إلى السبت · 9:00 ص – 8:00 م",
-  hoursContact: "السبت - الخميس: 9:00 ص - 6:00 م",
-  instagram: "https://www.instagram.com/soodfa2026?igsh=NTJkMWt3cW42a2E0",
-  facebook: "https://web.facebook.com/profile.php?id=61590754402259",
-  tiktok: "https://www.tiktok.com/@karimayassmin",
 };
 
 const DEFAULT_LEGAL: LegalConfig = {};
@@ -77,50 +65,40 @@ export function Footer({
   const pathname = usePathname() || "/";
   const router = useRouter();
   const { locale } = useLanguage();
+  const { siteConfig: storeSiteConfig } = useStoreSettings();
   // Homepage locked to Arabic — all homepage data is Arabic-only for now
   const isAr = pathname === "/" ? true : locale === "ar";
   const isFr = pathname === "/" ? false : locale === "fr";
   const t = (ar: string, fr: string, en: string) => isAr ? ar : isFr ? fr : en;
   const activeVariant = resolveVariant(pathname, variant);
   const [localLegal, setLocalLegal] = useState<string | null>(null);
-  const [fetchedSite, setFetchedSite] = useState<SiteConfig>(DEFAULT_SITE);
   const [fetchedLegal, setFetchedLegal] = useState<LegalConfig>(DEFAULT_LEGAL);
   const [storeLegal, setStoreLegal] = useState<Record<string, { title: string; body: string }>>({});
   const btnLabel = t("اشتركي الآن", "S'abonner", "Subscribe Now");
 
-  const site = siteProp !== DEFAULT_SITE ? siteProp : fetchedSite;
+  // Use store settings from database, fallback to minimal default
+  const site = storeSiteConfig ?? siteProp ?? DEFAULT_SITE;
   // Prefer Store Content (content_pages) over legacy legal config — editable in Dashboard → Store Content
   const LEGAL_SLUG_MAP: Record<string, string> = { privacy: 'privacy-policy', terms: 'terms', cookies: 'cookies' };
   const legal = { ...(legalProp && Object.keys(legalProp).length > 0 ? legalProp : fetchedLegal), ...storeLegal } as LegalConfig;
 
   // Self-fetch when rendered standalone on store pages (no props)
   useEffect(() => {
-    const needsSite = siteProp === DEFAULT_SITE;
     const needsLegal = !legalProp || Object.keys(legalProp).length === 0;
-    if (!needsSite && !needsLegal) return;
+    if (!needsLegal) return;
     let cancelled = false;
     (async () => {
       try {
         const { loadPublicConfig } = await import("@/lib/public-content");
         const cfg = await loadPublicConfig();
         if (cancelled) return;
-        if (needsSite && cfg.site) setFetchedSite({ ...DEFAULT_SITE, ...cfg.site });
         if (needsLegal && cfg.legal) setFetchedLegal(cfg.legal as LegalConfig);
-      } catch {
-        // fallback to static json
-        try {
-          const r = await fetch("/json/config.json");
-          const data = await r.json();
-          if (cancelled) return;
-          if (needsSite && data.site) setFetchedSite((prev) => ({ ...prev, ...data.site }));
-          if (needsLegal && data.legal) setFetchedLegal(data.legal);
-        } catch {}
-      }
+      } catch {}
     })();
     return () => {
       cancelled = true;
     };
-  }, [siteProp, legalProp]);
+  }, [legalProp]);
 
   // Fetch Store Content pages for footer popups — uses Store Info slugs (editable in Dashboard → Store Management → Settings → Legal Pages)
   useEffect(() => {

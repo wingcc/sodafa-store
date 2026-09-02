@@ -4,7 +4,8 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useLanguage } from '@/app/contexts/LanguageContext';
-import { WHATSAPP_LINK } from '@/app/constants';
+import { useStoreSettings } from '@/app/contexts/StoreSettingsContext';
+import { getWhatsAppLink } from '@/app/lib/whatsapp';
 import { fetchOrderByNumber, OrderTrackingData } from '@/lib/order-utils';
 import {
   Loader2,
@@ -77,6 +78,7 @@ export default function TrackOrderClient() {
   const isFr = locale === 'fr';
   const tr = (ar: string, fr: string, en: string) => (isAr ? ar : isFr ? fr : en);
   const dir = isAr ? 'rtl' : 'ltr';
+  const { siteConfig } = useStoreSettings();
 
   const paymentMethodLabels: Record<string, string> = {
     cash_on_delivery: tr('الدفع عند الاستلام', 'Paiement à la livraison', 'Cash on Delivery'),
@@ -92,6 +94,7 @@ export default function TrackOrderClient() {
   const [error, setError] = useState<string | null>(null);
   const [showTimeline, setShowTimeline] = useState(false);
   const [activeTab, setActiveTab] = useState<'items' | 'shipping' | 'summary' | 'notes'>('items');
+  const [waUrl, setWaUrl] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Auto-search when ?order= is in URL (from QR scan)
@@ -147,6 +150,14 @@ export default function TrackOrderClient() {
     setOrderNumber(e.target.value);
     if (error) setError(null);
   };
+
+  // Build WhatsApp URL from store settings when order is loaded
+  useEffect(() => {
+    if (!order || !siteConfig) return;
+    setWaUrl(getWhatsAppLink(siteConfig, locale, "tracking", {
+      orderNumber: order.orderNumber,
+    }));
+  }, [locale, order, siteConfig]);
 
   return (
     <div className="bg-[#F7F3E8] dark:bg-[#0a0f1a] min-h-screen" dir={dir}>
@@ -516,22 +527,18 @@ export default function TrackOrderClient() {
 
               {/* Actions */}
               <div className="space-y-3 pt-2">
-                <a
-                  href={`${WHATSAPP_LINK}?text=${encodeURIComponent(
-                    tr(
-                      `مرحباً دار صودفا 🌿، أريد الاستفسار عن طلبي رقم: *${order.orderNumber}*\nالاسم: ${order.customerName}\nالمجموع: ${Number(order.total).toFixed(2)} د.م`,
-                      `Bonjour SODFA 🌿, je souhaite suivre ma commande : *${order.orderNumber}*\nNom: ${order.customerName}\nTotal: ${Number(order.total).toFixed(2)} MAD`,
-                      `Hello SODFA Store 🌿, I want to trace my order: *${order.orderNumber}*\nName: ${order.customerName}\nTotal: ${Number(order.total).toFixed(2)} MAD`
-                    )
-                  )}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-4 px-6 rounded-2xl font-bold text-sm text-white flex items-center justify-center gap-2 shadow-lg hover:shadow-xl active:scale-[0.99] transition-all"
-                  style={{ background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)', boxShadow: '0 4px 15px rgba(37, 211, 102, 0.3)' }}
-                >
-                  <MessageCircle className="w-5 h-5 shrink-0" />
-                  <span className="text-center leading-tight">{tr('متابعة عبر الواتساب', 'Suivi WhatsApp', 'Track via WhatsApp')}</span>
-                </a>
+                {waUrl && (
+                  <a
+                    href={waUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-4 px-6 rounded-2xl font-bold text-sm text-white flex items-center justify-center gap-2 shadow-lg hover:shadow-xl active:scale-[0.99] transition-all"
+                    style={{ background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)', boxShadow: '0 4px 15px rgba(37, 211, 102, 0.3)' }}
+                  >
+                    <MessageCircle className="w-5 h-5 shrink-0" />
+                    <span className="text-center leading-tight">{tr('متابعة عبر الواتساب', 'Suivi WhatsApp', 'Track via WhatsApp')}</span>
+                  </a>
+                )}
                 <div className="grid grid-cols-2 gap-3">
                   <Link href="/store" className="py-3.5 px-4 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 font-semibold text-sm text-gray-700 dark:text-gray-200 text-center hover:bg-gray-50 dark:hover:bg-white/10 transition-colors flex items-center justify-center gap-1.5">
                     <ShoppingBag size={16} className="text-emerald-700 dark:text-emerald-400 shrink-0" />

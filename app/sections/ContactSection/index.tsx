@@ -2,6 +2,8 @@
 
 import React, { useState } from "react";
 import { useLanguage } from "../../contexts/LanguageContext";
+import { useStoreSettings } from "../../contexts/StoreSettingsContext";
+import { getWhatsAppLink } from "../../lib/whatsapp";
 import type { SiteConfig } from "../common/types";
 
 // ── Inline icons (Tailwind-friendly, no external deps) ──
@@ -106,7 +108,8 @@ export const ContactSection = ({ site }: ContactSectionProps) => {
   const [submitted, setSubmitted] = useState(false);
   const [sending, setSending] = useState(false);
 
-  const waUrl = `https://wa.me/${String(site.whatsappStore || "").replace(/[^0-9]/g, "")}?text=${encodeURIComponent(site.whatsappMessage || "مرحبا، أريد الاستفسار")}`;
+  const { siteConfig } = useStoreSettings();
+  const waUrl = getWhatsAppLink(siteConfig, locale, "general") || `https://wa.me/${String(site.whatsappStore || "").replace(/[^0-9]/g, "")}?text=${encodeURIComponent("مرحباً 👋 أريد الاستفسار عن منتجاتكم، هل يمكنكم مساعدتي؟")}`;
   const telUrl = `tel:${site.phoneTel}`;
   const mailUrl = `mailto:${site.email}`;
 
@@ -365,18 +368,18 @@ export const ContactSection = ({ site }: ContactSectionProps) => {
                         type="tel"
                         inputMode="tel"
                         dir="ltr"
-                        placeholder="+212 6XX XXX XXX"
+                        placeholder="06 XX XX XX XX"
                         value={formData.phone}
                         onChange={handleChange}
                         aria-invalid={!!errors.phone}
-                        className={`w-full rounded-2xl border bg-[#FCFDFC] px-4 py-[13px] text-left text-[14px] font-medium tracking-wide text-[#122A20] placeholder:text-[#8AA39A] outline-none transition-all duration-200 focus:bg-white ${
+                        className={`w-full rounded-2xl border bg-[#FCFDFC] pl-16 pr-4 py-[13px] text-left text-[14px] font-medium tracking-wide text-[#122A20] placeholder:text-[#8AA39A] outline-none transition-all duration-200 focus:bg-white ${
                           errors.phone
                             ? "border-red-300 bg-red-50/40 focus:border-red-400 focus:ring-4 focus:ring-red-100"
                             : "border-[rgba(23,64,47,.10)] focus:border-[#1E7A57] focus:ring-4 focus:ring-[#1E7A57]/12"
                         }`}
                         style={{ fontFamily: "Tajawal, sans-serif" }}
                       />
-                                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-[#EAF4EE] px-2 py-1 text-[11px] font-extrabold text-[#1E7A57]">MA</span>
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-[#EAF4EE] px-2 py-1 text-[11px] font-extrabold text-[#1E7A57]">MA</span>
                     </div>
                     {errors.phone && <p className="text-xs font-bold text-red-600">{errors.phone}</p>}
                   </div>
@@ -655,29 +658,6 @@ export const ContactSection = ({ site }: ContactSectionProps) => {
                 <span className="text-xs font-bold text-[#92400E]">نشطة الآن — ننشر عروض فلاش كل أسبوع</span>
               </div>
             </div>
-
-            {/* WhatsApp big CTA */}
-            <a
-              href={waUrl}
-              target="_blank"
-              rel="noopener"
-              className="group relative flex items-center gap-4 overflow-hidden rounded-[20px] bg-gradient-to-r from-[#25D366] to-[#128C3E] p-[1.5px] shadow-[0_16px_36px_rgba(37,211,102,.28)] transition-all hover:-translate-y-1 hover:shadow-[0_20px_44px_rgba(37,211,102,.34)]"
-            >
-              <div className="flex w-full items-center gap-4 rounded-[18px] bg-gradient-to-r from-[#25D366] to-[#128C3E] px-5 py-4 text-white">
-                <span className="grid h-12 w-12 place-items-center rounded-2xl bg-white text-[#128C3E] shadow-[0_8px_20px_rgba(0,0,0,.12)] transition-transform group-hover:scale-105">
-                  <WhatsAppGlyph className="h-6 w-6" />
-                </span>
-                <div className="min-w-0 flex-1 text-right">
-                  <div className="text-[15px] font-extrabold leading-none">{tr("تواصلي معنا عبر واتساب", "Contactez-nous via WhatsApp", "Contact us via WhatsApp")}</div>
-                  <div className="mt-1 text-xs font-medium text-white/90">{tr("نرد عادة خلال أقل من ساعة • اضغطي لبدء المحادثة", "Nous répondons généralement sous une heure • Cliquez pour démarrer la conversation", "We usually reply within an hour • Click to start the conversation")}</div>
-                </div>
-                <span className="grid h-9 w-9 place-items-center rounded-full bg-white/15 text-white ring-1 ring-white/20 transition-transform group-hover:translate-x-[-2px]">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} className="h-4 w-4" aria-hidden>
-                    <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </span>
-              </div>
-            </a>
 
             {/* trust footer */}
             <div className="flex flex-wrap items-center justify-center gap-2 text-[11px] font-bold text-[#8AA39A]">

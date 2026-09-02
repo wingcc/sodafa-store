@@ -7,6 +7,7 @@ import type { SiteConfig } from "../common/types";
 import { useUI } from "@/app/contexts/UIContext";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { useFavorites } from "../../contexts/FavoritesContext";
+import { useStoreSettings } from "../../contexts/StoreSettingsContext";
 import { LanguageDropdown } from "../../components/LanguageDropdown";
 
 // ── Link sets per variant ──
@@ -37,25 +38,12 @@ const STORE_MOBILE_LINKS = [
   { href: "/contact", ar: "اتصل بنا", en: "Contact" },
 ];
 
+// Default site config — only logo and brand name, no hardcoded contact info
 const DEFAULT_SITE: SiteConfig = {
   brandName: "SODFA",
   logo: "/assets/Image/NavbarLogo.png",
   NavbarLogo: "/assets/Image/NavbarLogo.png",
   footerLogo: "/assets/Image/FooterLogo.jpg",
-  tagline: "جمال · طبيعة · ثقة",
-  whatsappMain: "+212673932389",
-  whatsappMessage: "أريد طلب سيروم الشعر الطبيعي",
-  whatsappStore: "+212673932389",
-  phoneDisplay: "+212 673-932389",
-  phoneTel: "+212673932389",
-  email: "info@sodfa.com",
-  address: "حي شماعو سلا ، المغرب",
-  addressShort: "حي شماعو سلا، سلا",
-  hoursStore: "من الإثنين إلى السبت · 9:00 ص – 8:00 م",
-  hoursContact: "السبت - الخميس: 9:00 ص - 6:00 م",
-  instagram: "https://www.instagram.com/soodfa2026?igsh=NTJkMWt3cW42a2E0",
-  facebook: "https://web.facebook.com/profile.php?id=61590754402259",
-  tiktok: "https://www.tiktok.com/@karimayassmin",
 };
 
 type NavbarVariant = "home" | "store" | "minimal";
@@ -75,39 +63,18 @@ function resolveVariant(pathname: string, explicit?: NavbarVariant): NavbarVaria
   return "store";
 }
 
-export function Navbar({ site: siteProp = DEFAULT_SITE, onOpenContact = () => {}, variant }: NavbarProps) {
+export function Navbar({ site: siteProp, onOpenContact = () => {}, variant }: NavbarProps) {
   const pathname = usePathname() || "/";
   const router = useRouter();
   const { openSearch, openCart, cartItems } = useUI();
   const { locale, setLocale } = useLanguage();
   const { favorites } = useFavorites();
+  const { siteConfig } = useStoreSettings();
   const isAr = locale === "ar";
   const activeVariant = resolveVariant(pathname, variant);
 
-  const [site, setSite] = useState<SiteConfig>(siteProp);
-  useEffect(() => {
-    if (siteProp !== DEFAULT_SITE) setSite(siteProp);
-  }, [siteProp]);
-  useEffect(() => {
-    if (siteProp !== DEFAULT_SITE) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const { loadPublicConfig } = await import("@/lib/public-content");
-        const cfg = await loadPublicConfig();
-        if (!cancelled && cfg.site) setSite(cfg.site);
-      } catch {
-        try {
-          const r = await fetch("/json/config.json");
-          const data = await r.json();
-          if (!cancelled && data.site) setSite((prev) => ({ ...prev, ...data.site }));
-        } catch {}
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [siteProp]);
+  // Use store settings from database, fallback to minimal default
+  const site = siteConfig ?? siteProp ?? DEFAULT_SITE;
 
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -191,7 +158,7 @@ export function Navbar({ site: siteProp = DEFAULT_SITE, onOpenContact = () => {}
       <nav id="nav" className={scrolled ? "scrolled" : ""}>
         <div className="wrap nav-in">
           <Link className="logo has-logo" href="/" aria-label="SODFA">
-            <img src={site.NavbarLogo} alt="SODFA" aria-hidden="true" />
+            <img src={site.NavbarLogo || "/assets/Image/NavbarLogo.png"} alt="SODFA" aria-hidden="true" />
           </Link>
           <div className="nav-links">
             <Link href="/store">{isAr ? "المتجر" : "Store"}</Link>
@@ -245,7 +212,7 @@ export function Navbar({ site: siteProp = DEFAULT_SITE, onOpenContact = () => {}
     <nav id="nav" className={scrolled ? "scrolled" : ""}>
       <div className="wrap nav-in">
         <Link className="logo has-logo" href="/" aria-label="SODFA">
-          <img src={site.NavbarLogo} alt="SODFA" aria-hidden="true" />
+          <img src={site.NavbarLogo || "/assets/Image/NavbarLogo.png"} alt="SODFA" aria-hidden="true" />
         </Link>
 
         <div className="nav-links">

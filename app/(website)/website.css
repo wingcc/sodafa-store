@@ -6,7 +6,7 @@
    ===================================================== */
 
 /* SODFA brand styles — full website stylesheet */
-@import "../Resources/assets/css/style.css";
+@import "./style.css";
 
 /* ── Brand fonts ──
    El Messiri is loaded via @fontsource CSS links in app/(website)/layout.tsx

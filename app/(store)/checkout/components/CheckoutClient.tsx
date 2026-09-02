@@ -37,7 +37,11 @@ import {
   Home,
   LayoutGrid,
 } from 'lucide-react';
-import { WHATSAPP_LINK } from '../../../constants';
+import { getWhatsAppLink } from '../../../lib/whatsapp';
+import { useStoreSettings } from '../../../contexts/StoreSettingsContext';
+import { BreadcrumbBar } from '../../../components/shared/BreadcrumbBar';
+import { PageShell } from '../../../components/shared/PageBackground';
+import { SectionCard } from '../../../components/shared/SectionCard';
 
 /** Default free-shipping threshold used until the live DB value loads. */
 const DEFAULT_FREE_SHIPPING_THRESHOLD = 500;
@@ -122,6 +126,7 @@ export default function CheckoutClient() {
   const { locale } = useLanguage();
   const isAr = locale === 'ar';
   const { addToast } = useStoreToast();
+  const { siteConfig } = useStoreSettings();
 
   const [form, setForm] = useState<FormData>(INITIAL_FORM);
   const [errors, setErrors] = useState<Partial<FormData>>({});
@@ -132,6 +137,7 @@ export default function CheckoutClient() {
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number } | null>(null);
   const [couponApplying, setCouponApplying] = useState(false);
   const [couponStatus, setCouponStatus] = useState<{ tone: 'success' | 'warning' | 'danger'; message: string } | null>(null);
+  const [waUrl, setWaUrl] = useState<string | null>(null);
 
   // ─── Track begin_checkout for cart abandonment ───────────────
   useEffect(() => {
@@ -272,6 +278,16 @@ export default function CheckoutClient() {
 
   const discount = appliedCoupon?.discount ?? 0;
   const grandTotal = calcFinalTotal({ subtotal, deliveryFee, discount });
+
+  // ─── Build WhatsApp URL from store settings ─────────────────
+  useEffect(() => {
+    if (siteConfig) {
+      setWaUrl(getWhatsAppLink(siteConfig, locale, "checkout", {
+        items: cartItems.map((i) => `• ${i.name} (Qty: ${i.qty})`).join("\n"),
+        total: grandTotal.toFixed(2),
+      }));
+    }
+  }, [locale, cartItems, grandTotal, siteConfig]);
 
   // ─── Validation ──────────────────────────────────────────────────
   const validate = useCallback((): boolean => {
@@ -444,44 +460,60 @@ export default function CheckoutClient() {
 
   // ─── Render ──────────────────────────────────────────────────────
   return (
-    <div className="bg-stone-50 text-stone-800 font-sans" dir={isAr ? 'rtl' : 'ltr'}>
-      <main className="pt-8 pb-20">
-        {/* Page Header & Breadcrumb */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-          <ol className="flex items-center whitespace-nowrap mb-3">
-            <li className="inline-flex items-center">
-              <Link
-                href="/"
-                className="flex items-center text-sm text-stone-500 hover:text-emerald-800 transition-colors focus:outline-none focus:text-emerald-800"
-              >
-                <Home className="shrink-0 me-2 w-4 h-4" />
-                {isAr ? 'الرئيسية' : 'Home'}
-              </Link>
-              <ChevronRight className="shrink-0 mx-2 w-4 h-4 text-stone-400" />
-            </li>
-            <li className="inline-flex items-center">
-              <Link
-                href="/store"
-                className="flex items-center text-sm text-stone-500 hover:text-emerald-800 transition-colors focus:outline-none focus:text-emerald-800"
-              >
-                <LayoutGrid className="shrink-0 me-2 w-4 h-4" />
-                {isAr ? 'المتجر' : 'Store'}
-              </Link>
-              <ChevronRight className="shrink-0 mx-2 w-4 h-4 text-stone-400" />
-            </li>
-            <li className="inline-flex items-center text-sm font-semibold text-stone-900 truncate max-w-[200px]" aria-current="page">
-              {isAr ? 'إتمام الطلب' : 'Checkout'}
-            </li>
-          </ol>
-
-          <h1 className="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight" style={{ color: '#0b2e22' }}>
-            {isAr ? 'تأكيد طلبكِ والدفع عند الاستلام' : 'Complete Your Order — Cash on Delivery'}
+    <div className="text-stone-800 font-sans" dir={isAr ? 'rtl' : 'ltr'}>
+      <BreadcrumbBar
+        items={[
+          { href: "/", label: isAr ? "الرئيسية" : "Home", icon: Home },
+          { href: "/store", label: isAr ? "المتجر" : "Store", icon: LayoutGrid },
+          { label: isAr ? "إتمام الطلب" : "Checkout", icon: ShoppingBag, current: true },
+        ]}
+        rightSlot={
+          <span className="hidden items-center gap-1.5 rounded-full bg-[#EAF4EE] px-2.5 py-1 text-[11px] font-extrabold text-[#1E7A57] sm:inline-flex shrink-0">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#1E7A57]" />
+            {isAr ? "الدفع عند الاستلام" : "Cash on Delivery"}
+          </span>
+        }
+      />
+      <PageShell dir={isAr ? "rtl" : "ltr"} className="pb-20" withPadding={false}>
+        <main className="pt-8">
+        {/* Page Header — contact visual language */}
+        <div className="mx-auto max-w-[760px] px-4 sm:px-6 lg:px-8 mb-8 text-center">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#1E7A57]/10 bg-white px-3.5 py-1.5 shadow-[0_6px_20px_rgba(17,64,47,.06)]">
+            <span className="grid h-6 w-6 place-items-center rounded-full bg-[#1E7A57] text-white">
+              <Lock className="h-3.5 w-3.5" />
+            </span>
+            <span className="text-[11px] font-extrabold tracking-[0.14em] text-[#1E7A57]" style={{ fontFamily: "Tajawal, sans-serif" }}>
+              {isAr ? "إتمام الطلب" : "Checkout"}
+            </span>
+            <span className="h-3 w-px bg-[#1E7A57]/15" />
+            <span className="text-[11px] font-bold text-[#5A6B5F]">{isAr ? "الدفع عند الاستلام" : "Cash on Delivery"}</span>
+          </div>
+          <h1
+            className="mt-5 text-[28px] font-extrabold leading-[0.95] tracking-[-0.02em] sm:text-[34px] lg:text-[38px]"
+            style={{ fontFamily: "'El Messiri', Tajawal, serif" }}
+          >
+            <span className="bg-gradient-to-l from-[#07231A] via-[#1E7A57] to-[#C6A15B] bg-clip-text text-transparent">
+              {isAr ? "تأكيد طلبكِ" : "Complete Your Order"}
+            </span>
+            <span className="text-[#07231A]">{isAr ? " والدفع عند الاستلام" : " — Cash on Delivery"}</span>
           </h1>
-          <p className="text-xs sm:text-sm text-stone-500 mt-1">
+          <p className="mx-auto mt-3.5 max-w-[560px] text-[13.5px] font-medium leading-7 text-[#5A6B5F] sm:text-[14px]" style={{ fontFamily: "Tajawal, sans-serif" }}>
             {isAr
-              ? 'ادخلي معلومات التسليم أدناه، وسيصلكِ الطلب حتى باب البيت مع إمكانية الفحص قبل الدفع.'
-              : 'Enter your delivery info below. Pay in cash when your order arrives at your doorstep.'}
+              ? "ادخلي معلومات التسليم أدناه، وسيصلكِ الطلب حتى باب البيت مع إمكانية الفحص قبل الدفع."
+              : "Enter your delivery info below. Pay in cash when your order arrives at your doorstep."}
           </p>
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+            {[
+              { dot: "bg-[#1E7A57]", label: isAr ? "دفع عند الاستلام" : "Cash on Delivery" },
+              { dot: "bg-[#C6A15B]", label: isAr ? "شحن 24-48 ساعة" : "24-48h Shipping" },
+              { dot: "bg-[#1E7A57]", label: isAr ? "فحص قبل الدفع" : "Inspect before pay" },
+            ].map((p) => (
+              <span key={p.label} className="inline-flex items-center gap-2 rounded-full bg-white px-3.5 py-2 text-xs font-bold text-[#122A20] shadow-[0_8px_20px_rgba(17,64,47,.06)] ring-1 ring-[rgba(23,64,47,.06)]">
+                <i className={`h-2 w-2 rounded-full ${p.dot} inline-block`} />
+                {p.label}
+              </span>
+            ))}
+          </div>
         </div>
 
         {cartItems.length === 0 ? (
@@ -519,23 +551,26 @@ export default function CheckoutClient() {
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-8 items-start">
               {/* LEFT: Customer & Delivery Info Form */}
               <div className="space-y-6">
-                {/* Information Card */}
-                <div className="bg-white border border-stone-200/90 rounded-3xl p-6 sm:p-8 shadow-sm">
-                  <div className="flex items-center gap-3 mb-6 pb-4 border-b border-stone-100">
-                    <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0"
-                      style={{ background: 'linear-gradient(135deg, #061c16 0%, #0b2e22 100%)' }}
-                    >
-                      <User className="w-5 h-5 text-amber-300" />
+                {/* Information Card — contact card language */}
+                <div className="relative overflow-hidden rounded-[28px] border border-[rgba(23,64,47,.08)] bg-white shadow-[0_20px_60px_rgba(17,64,47,.08)]">
+                  <div className="h-[4px] w-full bg-gradient-to-r from-[#1E7A57] via-[#1E7A57] to-[#C6A15B]" />
+                  <div className="p-6 sm:p-8">
+                  <div className="flex items-start gap-4 mb-6 pb-5 border-b border-stone-100">
+                    <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#EAF4EE] text-[#1E7A57] ring-1 ring-[#1E7A57]/10">
+                      <User className="w-5 h-5" />
                     </div>
-                    <div>
-                      <h2 className="text-lg font-bold text-stone-900">
+                    <div className="min-w-0 flex-1">
+                      <h2 className="text-[18px] font-extrabold leading-none text-[#07231A] sm:text-[19px]" style={{ fontFamily: "'El Messiri', Tajawal, serif" }}>
                         {isAr ? 'معلومات التسليم والعنوان' : 'Delivery & Address Details'}
                       </h2>
-                      <p className="text-xs text-stone-400">
+                      <p className="mt-1.5 text-[13px] font-medium leading-5 text-[#5A6B5F]" style={{ fontFamily: "Tajawal, sans-serif" }}>
                         {isAr ? 'يرجى إدخال معلومات دقيقة لضمان وصول الطلب بسرعة' : 'Please provide accurate info for smooth delivery'}
                       </p>
                     </div>
+                    <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-[#FCFBF7] px-3 py-1.5 text-[11px] font-extrabold text-[#1E7A57] ring-1 ring-[#EDE7D5]">
+                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#1E7A57]" />
+                      {isAr ? "آمن ومشفر" : "Secure"}
+                    </span>
                   </div>
 
                   <div className="space-y-4">
@@ -570,7 +605,7 @@ export default function CheckoutClient() {
                           type="tel"
                           value={form.phone}
                           onChange={(e) => handleChange('phone', e.target.value)}
-                          placeholder={isAr ? 'مثال: 0612345678' : 'e.g. 0612345678'}
+                          placeholder={isAr ? 'مثال: 06 XX XX XX XX' : 'e.g. 06 XX XX XX XX'}
                           className={`w-full px-4 py-3 rounded-xl border text-sm text-stone-900 bg-stone-50/50 focus:bg-white focus:outline-none transition-colors ${
                             errors.phone ? 'border-red-400 focus:border-red-500' : 'border-stone-200 focus:border-emerald-800'
                           }`}
@@ -726,6 +761,7 @@ export default function CheckoutClient() {
                       />
                     </div>
                   </div>
+                  </div>
                 </div>
 
                 {/* Payment Method Badge: Cash on Delivery */}
@@ -754,41 +790,41 @@ export default function CheckoutClient() {
                   </p>
                 </div>
 
-                {/* Trust Badges */}
+                {/* Trust Badges — contact pill language */}
                 <div className="grid grid-cols-3 gap-3">
-                  <div className="bg-white border border-stone-200 rounded-2xl p-4 text-center flex flex-col items-center gap-1.5">
-                    <Truck className="w-5 h-5 text-emerald-800" />
-                    <span className="text-xs font-bold text-stone-800">
+                  <div className="bg-white border border-[rgba(23,64,47,.08)] rounded-2xl p-4 text-center flex flex-col items-center gap-1.5 shadow-[0_8px_20px_rgba(17,64,47,.04)]">
+                    <Truck className="w-5 h-5 text-[#1E7A57]" />
+                    <span className="text-xs font-bold text-[#122A20]">
                       {isAr ? 'توصيل سريع' : 'Fast Shipping'}
                     </span>
-                    <span className="text-[10px] text-stone-400">
+                    <span className="text-[10px] text-[#8AA39A]">
                       {isAr ? 'خلال 24-48 ساعة' : 'Within 24-48h'}
                     </span>
                   </div>
-                  <div className="bg-white border border-stone-200 rounded-2xl p-4 text-center flex flex-col items-center gap-1.5">
-                    <ShieldCheck className="w-5 h-5 text-amber-600" />
-                    <span className="text-xs font-bold text-stone-800">
+                  <div className="bg-white border border-[rgba(23,64,47,.08)] rounded-2xl p-4 text-center flex flex-col items-center gap-1.5 shadow-[0_8px_20px_rgba(17,64,47,.04)]">
+                    <ShieldCheck className="w-5 h-5 text-[#C6A15B]" />
+                    <span className="text-xs font-bold text-[#122A20]">
                       {isAr ? 'فحص قبل الدفع' : 'Inspect Package'}
                     </span>
-                    <span className="text-[10px] text-stone-400">
+                    <span className="text-[10px] text-[#8AA39A]">
                       {isAr ? 'ضمان 100%' : '100% Guaranteed'}
                     </span>
                   </div>
-                  <div className="bg-white border border-stone-200 rounded-2xl p-4 text-center flex flex-col items-center gap-1.5">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-800" />
-                    <span className="text-xs font-bold text-stone-800">
+                  <div className="bg-white border border-[rgba(23,64,47,.08)] rounded-2xl p-4 text-center flex flex-col items-center gap-1.5 shadow-[0_8px_20px_rgba(17,64,47,.04)]">
+                    <CheckCircle2 className="w-5 h-5 text-[#1E7A57]" />
+                    <span className="text-xs font-bold text-[#122A20]">
                       {isAr ? 'منتجات أصلية' : 'Original Items'}
                     </span>
-                    <span className="text-[10px] text-stone-400">
+                    <span className="text-[10px] text-[#8AA39A]">
                       {isAr ? 'مكونات طبيعية' : 'Natural ingredients'}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* RIGHT: Order Summary Card */}
+              {/* RIGHT: Order Summary Card — contact card language */}
               <div className="space-y-6 lg:sticky lg:top-24">
-                <div className="bg-white border border-stone-200 rounded-3xl overflow-hidden shadow-sm">
+                <div className="rounded-[28px] border border-[rgba(23,64,47,.08)] bg-white shadow-[0_20px_60px_rgba(17,64,47,.08)] overflow-hidden">
                   <div
                     className="px-6 py-4 flex items-center justify-between text-white"
                     style={{ background: 'linear-gradient(135deg, #061c16 0%, #0b2e22 100%)' }}
@@ -922,30 +958,25 @@ export default function CheckoutClient() {
                 />
 
                 {/* Direct WhatsApp Quick Order Backup */}
-                <a
-                  href={`${WHATSAPP_LINK}?text=${encodeURIComponent(
-                    isAr
-                      ? `مرحباً دار صودفا 🌿، أريد تأكيد طلبي لهذه المنتجات:\n` +
-                        cartItems.map((i) => `• ${i.name} (الكمية: ${i.qty})`).join('\n') +
-                        `\n\nالمجموع: ${grandTotal.toFixed(2)} د.م`
-                      : `Hello SODFA Store 🌿, I would like to confirm my order:\n` +
-                        cartItems.map((i) => `• ${i.name} (Qty: ${i.qty})`).join('\n') +
-                        `\n\nTotal: ${grandTotal.toFixed(2)} MAD`
-                  )}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-3 px-6 rounded-xl font-bold text-xs text-white flex items-center justify-center gap-2 shadow-md transition-all hover:scale-[1.01]"
-                  style={{
-                    background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
-                  }}
-                >
-                  <span>{isAr ? 'أو تأكيد الطلب مباشرة عبر الواتساب' : 'Or Confirm Order via WhatsApp'}</span>
-                </a>
+                {waUrl && (
+                  <a
+                    href={waUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-3 px-6 rounded-xl font-bold text-xs text-white flex items-center justify-center gap-2 shadow-md transition-all hover:scale-[1.01]"
+                    style={{
+                      background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
+                    }}
+                  >
+                    <span>{isAr ? 'أو تأكيد الطلب مباشرة عبر الواتساب' : 'Or Confirm Order via WhatsApp'}</span>
+                  </a>
+                )}
               </div>
             </div>
           </div>
         )}
       </main>
+      </PageShell>
     </div>
   );
 }
