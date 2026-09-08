@@ -23,15 +23,39 @@ export function validateEnv() {
   });
 }
 
+function isValidHttpUrl(value: string | undefined): boolean {
+  if (!value) return false;
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  // Reject obvious placeholder / garbage values (the repo had " process.env.NEXT_PUBLIC_SUPABASE_URL;")
+  if (trimmed.includes('process.env')) return false;
+  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) return false;
+  try {
+    const u = new URL(trimmed);
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Public Supabase configuration (safe for client-side)
+ * Returns undefined when not configured or when value is an invalid placeholder.
+ * This prevents "Invalid supabaseUrl" crashes during `next build` prerender.
  */
 export const publicConfig = {
-  get url() {
-    return process.env.NEXT_PUBLIC_SUPABASE_URL;
+  get url(): string | undefined {
+    const raw = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+    if (!raw || raw.includes('process.env')) return undefined;
+    if (!isValidHttpUrl(raw)) return undefined;
+    return raw;
   },
-  get anonKey() {
-    return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  get anonKey(): string | undefined {
+    const raw = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+    if (!raw || raw.includes('process.env')) return undefined;
+    // anon key is a JWT — basic sanity check
+    if (raw.length < 20) return undefined;
+    return raw;
   },
 };
 
@@ -39,8 +63,11 @@ export const publicConfig = {
  * Server-only configuration (never expose to client)
  */
 export const serverConfig = {
-  get serviceRoleKey() {
-    return process.env.SUPABASE_SERVICE_ROLE_KEY;
+  get serviceRoleKey(): string | undefined {
+    const raw = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+    if (!raw || raw.includes('process.env')) return undefined;
+    if (raw.length < 20) return undefined;
+    return raw;
   },
 };
 

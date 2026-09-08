@@ -56,13 +56,29 @@ function createDummyClient() {
  * Only use for operations that require elevated privileges,
  * such as admin operations or server-side maintenance tasks.
  */
+function isValidSupabaseUrl(url: string | undefined): boolean {
+  if (!url) return false;
+  const trimmed = url.trim();
+  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) return false;
+  try {
+    const u = new URL(trimmed);
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 export const createAdminClient = (): AdminSupabaseClient => {
   const url = publicConfig.url;
   const serviceRoleKey = serverConfig.serviceRoleKey;
 
-  if (!url || !serviceRoleKey) {
+  if (!url || !serviceRoleKey || !isValidSupabaseUrl(url)) {
     return createDummyClient();
   }
 
-  return createSupabaseClient(url, serviceRoleKey);
+  try {
+    return createSupabaseClient(url, serviceRoleKey);
+  } catch {
+    return createDummyClient();
+  }
 };
