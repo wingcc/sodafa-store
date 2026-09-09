@@ -99,20 +99,64 @@ export const MainContent = () => {
   }, [config]);
 
   useEffect(() => {
-    const loadConfig = async () => {
+    let cancelled = false;
+    let interval: ReturnType<typeof setInterval> | null = null;
+    let channel: { unsubscribe: () => void } | null = null;
+
+    const loadConfig = async (isInitial = false) => {
       try {
-        // config.json base + dashboard-managed database overlay
         const cfg = await loadPublicConfig();
-        setConfig(cfg);
+        if (!cancelled) {
+          setConfig(cfg);
+          if (isInitial) setLoading(false);
+        }
       } catch (err) {
         console.error("Failed to load config:", err);
-        setError("Failed to load configuration");
-        document.title = "SODFA — Config Error";
-      } finally {
-        setLoading(false);
+        if (!cancelled && isInitial) {
+          setError("Failed to load configuration");
+          document.title = "SODFA — Config Error";
+          setLoading(false);
+        }
       }
     };
-    loadConfig();
+
+    loadConfig(true);
+
+    // Keep homepage sections in sync with dashboard — polls + realtime + visibility
+    const reload = () => loadConfig(false);
+    interval = setInterval(reload, 60_000);
+    const onFocus = () => reload();
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") reload();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+
+    (async () => {
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        if (typeof (supabase as unknown as { channel?: unknown }).channel === "function") {
+          const ch = (supabase as unknown as { channel: (name: string) => { on: (...a: unknown[]) => { subscribe: () => unknown } } }).channel("main-homepage-sections");
+          // @ts-ignore
+          channel = ch
+            .on("postgres_changes", { event: "*", schema: "public", table: "homepage_sections" }, () => reload())
+            .subscribe() as unknown as { unsubscribe: () => void };
+        }
+      } catch {}
+    })();
+
+    return () => {
+      cancelled = true;
+      if (interval) clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+      try {
+        if (channel && typeof (channel as { unsubscribe?: () => void }).unsubscribe === "function") {
+          (channel as { unsubscribe: () => void }).unsubscribe();
+        }
+      } catch {}
+    };
   }, []);
 
   // Load Store Content pages for legal popups — uses slugs from Store Info (Dashboard → Store Management → Settings → Legal Pages)
@@ -244,7 +288,7 @@ export const MainContent = () => {
       <Preloader />
       <ScrollProgress />
       <AnnouncementBar />
-      <Navbar site={site} onOpenContact={handleOpenContact} />
+      <Navbar site={site} onOpenContact={handleOpenContact} enabledSections={enabledSet} />
 
       {/* Hero Section — div mount like the original buildApp() (hero carries
           its own <section class="hero"> with padding:0) */}

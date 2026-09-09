@@ -1121,7 +1121,7 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                         title: isAr ? 'توصيل سريع' : 'Express Delivery',
                         desc: isAr ? '24 ساعة' : '24 hours',
                         extra: isAr ? '50 د.م' : '50 MAD',
-                        note: isAr ? 'اطلبي قبل الساعة 2 مساءً للشحن بنفس اليوم' : 'Order before 2 PM for same-day dispatch',
+                        note: isAr ? 'أطلبي قبل الساعة 2 مساءً للشحن بنفس اليوم' : 'Order before 2 PM for same-day dispatch',
                       },
                       {
                         icon: Package,

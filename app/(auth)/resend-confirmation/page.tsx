@@ -10,7 +10,6 @@ export default function ResendConfirmationPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const supabase = createClient()
 
   const handleResend = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -25,6 +24,7 @@ export default function ResendConfirmationPage() {
     }
 
     try {
+      const supabase = createClient()
       const { error } = await supabase.auth.resend({
         type: 'signup',
         email: email.trim(),

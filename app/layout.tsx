@@ -14,7 +14,10 @@ import Preloader from './components/common/Preloader';
 
 export const metadata: Metadata = {
   title: "SODFA Store — 100% Natural Moroccan Beauty & Skincare",
-  description: "Discover luxury Moroccan hair serums, argan oils, and natural skincare products with Cash on Delivery across Morocco.",
+  description: "سيروم SODFA الطبيعي بأربعة زيوت نادرة لعلاج تساقط الشعر وتغذية البصيلات. نتائج ملموسة خلال شهر.",
+  icons: {
+    icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌿</text></svg>",
+  },
 };
 
 export default function RootLayout({

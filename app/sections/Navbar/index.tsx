@@ -52,6 +52,42 @@ interface NavbarProps {
   site?: SiteConfig;
   onOpenContact?: () => void;
   variant?: NavbarVariant;
+  /** Single source of truth — homepage_sections status from DB.
+   *  When provided, Navbar uses this instead of fetching itself.
+   *  MainContent passes `enabledSet` from loadPublicConfig.
+   *  When undefined, Navbar fetches anonymously via /api/homepage-sections. */
+  enabledSections?: Set<string> | null;
+}
+
+// ── Navbar link → homepage_section.id mapping (single source of truth) ──
+// Only hash links (#flash, #store…) are tied to homepage sections.
+// Route links like "/store" are standalone pages and stay visible even if the
+// homepage "store" section is disabled — disabling that section only hides the
+// "#store" anchor on the landing page.
+const NAV_LINK_TO_SECTION: Record<string, string> = {
+  "#flash": "flash",
+  "/#flash": "flash",
+  "#products": "products",
+  "/#products": "products",
+  "#cases": "cases",
+  "/#cases": "cases",
+  "#about": "about",
+  "/#about": "about",
+  "#order": "order",
+  "/#order": "order",
+  "#store": "store",
+  "/#store": "store",
+};
+
+function getSectionForHref(href: string): string | null {
+  return NAV_LINK_TO_SECTION[href] ?? null;
+}
+
+function isLinkEnabled(href: string, enabledSet: Set<string> | null): boolean {
+  const sectionId = getSectionForHref(href);
+  if (!sectionId) return true; // not tied to a section (e.g. "/", "/track-order") → always visible
+  if (!enabledSet || enabledSet.size === 0) return true; // loading / fallback → show all (prevents flash)
+  return enabledSet.has(sectionId);
 }
 
 function resolveVariant(pathname: string, explicit?: NavbarVariant): NavbarVariant {
@@ -63,7 +99,7 @@ function resolveVariant(pathname: string, explicit?: NavbarVariant): NavbarVaria
   return "store";
 }
 
-export function Navbar({ site: siteProp, onOpenContact = () => {}, variant }: NavbarProps) {
+export function Navbar({ site: siteProp, onOpenContact = () => {}, variant, enabledSections }: NavbarProps) {
   const pathname = usePathname() || "/";
   const router = useRouter();
   const { openSearch, openCart, cartItems } = useUI();
@@ -72,6 +108,81 @@ export function Navbar({ site: siteProp, onOpenContact = () => {}, variant }: Na
   const { siteConfig } = useStoreSettings();
   const isAr = locale === "ar";
   const activeVariant = resolveVariant(pathname, variant);
+
+  // ── Homepage section sync: single source of truth is `homepage_sections.status` ──
+  const [fetchedEnabledSet, setFetchedEnabledSet] = useState<Set<string> | null>(null);
+  // controlled (MainContent passes enabledSet) vs uncontrolled (Navbar fetches itself e.g. StoreLayout)
+  const isControlled = enabledSections !== undefined;
+  const effectiveEnabledSet = isControlled ? enabledSections : fetchedEnabledSet;
+
+  useEffect(() => {
+    if (isControlled) return; // parent controls — don't fetch
+
+    let cancelled = false;
+    let channel: { unsubscribe: () => void } | null = null;
+    let interval: ReturnType<typeof setInterval> | null = null;
+
+    const fetchEnabled = async () => {
+      try {
+        const res = await fetch("/api/homepage-sections", { cache: "no-store" });
+        const json = await res.json().catch(() => null);
+        if (!cancelled && json?.success && Array.isArray(json.data)) {
+          const enabled = new Set<string>(
+            (json.data as { id: string; status: string }[])
+              .filter((s) => s.status === "active")
+              .map((s) => s.id)
+          );
+          // If API returns no rows (fallback) treat as "all enabled" → null triggers show-all fallback
+          // but we store empty set which isLinkEnabled treats as show-all, so it's safe.
+          setFetchedEnabledSet(enabled);
+        } else if (!cancelled && json && Array.isArray(json.data) && json.data.length === 0) {
+          setFetchedEnabledSet(new Set());
+        }
+      } catch {
+        // keep previous value, fail silent
+      }
+    };
+
+    fetchEnabled();
+    interval = setInterval(fetchEnabled, 60_000);
+
+    const onFocus = () => fetchEnabled();
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") fetchEnabled();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+
+    // Realtime: reflect dashboard toggle instantly without page reload
+    (async () => {
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        // @ts-ignore — channel may not exist on dummy client
+        if (typeof (supabase as unknown as { channel?: unknown }).channel === "function") {
+          const ch = (supabase as unknown as { channel: (name: string) => { on: (...a: unknown[]) => { subscribe: () => unknown } } }).channel("navbar-homepage-sections");
+          // @ts-ignore
+          channel = ch
+            .on("postgres_changes", { event: "*", schema: "public", table: "homepage_sections" }, () => {
+              fetchEnabled();
+            })
+            .subscribe() as unknown as { unsubscribe: () => void };
+        }
+      } catch {}
+    })();
+
+    return () => {
+      cancelled = true;
+      if (interval) clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+      try {
+        if (channel && typeof (channel as { unsubscribe?: () => void }).unsubscribe === "function") {
+          (channel as { unsubscribe: () => void }).unsubscribe();
+        }
+      } catch {}
+    };
+  }, [isControlled]);
 
   // Use store settings from database, fallback to minimal default
   const site = siteConfig ?? siteProp ?? DEFAULT_SITE;
@@ -198,15 +309,19 @@ export function Navbar({ site: siteProp, onOpenContact = () => {}, variant }: Na
             🇬🇧 {isAr ? "الإنجليزية" : locale === "fr" ? "Anglais" : "English"}
           </button>
           <a className="btn btn-wa" href={waUrl} target="_blank" rel="noopener" onClick={closeMenu}>
-            {isAr ? "اطبي عبر الواتساب" : "Order via WhatsApp"}
+            <WhatsAppIcon size={17} />
+            {isAr ? "أطلب عبر الواتساب" : "Order via WhatsApp"}
           </a>
         </div>
       </nav>
     );
   }
 
-  const links = activeVariant === "home" ? HOME_LINKS : STORE_LINKS;
-  const mobileLinks = activeVariant === "home" ? HOME_MOBILE_LINKS : STORE_MOBILE_LINKS;
+  // Filter navbar links by homepage section visibility — hidden when section inactive
+  const rawLinks = activeVariant === "home" ? HOME_LINKS : STORE_LINKS;
+  const rawMobileLinks = activeVariant === "home" ? HOME_MOBILE_LINKS : STORE_MOBILE_LINKS;
+  const links = rawLinks.filter((l) => isLinkEnabled(l.href, effectiveEnabledSet));
+  const mobileLinks = rawMobileLinks.filter((l) => isLinkEnabled(l.href, effectiveEnabledSet));
 
   return (
     <nav id="nav" className={scrolled ? "scrolled" : ""}>
@@ -401,7 +516,8 @@ export function Navbar({ site: siteProp, onOpenContact = () => {}, variant }: Na
           </Link>
         ))}
         <a className="btn btn-wa" href={waUrl} target="_blank" rel="noopener" onClick={closeMenu}>
-          {isAr ? "اطبي عبر الواتساب" : "Order via WhatsApp"}
+          <WhatsAppIcon size={17} />
+          {isAr ? "أطلب عبر الواتساب" : "Order via WhatsApp"}
         </a>
       </div>
     </nav>

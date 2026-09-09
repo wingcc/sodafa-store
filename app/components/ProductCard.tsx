@@ -306,7 +306,7 @@ export const ProductCard = ({
                 ? (isAr ? "غير متوفر" : "Out of stock")
                 : added
                 ? (isAr ? "تمت الإضافة ✓" : "Added ✓")
-                : (isAr ? "اطلبي الآن" : "Order Now")
+                : (isAr ? "أطلبي الآن" : "Order Now")
               }
             </span>
           </button>
